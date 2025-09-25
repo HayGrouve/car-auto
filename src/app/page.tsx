@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   return (
@@ -31,6 +32,7 @@ export default function HomePage() {
             </div>
           </Link>
         </div>
+        <Button variant="secondary">Click me</Button>
       </div>
     </main>
   );
