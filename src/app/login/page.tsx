@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { brand } from "@/lib/brand";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -29,7 +30,7 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-background p-6">
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 border rounded-lg p-6 bg-card">
-        <h1 className="text-xl font-semibold">Вход</h1>
+        <h1 className="text-xl font-semibold">{brand.nameBg}: Вход</h1>
         {error && <div className="text-destructive text-sm">{error}</div>}
         <div className="space-y-1">
           <label className="text-sm">Имейл</label>
