@@ -25,6 +25,11 @@ export default function VisitDetailPage() {
   const [o, setO] = useState("");
   const [a, setA] = useState("");
   const [p, setP] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+  const [procedures, setProcedures] = useState<string[]>([]);
+  const [medications, setMedications] = useState<string[]>([]);
+  const [procInput, setProcInput] = useState("");
+  const [medInput, setMedInput] = useState("");
   const [animalId, setAnimalId] = useState<string | null>(null);
   const [animalSearch, setAnimalSearch] = useState("");
   const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string }[] | undefined;
@@ -33,20 +38,25 @@ export default function VisitDetailPage() {
   const visit: VisitDoc | null = parsed.success ? parsed.data : null;
 
   useEffect(() => {
-    if (visit) {
+    if (!hydrated && visit) {
       setS(visit.soap?.s ?? "");
       setO(visit.soap?.o ?? "");
       setA(visit.soap?.a ?? "");
       setP(visit.soap?.p ?? "");
       setAnimalId(visit.animalId ?? null);
+      setProcedures(visit.procedures ?? []);
+      setMedications(visit.medications ?? []);
+      setHydrated(true);
     }
-  }, [visit]);
+  }, [visit, hydrated]);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
     const res = (await update({
       id,
       soap: { s, o, a, p },
+      procedures,
+      medications,
       animalId: animalId ? (animalId as Id<"animals">) : null,
     })) as { ok: boolean };
     if (res?.ok) toast.success("Записът е обновен");
@@ -105,6 +115,64 @@ export default function VisitDetailPage() {
           <div>
             <Label htmlFor="p">P - План</Label>
             <Textarea id="p" value={p} onChange={(e) => setP(e.target.value)} />
+          </div>
+        </div>
+        <div className="md:col-span-4 grid md:grid-cols-2 gap-4">
+          <div>
+            <Label>Процедури</Label>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <input className="border rounded-md px-3 h-10 w-full" value={procInput} onChange={(e) => setProcInput(e.target.value)} placeholder="напр. Ваксинация" />
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  const v = procInput.trim();
+                  if (!v) return;
+                  setProcedures((arr) => [...arr, v]);
+                  setProcInput("");
+                }}
+              >
+                Добави
+              </Button>
+            </div>
+            <ul className="mt-2 space-y-1 text-sm">
+              {procedures.map((pr, i) => (
+                <li key={i} className="flex justify-between">
+                  <span>{pr}</span>
+                  <Button type="button" variant="ghost" onClick={() => setProcedures((arr) => arr.filter((_, idx) => idx !== i))}>Премахни</Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <Label>Медикаменти</Label>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <input className="border rounded-md px-3 h-10 w-full" value={medInput} onChange={(e) => setMedInput(e.target.value)} placeholder="напр. Амоксицилин" />
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  const v = medInput.trim();
+                  if (!v) return;
+                  setMedications((arr) => [...arr, v]);
+                  setMedInput("");
+                }}
+              >
+                Добави
+              </Button>
+            </div>
+            <ul className="mt-2 space-y-1 text-sm">
+              {medications.map((md, i) => (
+                <li key={i} className="flex justify-between">
+                  <span>{md}</span>
+                  <Button type="button" variant="ghost" onClick={() => setMedications((arr) => arr.filter((_, idx) => idx !== i))}>Премахни</Button>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
         <div className="md:col-span-4 flex gap-2">

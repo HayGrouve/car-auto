@@ -8,6 +8,8 @@ export const VisitDocSchema = z.object({
   soap: z
     .object({ s: z.string().optional(), o: z.string().optional(), a: z.string().optional(), p: z.string().optional() })
     .optional(),
+  procedures: z.array(z.string()).optional(),
+  medications: z.array(z.string()).optional(),
   createdAt: z.number(),
   updatedAt: z.number().optional(),
 });

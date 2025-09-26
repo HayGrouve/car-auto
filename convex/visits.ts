@@ -20,6 +20,8 @@ export const create = mutation({
       a: v.optional(v.string()),
       p: v.optional(v.string()),
     }),
+    procedures: v.optional(v.array(v.string())),
+    medications: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -27,6 +29,8 @@ export const create = mutation({
       ownerId: args.ownerId,
       animalId: args.animalId ?? null,
       soap: args.soap,
+      procedures: args.procedures ?? [],
+      medications: args.medications ?? [],
       status: "draft",
       createdAt: now,
       updatedAt: now,
@@ -63,12 +67,16 @@ export const update = mutation({
     })),
     animalId: v.optional(v.union(v.id("animals"), v.null())),
     status: v.optional(v.string()),
+    procedures: v.optional(v.array(v.string())),
+    medications: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const patch: any = { updatedAt: Date.now() };
     if (args.soap !== undefined) patch.soap = args.soap;
     if (args.animalId !== undefined) patch.animalId = args.animalId;
     if (args.status !== undefined) patch.status = args.status;
+    if (args.procedures !== undefined) patch.procedures = args.procedures;
+    if (args.medications !== undefined) patch.medications = args.medications;
     await ctx.db.patch(args.id, patch);
     return { ok: true } as const;
   },
