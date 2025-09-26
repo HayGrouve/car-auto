@@ -20,10 +20,10 @@ export default function LoginPage() {
     setLoading(false);
     if (res.ok) {
       window.location.href = "/";
-    } else {
-      const data = await res.json();
-      setError(data?.message ?? "Грешни данни за вход");
+      return;
     }
+    const data = (await res.json()) as { message?: string };
+    setError(data?.message ?? "Грешни данни за вход");
   }
 
   return (
