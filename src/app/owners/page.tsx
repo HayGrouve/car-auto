@@ -4,9 +4,9 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { brand } from "@/lib/brand";
+import { User as UserIcon, ShieldCheck, Phone as PhoneIcon, Mail as MailIcon } from "lucide-react";
 import type { OwnerDoc } from "@/types/owner";
 import { toast } from "sonner";
-import { BackButton } from "@/components/back-button";
 
 export default function OwnersPage() {
   const [search, setSearch] = useState("");
@@ -36,7 +36,6 @@ export default function OwnersPage() {
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-2">
-        <BackButton />
         <h1 className="text-2xl font-semibold">{brand.nameBg}: Собственици</h1>
       </div>
       <div className="flex gap-2 items-center">
@@ -54,7 +53,7 @@ export default function OwnersPage() {
         <input name="address" placeholder="Адрес" className="border rounded-md px-3 h-10 md:col-span-1" />
         <label className="flex items-center gap-2 md:col-span-1">
           <input type="checkbox" name="gdpr" />
-          <span className="text-sm">Съгласие (GDPR)</span>
+          <span className="text-sm inline-flex items-center gap-1"><ShieldCheck className="size-4 text-secondary" /> Съгласие (GDPR)</span>
         </label>
         <div className="md:col-span-5">
           <Button type="submit">Добави собственик</Button>
@@ -62,12 +61,21 @@ export default function OwnersPage() {
       </form>
       <div className="border rounded-md divide-y">
         {(owners ?? []).map((o) => (
-          <div key={o._id} className="p-3 flex justify-between text-sm">
-            <div>
-              <div className="font-medium">{o.name}</div>
-              <div className="text-muted-foreground">{o.phone}{o.email ? ` · ${o.email}` : ""}</div>
+          <div key={o._id} className="p-3 flex justify-between items-center text-sm">
+            <div className="flex items-center gap-3">
+              <UserIcon className="size-5 text-primary" aria-hidden />
+              <div>
+                <div className="font-medium">{o.name}</div>
+                <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                  <span className="inline-flex items-center gap-1"><PhoneIcon className="size-4" />{o.phone}</span>
+                  {o.email ? <span className="inline-flex items-center gap-1"><MailIcon className="size-4" />{o.email}</span> : null}
+                </div>
+              </div>
             </div>
-            <div>{new Date(o.createdAt).toLocaleString()}</div>
+            <div className="flex items-center gap-2">
+              {o.gdprConsent ? <ShieldCheck className="size-4 text-secondary" aria-label="GDPR" /> : null}
+              <span className="text-muted-foreground">{new Date(o.createdAt).toLocaleString()}</span>
+            </div>
           </div>
         ))}
       </div>

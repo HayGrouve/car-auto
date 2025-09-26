@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import type { AnimalDoc } from "@/types/animal";
-import { BackButton } from "@/components/back-button";
+import { PawPrint, Hash } from "lucide-react";
 
 export default function AnimalsPage() {
   const [search, setSearch] = useState("");
@@ -35,7 +35,6 @@ export default function AnimalsPage() {
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-2">
-        <BackButton />
         <h1 className="text-2xl font-semibold">{brand.nameBg}: Животни</h1>
       </div>
       <div className="flex gap-2 items-center">
@@ -57,12 +56,18 @@ export default function AnimalsPage() {
       </form>
       <div className="border rounded-md divide-y">
         {(animals ?? []).map((a) => (
-          <div key={a._id} className="p-3 flex justify-between text-sm">
-            <div>
-              <div className="font-medium">{a.name} ({a.species})</div>
-              <div className="text-muted-foreground">{a.breed ?? ""} {a.microchip ? `· ${a.microchip}` : ""}</div>
+          <div key={a._id} className="p-3 flex justify-between items-center text-sm">
+            <div className="flex items-center gap-3">
+              <PawPrint className="size-5 text-primary" aria-hidden />
+              <div>
+                <div className="font-medium">{a.name} ({a.species})</div>
+                <div className="text-muted-foreground flex items-center gap-3">
+                  <span>{a.breed ?? ""}</span>
+                  {a.microchip ? <span className="inline-flex items-center gap-1"><Hash className="size-4" />{a.microchip}</span> : null}
+                </div>
+              </div>
             </div>
-            <div>{new Date(a.createdAt).toLocaleString()}</div>
+            <div className="text-muted-foreground">{new Date(a.createdAt).toLocaleString()}</div>
           </div>
         ))}
       </div>

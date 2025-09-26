@@ -4,6 +4,7 @@ import "@/styles/globals.css";
 import { ConvexClientProvider } from "./ConvexClientProvider";
 import { brand } from "@/lib/brand";
 import { Toaster } from "sonner";
+import { AppNav } from "@/components/app-nav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +36,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ConvexClientProvider>
-          {children}
+          <AppNav />
+          <div className="pt-14">{children}</div>
           <Toaster richColors position="top-center" />
         </ConvexClientProvider>
       </body>

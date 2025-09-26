@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Mail, Lock, LogIn } from "lucide-react";
 import { brand } from "@/lib/brand";
 
 export default function LoginPage() {
@@ -33,7 +34,7 @@ export default function LoginPage() {
         <h1 className="text-xl font-semibold">{brand.nameBg}: Вход</h1>
         {error && <div className="text-destructive text-sm">{error}</div>}
         <div className="space-y-1">
-          <label className="text-sm">Имейл</label>
+          <label className="text-sm inline-flex items-center gap-2"><Mail className="size-4" /> Имейл</label>
           <input
             className="w-full h-10 px-3 border rounded-md bg-background"
             type="email"
@@ -44,7 +45,7 @@ export default function LoginPage() {
           />
         </div>
         <div className="space-y-1">
-          <label className="text-sm">Парола</label>
+          <label className="text-sm inline-flex items-center gap-2"><Lock className="size-4" /> Парола</label>
           <input
             className="w-full h-10 px-3 border rounded-md bg-background"
             type="password"
@@ -54,7 +55,8 @@ export default function LoginPage() {
             required
           />
         </div>
-        <Button type="submit" disabled={loading} className="w-full">
+        <Button type="submit" disabled={loading} className="w-full inline-flex items-center gap-2">
+          <LogIn className="size-4" />
           {loading ? "Влизане..." : "Влизане"}
         </Button>
       </form>
