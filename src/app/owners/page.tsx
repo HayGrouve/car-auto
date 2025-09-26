@@ -68,7 +68,7 @@ export default function OwnersPage() {
         </div>
         <label className="flex items-center gap-2 md:col-span-1">
           <Checkbox name="gdpr" />
-          <span className="text-sm inline-flex items-center gap-1"><ShieldCheck className="size-4 text-secondary" /> Съгласие (GDPR)</span>
+          <span className="text-sm inline-flex items-center gap-1">Съгласие (GDPR)</span>
         </label>
         <div className="md:col-span-5">
           <Button type="submit">Добави собственик</Button>
@@ -80,7 +80,7 @@ export default function OwnersPage() {
             <div className="flex items-center gap-3">
               <UserIcon className="size-5 text-primary" aria-hidden />
               <div>
-                <div className="font-medium">{o.name}</div>
+                <a href={`/owners/${o._id}`} className="font-medium underline-offset-2 hover:underline">{o.name}</a>
                 <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
                   <span className="inline-flex items-center gap-1"><PhoneIcon className="size-4" />{o.phone}</span>
                   {o.email ? <span className="inline-flex items-center gap-1"><MailIcon className="size-4" />{o.email}</span> : null}

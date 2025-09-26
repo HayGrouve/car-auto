@@ -57,4 +57,32 @@ export const create = mutation({
   },
 });
 
+export const getById = query({
+  args: { id: v.id("owners") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const update = mutation({
+  args: {
+    id: v.id("owners"),
+    name: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.union(v.string(), v.null())),
+    address: v.optional(v.union(v.string(), v.null())),
+    gdprConsent: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const patch: any = {};
+    if (args.name !== undefined) patch.name = args.name;
+    if (args.phone !== undefined) patch.phone = args.phone?.replace(/\D/g, "");
+    if (args.email !== undefined) patch.email = args.email ?? null;
+    if (args.address !== undefined) patch.address = args.address ?? null;
+    if (args.gdprConsent !== undefined) patch.gdprConsent = args.gdprConsent;
+    await ctx.db.patch(args.id, patch);
+    return { ok: true } as const;
+  },
+});
+
 
