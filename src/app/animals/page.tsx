@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import type { AnimalDoc } from "@/types/animal";
+import { BackButton } from "@/components/back-button";
 
 export default function AnimalsPage() {
   const [search, setSearch] = useState("");
@@ -33,7 +34,10 @@ export default function AnimalsPage() {
 
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold">{brand.nameBg}: Животни</h1>
+      <div className="flex items-center gap-2">
+        <BackButton />
+        <h1 className="text-2xl font-semibold">{brand.nameBg}: Животни</h1>
+      </div>
       <div className="flex gap-2 items-center">
         <input
           placeholder="Търсене по име, вид, порода, микрочип"

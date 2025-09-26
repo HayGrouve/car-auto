@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { brand } from "@/lib/brand";
 import type { OwnerDoc } from "@/types/owner";
 import { toast } from "sonner";
+import { BackButton } from "@/components/back-button";
 
 export default function OwnersPage() {
   const [search, setSearch] = useState("");
@@ -34,7 +35,10 @@ export default function OwnersPage() {
 
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold">{brand.nameBg}: Собственици</h1>
+      <div className="flex items-center gap-2">
+        <BackButton />
+        <h1 className="text-2xl font-semibold">{brand.nameBg}: Собственици</h1>
+      </div>
       <div className="flex gap-2 items-center">
         <input
           placeholder="Търсене по име, телефон, имейл"
