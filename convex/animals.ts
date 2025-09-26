@@ -50,4 +50,36 @@ export const create = mutation({
   },
 });
 
+export const getById = query({
+  args: { id: v.id("animals") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const update = mutation({
+  args: {
+    id: v.id("animals"),
+    name: v.optional(v.string()),
+    species: v.optional(v.string()),
+    breed: v.optional(v.union(v.string(), v.null())),
+    sex: v.optional(v.union(v.string(), v.null())),
+    neutered: v.optional(v.boolean()),
+    dob: v.optional(v.union(v.number(), v.null())),
+    microchip: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const patch: any = {};
+    if (args.name !== undefined) patch.name = args.name;
+    if (args.species !== undefined) patch.species = args.species;
+    if (args.breed !== undefined) patch.breed = args.breed;
+    if (args.sex !== undefined) patch.sex = args.sex;
+    if (args.neutered !== undefined) patch.neutered = args.neutered;
+    if (args.dob !== undefined) patch.dob = args.dob;
+    if (args.microchip !== undefined) patch.microchip = args.microchip?.trim() || null;
+    await ctx.db.patch(args.id, patch);
+    return { ok: true } as const;
+  },
+});
+
 

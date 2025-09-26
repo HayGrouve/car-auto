@@ -74,7 +74,7 @@ export default function AnimalsPage() {
             <div className="flex items-center gap-3">
               <PawPrint className="size-5 text-primary" aria-hidden />
               <div>
-                <div className="font-medium">{a.name} ({a.species})</div>
+                <a href={`/animals/${a._id}`} className="font-medium underline-offset-2 hover:underline">{a.name} ({a.species})</a>
                 <div className="text-muted-foreground flex items-center gap-3">
                   <span>{a.breed ?? ""}</span>
                   {a.microchip ? <span className="inline-flex items-center gap-1"><Hash className="size-4" />{a.microchip}</span> : null}
