@@ -44,6 +44,18 @@ export default function AnimalDetailPage() {
     }
   }
 
+  // Weights
+  const weights = useQuery(api.weights.listByAnimal, useMemo(() => ({ animalId: id }), [id])) as { _id: string; kg: number; notedAt?: number; createdAt: number }[] | undefined;
+  const addWeight = useMutation(api.weights.add);
+  const [kg, setKg] = useState<string>("");
+  async function onAddWeight(e: React.FormEvent) {
+    e.preventDefault();
+    const value = parseFloat(kg);
+    if (Number.isNaN(value) || value <= 0) { toast.error("Невалидно тегло"); return; }
+    const r = await addWeight({ animalId: id, kg: value });
+    if (r?.ok) { toast.success("Добавено тегло"); setKg(""); }
+  }
+
   const hasAnimal = AnimalDocSchema.safeParse(animalUnknown).success;
   if (!hasAnimal) return <main className="p-6 max-w-3xl mx-auto">Зареждане...</main>;
 
@@ -76,6 +88,29 @@ export default function AnimalDetailPage() {
           <Button type="button" variant="outline" onClick={() => router.back()}>Назад</Button>
         </div>
       </form>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-medium">Тегло</h2>
+        <form onSubmit={onAddWeight} className="flex items-end gap-2">
+          <div className="flex-1">
+            <Label htmlFor="kg">Килограми</Label>
+            <Input id="kg" inputMode="decimal" value={kg} onChange={(e) => setKg(e.target.value)} placeholder="напр. 12.4" />
+          </div>
+          <Button type="submit">Добави</Button>
+        </form>
+        <div className="border rounded-md divide-y">
+          {(weights ?? []).length === 0 ? (
+            <div className="p-3 text-sm text-muted-foreground">Няма записани тегла</div>
+          ) : (
+            (weights ?? []).map((w) => (
+              <div key={w._id} className="p-3 flex justify-between text-sm">
+                <span>{w.kg.toFixed(2)} кг</span>
+                <span className="text-muted-foreground">{new Date(w.notedAt ?? w.createdAt).toLocaleString()}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
     </main>
   );
 }
