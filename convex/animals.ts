@@ -82,4 +82,12 @@ export const update = mutation({
   },
 });
 
+export const listByOwner = query({
+  args: { ownerId: v.id("owners") },
+  handler: async (ctx, args) => {
+    const all = await ctx.db.query("animals").collect();
+    return all.filter((a: any) => a.ownerId === args.ownerId);
+  },
+});
+
 

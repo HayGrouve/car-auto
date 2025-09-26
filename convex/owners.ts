@@ -5,9 +5,10 @@ export const list = query({
   args: { search: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("owners").collect();
+    const filtered = all.filter((o: any) => !o.deletedAt);
     const search = args.search?.toLowerCase() ?? "";
-    if (!search) return all.sort((a: any, b: any) => b.createdAt - a.createdAt);
-    return all
+    if (!search) return filtered.sort((a: any, b: any) => b.createdAt - a.createdAt);
+    return filtered
       .filter((o: any) =>
         [o.name, o.phone, o.email].filter(Boolean).some((v: string) => v.toLowerCase().includes(search))
       )
@@ -81,6 +82,14 @@ export const update = mutation({
     if (args.address !== undefined) patch.address = args.address ?? null;
     if (args.gdprConsent !== undefined) patch.gdprConsent = args.gdprConsent;
     await ctx.db.patch(args.id, patch);
+    return { ok: true } as const;
+  },
+});
+
+export const softDelete = mutation({
+  args: { id: v.id("owners") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { deletedAt: Date.now() } as any);
     return { ok: true } as const;
   },
 });
