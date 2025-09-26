@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { brand } from "@/lib/brand";
-import { Menu, PawPrint, User, CalendarCheck, Receipt } from "lucide-react";
+import { Menu, PawPrint, User, CalendarCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function AppNav() {
@@ -16,9 +16,7 @@ export function AppNav() {
   const links = [
     { href: "/owners", label: "Собственици", icon: User },
     { href: "/animals", label: "Животни", icon: PawPrint },
-    // Future:
     { href: "/visits", label: "Посещения", icon: CalendarCheck },
-    { href: "/billing", label: "Каса", icon: Receipt },
   ];
 
   const NavLinks = ({ onClick }: { onClick?: () => void }) => (

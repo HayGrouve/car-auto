@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as animals from "../animals.js";
 import type * as owners from "../owners.js";
+import type * as visits from "../visits.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -27,6 +28,7 @@ import type * as owners from "../owners.js";
 declare const fullApi: ApiFromModules<{
   animals: typeof animals;
   owners: typeof owners;
+  visits: typeof visits;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,
