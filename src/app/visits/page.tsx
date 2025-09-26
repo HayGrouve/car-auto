@@ -3,6 +3,10 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandItem, CommandList, CommandEmpty } from "@/components/ui/command";
 import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import { CalendarCheck } from "lucide-react";
@@ -19,6 +23,11 @@ export default function VisitsPage() {
   const [o, setO] = useState("");
   const [a, setA] = useState("");
   const [p, setP] = useState("");
+  const [ownerSearch, setOwnerSearch] = useState("");
+  const [animalSearch, setAnimalSearch] = useState("");
+
+  const owners = useQuery(api.owners.list, useMemo(() => ({ search: ownerSearch }), [ownerSearch])) as { _id: string; name: string; phone: string }[] | undefined;
+  const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string }[] | undefined;
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -41,13 +50,71 @@ export default function VisitsPage() {
       </div>
 
       <form onSubmit={onCreate} className="grid md:grid-cols-4 gap-2">
-        <input className="border rounded-md px-3 h-10" placeholder="ownerId (временно)" value={ownerId} onChange={(e) => setOwnerId(e.target.value)} />
-        <input className="border rounded-md px-3 h-10" placeholder="animalId (по избор)" value={animalId} onChange={(e) => setAnimalId(e.target.value)} />
+        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div>
+            <Label>Собственик</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  {ownerId ? (owners ?? []).find((o) => o._id === ownerId)?.name : "Изберете собственик"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+                <Command>
+                  <CommandInput placeholder="Търси собственик..." value={ownerSearch} onValueChange={setOwnerSearch} />
+                  <CommandList>
+                    <CommandEmpty>Няма резултати</CommandEmpty>
+                    {(owners ?? []).map((o) => (
+                      <CommandItem key={o._id} value={o._id} onSelect={(v) => { setOwnerId(v); }}>
+                        {o.name} · {o.phone}
+                      </CommandItem>
+                    ))}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div>
+            <Label>Животно</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  {animalId ? (animals ?? []).find((a) => a._id === animalId)?.name : "Без животно"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+                <Command>
+                  <CommandInput placeholder="Търси животно..." value={animalSearch} onValueChange={setAnimalSearch} />
+                  <CommandList>
+                    <CommandEmpty>Няма резултати</CommandEmpty>
+                    {(animals ?? []).map((an) => (
+                      <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); }}>
+                        {an.name} ({an.species})
+                      </CommandItem>
+                    ))}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
         <div className="md:col-span-4 grid md:grid-cols-4 gap-2">
-          <textarea className="border rounded-md p-2" placeholder="S - Субективно" value={s} onChange={(e) => setS(e.target.value)} />
-          <textarea className="border rounded-md p-2" placeholder="O - Обективно" value={o} onChange={(e) => setO(e.target.value)} />
-          <textarea className="border rounded-md p-2" placeholder="A - Оценка" value={a} onChange={(e) => setA(e.target.value)} />
-          <textarea className="border rounded-md p-2" placeholder="P - План" value={p} onChange={(e) => setP(e.target.value)} />
+          <div>
+            <Label htmlFor="s">S - Субективно</Label>
+            <Textarea id="s" value={s} onChange={(e) => setS(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="o">O - Обективно</Label>
+            <Textarea id="o" value={o} onChange={(e) => setO(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="a">A - Оценка</Label>
+            <Textarea id="a" value={a} onChange={(e) => setA(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="p">P - План</Label>
+            <Textarea id="p" value={p} onChange={(e) => setP(e.target.value)} />
+          </div>
         </div>
         <div className="md:col-span-4"><Button type="submit">Ново посещение</Button></div>
       </form>

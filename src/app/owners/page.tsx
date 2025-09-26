@@ -3,8 +3,11 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { brand } from "@/lib/brand";
 import { User as UserIcon, ShieldCheck, Phone as PhoneIcon, Mail as MailIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { OwnerDoc } from "@/types/owner";
 import { toast } from "sonner";
 
@@ -47,12 +50,24 @@ export default function OwnersPage() {
         />
       </div>
       <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
-        <input name="name" placeholder="Име" className="border rounded-md px-3 h-10 md:col-span-1" required />
-        <input name="phone" placeholder="Телефон" className="border rounded-md px-3 h-10 md:col-span-1" required />
-        <input name="email" placeholder="Имейл" className="border rounded-md px-3 h-10 md:col-span-1" />
-        <input name="address" placeholder="Адрес" className="border rounded-md px-3 h-10 md:col-span-1" />
+        <div className="md:col-span-1">
+          <Label htmlFor="name">Име</Label>
+          <Input id="name" name="name" required />
+        </div>
+        <div className="md:col-span-1">
+          <Label htmlFor="phone">Телефон</Label>
+          <Input id="phone" name="phone" required />
+        </div>
+        <div className="md:col-span-1">
+          <Label htmlFor="email">Имейл</Label>
+          <Input id="email" name="email" />
+        </div>
+        <div className="md:col-span-1">
+          <Label htmlFor="address">Адрес</Label>
+          <Input id="address" name="address" />
+        </div>
         <label className="flex items-center gap-2 md:col-span-1">
-          <input type="checkbox" name="gdpr" />
+          <Checkbox name="gdpr" />
           <span className="text-sm inline-flex items-center gap-1"><ShieldCheck className="size-4 text-secondary" /> Съгласие (GDPR)</span>
         </label>
         <div className="md:col-span-5">

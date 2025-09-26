@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import type { AnimalDoc } from "@/types/animal";
@@ -46,10 +48,22 @@ export default function AnimalsPage() {
         />
       </div>
       <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
-        <input name="name" placeholder="Име" className="border rounded-md px-3 h-10" required />
-        <input name="species" placeholder="Вид" className="border rounded-md px-3 h-10" required />
-        <input name="breed" placeholder="Порода" className="border rounded-md px-3 h-10" />
-        <input name="microchip" placeholder="Микрочип" className="border rounded-md px-3 h-10" />
+        <div>
+          <Label htmlFor="aname">Име</Label>
+          <Input id="aname" name="name" required />
+        </div>
+        <div>
+          <Label htmlFor="species">Вид</Label>
+          <Input id="species" name="species" required />
+        </div>
+        <div>
+          <Label htmlFor="breed">Порода</Label>
+          <Input id="breed" name="breed" />
+        </div>
+        <div>
+          <Label htmlFor="microchip">Микрочип</Label>
+          <Input id="microchip" name="microchip" />
+        </div>
         <div>
           <Button type="submit">Добави животно</Button>
         </div>
