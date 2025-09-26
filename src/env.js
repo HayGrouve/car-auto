@@ -8,6 +8,7 @@ export const env = createEnv({
    */
   server: {
     NODE_ENV: z.enum(["development", "test", "production"]),
+    JWT_SECRET: z.string().min(32),
   },
 
   /**
@@ -25,6 +26,7 @@ export const env = createEnv({
    */
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
+    JWT_SECRET: process.env.JWT_SECRET,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**
