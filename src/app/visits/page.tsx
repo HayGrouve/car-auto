@@ -123,7 +123,7 @@ export default function VisitsPage() {
         {(visits ?? []).map((v) => (
           <div key={v._id} className="p-3 flex items-center justify-between text-sm">
             <div className="space-y-1">
-              <div className="font-medium">#{String(v._id)} - {new Date(v.createdAt).toLocaleString()}</div>
+              <a href={`/visits/${v._id}`} className="font-medium underline-offset-2 hover:underline">#{String(v._id)} - {new Date(v.createdAt).toLocaleString()}</a>
               <div className="text-muted-foreground">Статус: {v.status}</div>
             </div>
             {v.status === "draft" ? (

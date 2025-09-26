@@ -38,9 +38,38 @@ export const create = mutation({
 export const finalize = mutation({
   args: { id: v.id("visits") },
   handler: async (ctx, args) => {
-    const visit = await ctx.db.get(args.id as any);
+    const visit = await ctx.db.get(args.id);
     if (!visit) return { ok: false } as const;
-    await ctx.db.patch(args.id as any, { status: "finalized", updatedAt: Date.now() });
+    await ctx.db.patch(args.id, { status: "finalized", updatedAt: Date.now() });
+    return { ok: true } as const;
+  },
+});
+
+export const getById = query({
+  args: { id: v.id("visits") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const update = mutation({
+  args: {
+    id: v.id("visits"),
+    soap: v.optional(v.object({
+      s: v.optional(v.string()),
+      o: v.optional(v.string()),
+      a: v.optional(v.string()),
+      p: v.optional(v.string()),
+    })),
+    animalId: v.optional(v.union(v.id("animals"), v.null())),
+    status: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const patch: any = { updatedAt: Date.now() };
+    if (args.soap !== undefined) patch.soap = args.soap;
+    if (args.animalId !== undefined) patch.animalId = args.animalId;
+    if (args.status !== undefined) patch.status = args.status;
+    await ctx.db.patch(args.id, patch);
     return { ok: true } as const;
   },
 });
