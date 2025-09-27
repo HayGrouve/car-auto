@@ -7,6 +7,7 @@ export const OwnerDocSchema = z.object({
   email: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   gdprConsent: z.boolean().optional(),
+  legalHold: z.boolean().optional(),
   createdAt: z.number(),
 });
 

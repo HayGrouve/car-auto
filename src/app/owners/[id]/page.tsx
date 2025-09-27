@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import Link from "next/link";
 
 export default function OwnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -19,17 +20,18 @@ export default function OwnerDetailPage() {
   const ownerUnknown = useQuery(api.owners.getById, useMemo(() => ({ id }), [id])) as unknown;
   const update = useMutation(api.owners.update);
   const softDelete = useMutation(api.owners.softDelete);
+  const setLegalHold = useMutation(api.owners.setLegalHold) as unknown as (args: { id: string; legalHold: boolean }) => Promise<{ ok: boolean }>;
   const animals = useQuery(api.animals.listByOwner, useMemo(() => ({ ownerId: id }), [id])) as { _id: string; name: string; species: string }[] | undefined;
   const router = useRouter();
 
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", gdpr: false });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", gdpr: false, legalHold: false });
   const [hydrated, setHydrated] = useState(false);
   const parsed = OwnerDocSchema.safeParse(ownerUnknown);
   const owner = parsed.success ? parsed.data : null;
 
   useEffect(() => {
     if (!hydrated && owner) {
-      setForm({ name: owner.name ?? "", phone: owner.phone ?? "", email: owner.email ?? "", address: owner.address ?? "", gdpr: !!owner.gdprConsent });
+      setForm({ name: owner.name ?? "", phone: owner.phone ?? "", email: owner.email ?? "", address: owner.address ?? "", gdpr: !!owner.gdprConsent, legalHold: !!owner.legalHold });
       setHydrated(true);
     }
   }, [owner, hydrated]);
@@ -48,6 +50,9 @@ export default function OwnerDetailPage() {
   return (
     <main className="p-6 max-w-3xl mx-auto space-y-4">
       <h1 className="text-2xl font-semibold">{brand.nameBg}: Собственик</h1>
+      <p className="text-sm text-muted-foreground">
+        Прочетете нашата <Link className="underline underline-offset-2" href="/privacy">политика за поверителност</Link>.
+      </p>
       <form onSubmit={onSave} className="grid gap-3">
         <div>
           <Label htmlFor="name">Име</Label>
@@ -69,6 +74,18 @@ export default function OwnerDetailPage() {
           <Checkbox checked={form.gdpr} onCheckedChange={(checked) => setForm((f) => ({ ...f, gdpr: Boolean(checked) }))} />
           <span className="text-sm">Съгласие (GDPR)</span>
         </label>
+        <label className="flex items-center gap-2">
+          <Checkbox
+            checked={form.legalHold}
+            onCheckedChange={async (checked) => {
+              const next = Boolean(checked);
+              setForm((f) => ({ ...f, legalHold: next }));
+              const r = await setLegalHold({ id, legalHold: next });
+              if (r?.ok) toast.success(next ? "Правен запор активиран" : "Правен запор изключен");
+            }}
+          />
+          <span className="text-sm">Правен запор (Legal Hold)</span>
+        </label>
         <div className="flex gap-2">
           <Button type="submit">Запази</Button>
           <Button type="button" variant="secondary" onClick={() => {
@@ -89,10 +106,10 @@ export default function OwnerDetailPage() {
               <DialogHeader>
                 <DialogTitle>Потвърдете изтриване</DialogTitle>
               </DialogHeader>
-              <p className="text-sm text-muted-foreground">Това действие ще скрие собственика от списъците (soft delete). Данните няма да са видими в UI.</p>
+              <p className="text-sm text-muted-foreground">Това действие ще скрие собственика от списъците (soft delete). Данните няма да са видими в UI. Ако е активиран правен запор, изтриването е блокирано.</p>
               <DialogFooter>
                 <Button variant="ghost">Отказ</Button>
-                <Button variant="destructive" onClick={async () => { const r = await softDelete({ id }); if (r?.ok) { toast.success("Изтрито"); router.push("/owners"); } }}>Потвърди</Button>
+                <Button variant="destructive" onClick={async () => { const r = await softDelete({ id }); if (r?.ok) { toast.success("Изтрито"); router.push("/owners"); } else { toast.error("Не може да се изтрие поради правен запор"); } }}>Потвърди</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

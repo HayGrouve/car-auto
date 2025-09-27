@@ -52,8 +52,19 @@ export const create = mutation({
       gdprConsent: args.gdprConsent,
       createdAt: now,
       deletedAt: null,
+      // GDPR: legal hold prevents deletion when enabled
+      legalHold: false,
     } as any;
     const id = await ctx.db.insert("owners", doc);
+    // Audit log: owner created
+    await ctx.db.insert("auditLogs", {
+      at: now,
+      actor: "system",
+      entityType: "owner",
+      entityId: id,
+      action: "create",
+      details: { name: doc.name, phone: doc.phone },
+    } as any);
     return { ok: true, id } as any;
   },
 });
@@ -82,6 +93,14 @@ export const update = mutation({
     if (args.address !== undefined) patch.address = args.address ?? null;
     if (args.gdprConsent !== undefined) patch.gdprConsent = args.gdprConsent;
     await ctx.db.patch(args.id, patch);
+    await ctx.db.insert("auditLogs", {
+      at: Date.now(),
+      actor: "system",
+      entityType: "owner",
+      entityId: args.id,
+      action: "update",
+      details: Object.keys(patch),
+    } as any);
     return { ok: true } as const;
   },
 });
@@ -89,7 +108,33 @@ export const update = mutation({
 export const softDelete = mutation({
   args: { id: v.id("owners") },
   handler: async (ctx, args) => {
+    const current = await ctx.db.get(args.id);
+    if (current?.legalHold) {
+      return { ok: false, reason: "legalHold" } as any;
+    }
     await ctx.db.patch(args.id, { deletedAt: Date.now() } as any);
+    await ctx.db.insert("auditLogs", {
+      at: Date.now(),
+      actor: "system",
+      entityType: "owner",
+      entityId: args.id,
+      action: "softDelete",
+    } as any);
+    return { ok: true } as const;
+  },
+});
+
+export const setLegalHold = mutation({
+  args: { id: v.id("owners"), legalHold: v.boolean() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { legalHold: args.legalHold } as any);
+    await ctx.db.insert("auditLogs", {
+      at: Date.now(),
+      actor: "system",
+      entityType: "owner",
+      entityId: args.id,
+      action: args.legalHold ? "legalHold:on" : "legalHold:off",
+    } as any);
     return { ok: true } as const;
   },
 });

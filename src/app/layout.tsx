@@ -5,6 +5,7 @@ import { ConvexClientProvider } from "./ConvexClientProvider";
 import { brand } from "@/lib/brand";
 import { Toaster } from "sonner";
 import { AppNav } from "@/components/app-nav";
+import { Footer } from "@/components/ui/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,7 +38,10 @@ export default function RootLayout({
       >
         <ConvexClientProvider>
           <AppNav />
-          <div className="pt-14">{children}</div>
+          <div className="pt-14 min-h-screen flex flex-col">
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
           <Toaster richColors position="top-center" />
         </ConvexClientProvider>
       </body>
