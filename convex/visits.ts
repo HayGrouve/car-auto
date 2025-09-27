@@ -2,10 +2,26 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const list = query({
-  args: { limit: v.optional(v.number()) },
+  args: {
+    limit: v.optional(v.number()),
+    status: v.optional(v.string()),
+    ownerId: v.optional(v.id("owners")),
+    animalId: v.optional(v.id("animals")),
+    from: v.optional(v.number()),
+    to: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     const items = await ctx.db.query("visits").collect();
-    const sorted = items.sort((a: any, b: any) => b.createdAt - a.createdAt);
+    const filtered = items.filter((vDoc: any) => {
+      if (args.status && vDoc.status !== args.status) return false;
+      if (args.ownerId && String(vDoc.ownerId) !== String(args.ownerId)) return false;
+      if (args.animalId && String(vDoc.animalId) !== String(args.animalId)) return false;
+      const t = vDoc.datetime ?? vDoc.createdAt;
+      if (args.from && t < args.from) return false;
+      if (args.to && t > args.to) return false;
+      return true;
+    });
+    const sorted = filtered.sort((a: any, b: any) => (b.datetime ?? b.createdAt) - (a.datetime ?? a.createdAt));
     return sorted.slice(0, args.limit ?? 50);
   },
 });
@@ -14,6 +30,7 @@ export const create = mutation({
   args: {
     ownerId: v.id("owners"),
     animalId: v.optional(v.id("animals")),
+    datetime: v.optional(v.number()),
     soap: v.object({
       s: v.optional(v.string()),
       o: v.optional(v.string()),
@@ -28,6 +45,7 @@ export const create = mutation({
     const id = await ctx.db.insert("visits", {
       ownerId: args.ownerId,
       animalId: args.animalId ?? null,
+      datetime: args.datetime ?? now,
       soap: args.soap,
       procedures: args.procedures ?? [],
       medications: args.medications ?? [],
@@ -59,6 +77,7 @@ export const getById = query({
 export const update = mutation({
   args: {
     id: v.id("visits"),
+    datetime: v.optional(v.union(v.number(), v.null())),
     soap: v.optional(v.object({
       s: v.optional(v.string()),
       o: v.optional(v.string()),
@@ -72,6 +91,7 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     const patch: any = { updatedAt: Date.now() };
+    if (args.datetime !== undefined) patch.datetime = args.datetime;
     if (args.soap !== undefined) patch.soap = args.soap;
     if (args.animalId !== undefined) patch.animalId = args.animalId;
     if (args.status !== undefined) patch.status = args.status;

@@ -7,12 +7,13 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { VisitDocSchema, type VisitDoc } from "@/types/visit";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
-import { fmtDateTimeBG } from "@/lib/format";
+// import { fmtDateTimeBG } from "@/lib/format";
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
@@ -26,6 +27,7 @@ export default function VisitDetailPage() {
   const [o, setO] = useState("");
   const [a, setA] = useState("");
   const [p, setP] = useState("");
+  const [dt, setDt] = useState<string>("");
   const [hydrated, setHydrated] = useState(false);
   const [procedures, setProcedures] = useState<string[]>([]);
   const [medications, setMedications] = useState<string[]>([]);
@@ -44,6 +46,8 @@ export default function VisitDetailPage() {
       setO(visit.soap?.o ?? "");
       setA(visit.soap?.a ?? "");
       setP(visit.soap?.p ?? "");
+      const baseTs = (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
+      setDt(baseTs ? new Date(baseTs).toISOString().slice(0,16) : "");
       setAnimalId(visit.animalId ?? null);
       setProcedures(visit.procedures ?? []);
       setMedications(visit.medications ?? []);
@@ -55,6 +59,7 @@ export default function VisitDetailPage() {
     e.preventDefault();
     const res = (await update({
       id,
+      datetime: dt ? Date.parse(dt) : undefined,
       soap: { s, o, a, p },
       procedures,
       medications,
@@ -101,6 +106,10 @@ export default function VisitDetailPage() {
           </Popover>
         </div>
         <div className="md:col-span-4 grid md:grid-cols-4 gap-2">
+          <div>
+            <Label htmlFor="datetime">Дата/час</Label>
+            <Input id="datetime" type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} />
+          </div>
           <div>
             <Label htmlFor="s">S - Субективно</Label>
             <Textarea id="s" value={s} onChange={(e) => setS(e.target.value)} />

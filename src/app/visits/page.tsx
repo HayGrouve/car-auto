@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandItem, CommandList, CommandEmpty } from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
 import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import { CalendarCheck } from "lucide-react";
@@ -14,7 +15,10 @@ import type { VisitDoc } from "@/types/visit";
 import { fmtDateTimeBG } from "@/lib/format";
 
 export default function VisitsPage() {
-  const visits = useQuery(api.visits.list, useMemo(() => ({ limit: 50 }), [])) as VisitDoc[] | undefined;
+  const [status, setStatus] = useState<string>("");
+  const [from, setFrom] = useState<string>("");
+  const [to, setTo] = useState<string>("");
+  const visits = useQuery(api.visits.list, useMemo(() => ({ limit: 50, status: status || undefined, from: from ? Date.parse(from) : undefined, to: to ? Date.parse(to) : undefined }), [status, from, to])) as VisitDoc[] | undefined;
   const createVisit = useMutation(api.visits.create) as unknown as (args: { ownerId: string; animalId?: string; soap: { s?: string; o?: string; a?: string; p?: string } }) => Promise<{ ok: boolean }>;
   const finalizeVisit = useMutation(api.visits.finalize) as unknown as (args: { id: string }) => Promise<{ ok: boolean }>;
 
@@ -28,7 +32,7 @@ export default function VisitsPage() {
   const [animalSearch, setAnimalSearch] = useState("");
 
   const owners = useQuery(api.owners.list, useMemo(() => ({ search: ownerSearch }), [ownerSearch])) as { _id: string; name: string; phone: string }[] | undefined;
-  const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string }[] | undefined;
+  const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -99,6 +103,33 @@ export default function VisitsPage() {
             </Popover>
           </div>
         </div>
+        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div>
+            <Label>Статус</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">{status || "Всички"}</Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+                <Command>
+                  <CommandList>
+                    <CommandItem onSelect={() => setStatus("")}>Всички</CommandItem>
+                    <CommandItem onSelect={() => setStatus("draft")}>Чернова</CommandItem>
+                    <CommandItem onSelect={() => setStatus("finalized")}>Приключени</CommandItem>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div>
+            <Label htmlFor="from">От дата</Label>
+            <Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="to">До дата</Label>
+            <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+        </div>
         <div className="md:col-span-4 grid md:grid-cols-4 gap-2">
           <div>
             <Label htmlFor="s">S - Субективно</Label>
@@ -124,7 +155,7 @@ export default function VisitsPage() {
         {(visits ?? []).map((v) => (
           <div key={v._id} className="p-3 flex items-center justify-between text-sm">
             <div className="space-y-1">
-              <a href={`/visits/${v._id}`} className="font-medium underline-offset-2 hover:underline">#{String(v._id)} - {fmtDateTimeBG(v.createdAt)}</a>
+              <a href={`/visits/${v._id}`} className="font-medium underline-offset-2 hover:underline">#{String(v._id)} - {fmtDateTimeBG((v as VisitDoc & { datetime?: number }).datetime ?? v.createdAt)}</a>
               <div className="text-muted-foreground">Статус: {v.status}</div>
             </div>
             {v.status === "draft" ? (

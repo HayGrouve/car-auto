@@ -5,6 +5,7 @@ export const VisitDocSchema = z.object({
   ownerId: z.string(),
   animalId: z.string().nullable().optional(),
   status: z.string(),
+  datetime: z.number().optional(),
   soap: z
     .object({ s: z.string().optional(), o: z.string().optional(), a: z.string().optional(), p: z.string().optional() })
     .optional(),

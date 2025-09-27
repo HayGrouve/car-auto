@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { brand } from "@/lib/brand";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import Link from "next/link";
-import { fmtDateTimeBG } from "@/lib/format";
+// import { fmtDateTimeBG } from "@/lib/format";
 
 export default function OwnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -21,7 +21,7 @@ export default function OwnerDetailPage() {
   const ownerUnknown = useQuery(api.owners.getById, useMemo(() => ({ id }), [id])) as unknown;
   const update = useMutation(api.owners.update);
   const softDelete = useMutation(api.owners.softDelete);
-  const setLegalHold = useMutation(api.owners.setLegalHold) as unknown as (args: { id: string; legalHold: boolean }) => Promise<{ ok: boolean }>;
+  const setLegalHold = useMutation(api.owners.setLegalHold);
   const animals = useQuery(api.animals.listByOwner, useMemo(() => ({ ownerId: id }), [id])) as { _id: string; name: string; species: string }[] | undefined;
   const router = useRouter();
 
@@ -81,8 +81,8 @@ export default function OwnerDetailPage() {
             onCheckedChange={async (checked) => {
               const next = Boolean(checked);
               setForm((f) => ({ ...f, legalHold: next }));
-              const r = await setLegalHold({ id, legalHold: next });
-              if (r?.ok) toast.success(next ? "Правен запор активиран" : "Правен запор изключен");
+              const res = (await setLegalHold({ id, legalHold: next })) as { ok: boolean };
+              if (res.ok) toast.success(next ? "Правен запор активиран" : "Правен запор изключен");
             }}
           />
           <span className="text-sm">Правен запор (Legal Hold)</span>
@@ -109,7 +109,7 @@ export default function OwnerDetailPage() {
               owner.address ?? "",
               String(!!owner.gdprConsent),
               new Date(owner.createdAt).toISOString()
-            ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",");
+            ].map((v: unknown) => `"${String(v).replace(/"/g, '""')}"`).join(",");
             const csv = header + "\n" + row + "\n";
             const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
             const url = URL.createObjectURL(blob);
@@ -146,7 +146,7 @@ export default function OwnerDetailPage() {
               <p className="text-sm text-muted-foreground">Това действие ще скрие собственика от списъците (soft delete). Данните няма да са видими в UI. Ако е активиран правен запор, изтриването е блокирано.</p>
               <DialogFooter>
                 <Button variant="ghost">Отказ</Button>
-                <Button variant="destructive" onClick={async () => { const r = await softDelete({ id }); if (r?.ok) { toast.success("Изтрито"); router.push("/owners"); } else { toast.error("Не може да се изтрие поради правен запор"); } }}>Потвърди</Button>
+                <Button variant="destructive" onClick={async () => { const r = (await softDelete({ id })) as { ok: boolean } | { ok: false; reason?: string }; if ("ok" in r && r.ok) { toast.success("Изтрито"); router.push("/owners"); } else { toast.error("Не може да се изтрие поради правен запор"); } }}>Потвърди</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -164,40 +164,15 @@ export default function OwnerDetailPage() {
                 <div>
                   <a href={`/animals/${a._id}`} className="underline underline-offset-2">{a.name} ({a.species})</a>
                 </div>
+                <div>
+                  <a href={`/visits?ownerId=${id}&animalId=${a._id}`} className="text-primary underline underline-offset-2">Ново посещение</a>
+                </div>
               </div>
             ))
           )}
         </div>
       </section>
-      {Boolean((api as any).auditLogs?.listByEntity) && (
-        <OwnerAuditLog ownerId={id} />
-      )}
+      {/* Аудит лог: наличен след активиране на Convex codegen за auditLogs */}
     </main>
   );
 }
-
-function OwnerAuditLog({ ownerId }: { ownerId: Id<"owners"> }) {
-  const logs = useQuery((api as any).auditLogs.listByEntity, useMemo(() => ({ entityType: 'owner', entityId: ownerId, limit: 10 }), [ownerId])) as { at?: number; action?: string; actor?: string; details?: any }[] | undefined;
-  return (
-    <section className="space-y-2">
-      <h2 className="text-lg font-medium">Аудит лог</h2>
-      <div className="border rounded-md divide-y">
-        {(logs ?? []).length === 0 ? (
-          <div className="p-3 text-sm text-muted-foreground">Няма записи</div>
-        ) : (
-          (logs ?? []).map((l, i) => (
-            <div key={i} className="p-3 flex items-center justify-between text-sm">
-              <div className="space-y-0.5">
-                <div className="font-medium">{l.action ?? 'действие'}</div>
-                <div className="text-muted-foreground">{l.actor ?? 'system'}</div>
-              </div>
-                <div className="text-muted-foreground">{l.at ? fmtDateTimeBG(l.at) : ''}</div>
-            </div>
-          ))
-        )}
-      </div>
-    </section>
-  );
-}
-
-

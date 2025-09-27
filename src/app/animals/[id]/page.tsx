@@ -92,6 +92,9 @@ export default function AnimalDetailPage() {
 
       <section className="space-y-2">
         <h2 className="text-lg font-medium">Тегло</h2>
+        <div>
+          <a href={`/visits?animalId=${id}`} className="text-primary underline underline-offset-2">Ново посещение за това животно</a>
+        </div>
         <form onSubmit={onAddWeight} className="flex items-end gap-2">
           <div className="flex-1">
             <Label htmlFor="kg">Килограми</Label>

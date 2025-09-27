@@ -9,6 +9,7 @@ export const AnimalDocSchema = z.object({
   sex: z.string().nullable().optional(),
   neutered: z.boolean().optional(),
   dob: z.number().nullable().optional(),
+  ownerId: z.string().nullable().optional(),
   createdAt: z.number(),
 });
 
