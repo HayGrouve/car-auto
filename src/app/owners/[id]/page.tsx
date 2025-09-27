@@ -98,6 +98,42 @@ export default function OwnerDetailPage() {
             a.click();
             URL.revokeObjectURL(url);
           }}>Експорт JSON</Button>
+          <Button type="button" variant="secondary" onClick={() => {
+            const header = ["id","name","phone","email","address","gdprConsent","createdAt"].join(",");
+            const row = [
+              owner._id,
+              owner.name ?? "",
+              owner.phone ?? "",
+              owner.email ?? "",
+              owner.address ?? "",
+              String(!!owner.gdprConsent),
+              new Date(owner.createdAt).toISOString()
+            ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",");
+            const csv = header + "\n" + row + "\n";
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `owner-${owner._id}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}>Експорт CSV</Button>
+          <Button type="button" variant="outline" onClick={() => {
+            const w = window.open("", "_blank", "noopener,noreferrer");
+            if (!w) return;
+            const html = `<!doctype html><html lang=\"bg\"><head><meta charset=\"utf-8\" /><title>Собственик ${owner.name}</title><style>body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px} h1{font-size:20px;margin:0 0 12px} table{border-collapse:collapse;width:100%} td{border:1px solid #ddd;padding:8px;vertical-align:top} .muted{color:#666}</style></head><body><h1>Данни за собственик</h1><table><tbody>
+              <tr><td class=\"muted\">ID</td><td>${owner._id}</td></tr>
+              <tr><td class=\"muted\">Име</td><td>${owner.name ?? ""}</td></tr>
+              <tr><td class=\"muted\">Телефон</td><td>${owner.phone ?? ""}</td></tr>
+              <tr><td class=\"muted\">Имейл</td><td>${owner.email ?? ""}</td></tr>
+              <tr><td class=\"muted\">Адрес</td><td>${owner.address ?? ""}</td></tr>
+              <tr><td class=\"muted\">Съгласие (GDPR)</td><td>${owner.gdprConsent ? "Да" : "Не"}</td></tr>
+              <tr><td class=\"muted\">Създаден</td><td>${new Date(owner.createdAt).toLocaleString()}</td></tr>
+            </tbody></table><script>window.onload = () => window.print()</script></body></html>`;
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
+          }}>Печат (PDF)</Button>
           <Dialog>
             <DialogTrigger asChild>
               <Button type="button" variant="destructive">Изтрий (GDPR)</Button>
@@ -132,7 +168,34 @@ export default function OwnerDetailPage() {
           )}
         </div>
       </section>
+      {Boolean((api as any).auditLogs?.listByEntity) && (
+        <OwnerAuditLog ownerId={id} />
+      )}
     </main>
+  );
+}
+
+function OwnerAuditLog({ ownerId }: { ownerId: Id<"owners"> }) {
+  const logs = useQuery((api as any).auditLogs.listByEntity, useMemo(() => ({ entityType: 'owner', entityId: ownerId, limit: 10 }), [ownerId])) as { at?: number; action?: string; actor?: string; details?: any }[] | undefined;
+  return (
+    <section className="space-y-2">
+      <h2 className="text-lg font-medium">Аудит лог</h2>
+      <div className="border rounded-md divide-y">
+        {(logs ?? []).length === 0 ? (
+          <div className="p-3 text-sm text-muted-foreground">Няма записи</div>
+        ) : (
+          (logs ?? []).map((l, i) => (
+            <div key={i} className="p-3 flex items-center justify-between text-sm">
+              <div className="space-y-0.5">
+                <div className="font-medium">{l.action ?? 'действие'}</div>
+                <div className="text-muted-foreground">{l.actor ?? 'system'}</div>
+              </div>
+              <div className="text-muted-foreground">{l.at ? new Date(l.at).toLocaleString() : ''}</div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
   );
 }
 

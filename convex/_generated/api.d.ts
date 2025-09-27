@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as animals from "../animals.js";
+import type * as auditLogs from "../auditLogs.js";
 import type * as owners from "../owners.js";
 import type * as visits from "../visits.js";
 import type * as weights from "../weights.js";
@@ -28,6 +29,7 @@ import type * as weights from "../weights.js";
  */
 declare const fullApi: ApiFromModules<{
   animals: typeof animals;
+  auditLogs: typeof auditLogs;
   owners: typeof owners;
   visits: typeof visits;
   weights: typeof weights;

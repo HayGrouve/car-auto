@@ -69,6 +69,7 @@ export default function OwnersPage() {
         <label className="flex items-center gap-2 md:col-span-1">
           <Checkbox name="gdpr" />
           <span className="text-sm inline-flex items-center gap-1">Съгласие (GDPR)</span>
+          <a href="/privacy" className="text-xs text-muted-foreground underline underline-offset-2">Политика</a>
         </label>
         <div className="md:col-span-5">
           <Button type="submit">Добави собственик</Button>
