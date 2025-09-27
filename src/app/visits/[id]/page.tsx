@@ -21,6 +21,7 @@ export default function VisitDetailPage() {
   const visitUnknown = useQuery(api.visits.getById, useMemo(() => ({ id }), [id])) as unknown;
   const update = useMutation(api.visits.update);
   const finalize = useMutation(api.visits.finalize);
+  const createVisit = useMutation(api.visits.create) as unknown as (args: { ownerId: string; animalId?: string | null; datetime?: number; soap: { s?: string; o?: string; a?: string; p?: string }; procedures?: string[]; medications?: string[] }) => Promise<{ ok: boolean; id: string }>;
   const router = useRouter();
 
   const [s, setS] = useState("");
@@ -73,6 +74,22 @@ export default function VisitDetailPage() {
     if (res?.ok) {
       toast.success("Приключено");
       router.push("/visits");
+    }
+  }
+
+  async function onDuplicate() {
+    if (!visit) return;
+    const res = await createVisit({
+      ownerId: visit.ownerId,
+      animalId: visit.animalId ?? undefined,
+      datetime: Date.now(),
+      soap: { s, o, a, p },
+      procedures,
+      medications,
+    });
+    if (res?.ok && res.id) {
+      toast.success("Дублирано посещение");
+      router.push(`/visits/${res.id}`);
     }
   }
 
@@ -132,7 +149,21 @@ export default function VisitDetailPage() {
             <Label>Процедури</Label>
             <div className="flex items-end gap-2">
               <div className="flex-1">
-                <input className="border rounded-md px-3 h-10 w-full" value={procInput} onChange={(e) => setProcInput(e.target.value)} placeholder="напр. Ваксинация" />
+                <input
+                  className="border rounded-md px-3 h-10 w-full"
+                  value={procInput}
+                  onChange={(e) => setProcInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const v = procInput.trim();
+                      if (!v) return;
+                      setProcedures((arr) => (arr.includes(v) ? arr : [...arr, v]));
+                      setProcInput("");
+                    }
+                  }}
+                  placeholder="напр. Ваксинация"
+                />
               </div>
               <Button
                 type="button"
@@ -140,7 +171,7 @@ export default function VisitDetailPage() {
                 onClick={() => {
                   const v = procInput.trim();
                   if (!v) return;
-                  setProcedures((arr) => [...arr, v]);
+                  setProcedures((arr) => (arr.includes(v) ? arr : [...arr, v]));
                   setProcInput("");
                 }}
               >
@@ -160,7 +191,21 @@ export default function VisitDetailPage() {
             <Label>Медикаменти</Label>
             <div className="flex items-end gap-2">
               <div className="flex-1">
-                <input className="border rounded-md px-3 h-10 w-full" value={medInput} onChange={(e) => setMedInput(e.target.value)} placeholder="напр. Амоксицилин" />
+                <input
+                  className="border rounded-md px-3 h-10 w-full"
+                  value={medInput}
+                  onChange={(e) => setMedInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const v = medInput.trim();
+                      if (!v) return;
+                      setMedications((arr) => (arr.includes(v) ? arr : [...arr, v]));
+                      setMedInput("");
+                    }
+                  }}
+                  placeholder="напр. Амоксицилин"
+                />
               </div>
               <Button
                 type="button"
@@ -168,7 +213,7 @@ export default function VisitDetailPage() {
                 onClick={() => {
                   const v = medInput.trim();
                   if (!v) return;
-                  setMedications((arr) => [...arr, v]);
+                  setMedications((arr) => (arr.includes(v) ? arr : [...arr, v]));
                   setMedInput("");
                 }}
               >
@@ -188,6 +233,7 @@ export default function VisitDetailPage() {
         <div className="md:col-span-4 flex gap-2">
           <Button type="submit">Запази</Button>
           <Button type="button" variant="outline" onClick={onFinalize}>Приключи</Button>
+          <Button type="button" variant="secondary" onClick={onDuplicate}>Дублирай</Button>
           <Button type="button" variant="ghost" onClick={() => router.back()}>Назад</Button>
         </div>
       </form>

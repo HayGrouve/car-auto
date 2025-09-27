@@ -17,4 +17,16 @@ export const VisitDocSchema = z.object({
 
 export type VisitDoc = z.infer<typeof VisitDocSchema>;
 
+export const InvoiceDocSchema = z.object({
+  _id: z.string(),
+  ownerId: z.string(),
+  animalId: z.string().nullable().optional(),
+  items: z.array(z.object({ description: z.string(), quantity: z.number(), price: z.number(), total: z.number() })),
+  total: z.number(),
+  paid: z.boolean(),
+  paidAt: z.number().nullable().optional(),
+  createdAt: z.number(),
+});
+export type InvoiceDoc = z.infer<typeof InvoiceDocSchema>;
+
 

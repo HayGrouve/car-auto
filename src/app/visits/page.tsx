@@ -138,6 +138,22 @@ function VisitsPageInner() {
             <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
         </div>
+        <div className="md:col-span-4 grid grid-cols-1 gap-2">
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {ownerId && (
+              <button type="button" onClick={() => setOwnerId("")} className="inline-flex items-center gap-1 rounded-full border px-2 py-1 hover:bg-accent">
+                <span>Собственик: {(owners ?? []).find((o) => o._id === ownerId)?.name ?? ownerId}</span>
+                <span aria-hidden>✕</span>
+              </button>
+            )}
+            {animalId && (
+              <button type="button" onClick={() => setAnimalId("")} className="inline-flex items-center gap-1 rounded-full border px-2 py-1 hover:bg-accent">
+                <span>Животно: {(animals ?? []).find((an) => an._id === animalId)?.name ?? animalId}</span>
+                <span aria-hidden>✕</span>
+              </button>
+            )}
+          </div>
+        </div>
         <div className="md:col-span-4 grid md:grid-cols-4 gap-2">
           <div>
             <Label htmlFor="s">S - Субективно</Label>
