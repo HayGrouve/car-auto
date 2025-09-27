@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { brand } from "@/lib/brand";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import Link from "next/link";
+import { fmtDateTimeBG } from "@/lib/format";
 
 export default function OwnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -190,7 +191,7 @@ function OwnerAuditLog({ ownerId }: { ownerId: Id<"owners"> }) {
                 <div className="font-medium">{l.action ?? 'действие'}</div>
                 <div className="text-muted-foreground">{l.actor ?? 'system'}</div>
               </div>
-              <div className="text-muted-foreground">{l.at ? new Date(l.at).toLocaleString() : ''}</div>
+                <div className="text-muted-foreground">{l.at ? fmtDateTimeBG(l.at) : ''}</div>
             </div>
           ))
         )}

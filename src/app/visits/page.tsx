@@ -11,6 +11,7 @@ import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import { CalendarCheck } from "lucide-react";
 import type { VisitDoc } from "@/types/visit";
+import { fmtDateTimeBG } from "@/lib/format";
 
 export default function VisitsPage() {
   const visits = useQuery(api.visits.list, useMemo(() => ({ limit: 50 }), [])) as VisitDoc[] | undefined;
@@ -123,7 +124,7 @@ export default function VisitsPage() {
         {(visits ?? []).map((v) => (
           <div key={v._id} className="p-3 flex items-center justify-between text-sm">
             <div className="space-y-1">
-              <a href={`/visits/${v._id}`} className="font-medium underline-offset-2 hover:underline">#{String(v._id)} - {new Date(v.createdAt).toLocaleString()}</a>
+              <a href={`/visits/${v._id}`} className="font-medium underline-offset-2 hover:underline">#{String(v._id)} - {fmtDateTimeBG(v.createdAt)}</a>
               <div className="text-muted-foreground">Статус: {v.status}</div>
             </div>
             {v.status === "draft" ? (

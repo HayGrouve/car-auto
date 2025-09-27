@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
+import { fmtDateTimeBG } from "@/lib/format";
 
 export default function AnimalDetailPage() {
   const params = useParams<{ id: string }>();
@@ -105,7 +106,7 @@ export default function AnimalDetailPage() {
             (weights ?? []).map((w) => (
               <div key={w._id} className="p-3 flex justify-between text-sm">
                 <span>{w.kg.toFixed(2)} кг</span>
-                <span className="text-muted-foreground">{new Date(w.notedAt ?? w.createdAt).toLocaleString()}</span>
+                <span className="text-muted-foreground">{fmtDateTimeBG(w.notedAt ?? w.createdAt)}</span>
               </div>
             ))
           )}

@@ -10,6 +10,7 @@ import { User as UserIcon, ShieldCheck, Phone as PhoneIcon, Mail as MailIcon } f
 import { Checkbox } from "@/components/ui/checkbox";
 import type { OwnerDoc } from "@/types/owner";
 import { toast } from "sonner";
+import { fmtDateTimeBG } from "@/lib/format";
 
 export default function OwnersPage() {
   const [search, setSearch] = useState("");
@@ -90,7 +91,7 @@ export default function OwnersPage() {
             </div>
             <div className="flex items-center gap-2">
               {o.gdprConsent ? <ShieldCheck className="size-4 text-secondary" aria-label="GDPR" /> : null}
-              <span className="text-muted-foreground">{new Date(o.createdAt).toLocaleString()}</span>
+              <span className="text-muted-foreground">{fmtDateTimeBG(o.createdAt)}</span>
             </div>
           </div>
         ))}

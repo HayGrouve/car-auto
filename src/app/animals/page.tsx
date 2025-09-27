@@ -9,6 +9,7 @@ import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import type { AnimalDoc } from "@/types/animal";
 import { PawPrint, Hash } from "lucide-react";
+import { fmtDateTimeBG } from "@/lib/format";
 
 export default function AnimalsPage() {
   const [search, setSearch] = useState("");
@@ -81,7 +82,7 @@ export default function AnimalsPage() {
                 </div>
               </div>
             </div>
-            <div className="text-muted-foreground">{new Date(a.createdAt).toLocaleString()}</div>
+            <div className="text-muted-foreground">{fmtDateTimeBG(a.createdAt)}</div>
           </div>
         ))}
       </div>

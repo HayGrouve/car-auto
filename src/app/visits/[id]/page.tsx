@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
+import { fmtDateTimeBG } from "@/lib/format";
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
