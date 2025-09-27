@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { CalendarCheck } from "lucide-react";
 import type { VisitDoc } from "@/types/visit";
 import { fmtDateTimeBG } from "@/lib/format";
 
-export default function VisitsPage() {
+function VisitsPageInner() {
   const [status, setStatus] = useState<string>("");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
@@ -24,6 +25,13 @@ export default function VisitsPage() {
 
   const [ownerId, setOwnerId] = useState("");
   const [animalId, setAnimalId] = useState("");
+  const params = useSearchParams();
+  useEffect(() => {
+    const o = params.get("ownerId") ?? "";
+    const a = params.get("animalId") ?? "";
+    if (o) setOwnerId(o);
+    if (a) setAnimalId(a);
+  }, [params]);
   const [s, setS] = useState("");
   const [o, setO] = useState("");
   const [a, setA] = useState("");
@@ -167,6 +175,14 @@ export default function VisitsPage() {
         ))}
       </div>
     </main>
+  );
+}
+
+export default function VisitsPage() {
+  return (
+    <Suspense fallback={<main className="p-6 max-w-5xl mx-auto">Зареждане...</main>}>
+      <VisitsPageInner />
+    </Suspense>
   );
 }
 

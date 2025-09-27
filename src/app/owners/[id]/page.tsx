@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { brand } from "@/lib/brand";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import Link from "next/link";
-// import { fmtDateTimeBG } from "@/lib/format";
+import { fmtDateTimeBG } from "@/lib/format";
 
 export default function OwnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -172,7 +172,35 @@ export default function OwnerDetailPage() {
           )}
         </div>
       </section>
-      {/* Аудит лог: наличен след активиране на Convex codegen за auditLogs */}
+      <OwnerAuditLog ownerId={id} />
     </main>
+  );
+}
+
+type AuditLogEntry = { at?: number; action?: string; actor?: string; details?: unknown };
+function OwnerAuditLog({ ownerId }: { ownerId: Id<"owners"> }) {
+  const logs = useQuery(
+    api.auditLogs.listByEntity,
+    useMemo(() => ({ entityType: "owner", entityId: String(ownerId), limit: 10 }), [ownerId])
+  ) as AuditLogEntry[] | undefined;
+  return (
+    <section className="space-y-2">
+      <h2 className="text-lg font-medium">Аудит лог</h2>
+      <div className="border rounded-md divide-y">
+        {(logs ?? []).length === 0 ? (
+          <div className="p-3 text-sm text-muted-foreground">Няма записи</div>
+        ) : (
+          (logs ?? []).map((l, i) => (
+            <div key={i} className="p-3 flex items-center justify-between text-sm">
+              <div className="space-y-0.5">
+                <div className="font-medium">{l.action ?? "действие"}</div>
+                <div className="text-muted-foreground">{l.actor ?? "system"}</div>
+              </div>
+              <div className="text-muted-foreground">{l.at ? fmtDateTimeBG(l.at) : ""}</div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
   );
 }
