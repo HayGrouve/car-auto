@@ -10,11 +10,19 @@ import { toast } from "sonner";
 import type { AnimalDoc } from "@/types/animal";
 import { PawPrint, Hash } from "lucide-react";
 import { fmtDateTimeBG } from "@/lib/format";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
 
 export default function AnimalsPage() {
   const [search, setSearch] = useState("");
   const animals = useQuery(api.animals.list, useMemo(() => ({ search }), [search])) as AnimalDoc[] | undefined;
   const createAnimal = useMutation(api.animals.create);
+  const [ownerId, setOwnerId] = useState("");
+  const [ownerSearch, setOwnerSearch] = useState("");
+  const owners = useQuery(
+    api.owners.list,
+    useMemo(() => ({ search: ownerSearch }), [ownerSearch])
+  ) as { _id: string; name: string; phone?: string }[] | undefined;
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,7 +32,7 @@ export default function AnimalsPage() {
     const species = (fd.get("species") ?? "") as string;
     const breed = (fd.get("breed") ?? undefined) as string | undefined;
     const microchip = (fd.get("microchip") ?? undefined) as string | undefined;
-    const res = (await createAnimal({ name, species, breed, microchip })) as
+    const res = (await createAnimal({ name, species, breed, microchip, ownerId: ownerId || undefined })) as
       | { ok: true; id: string }
       | { ok: false; reason: "microchip" };
     if (!res?.ok) {
@@ -33,6 +41,8 @@ export default function AnimalsPage() {
     }
     toast.success("Животното е добавено успешно");
     form.reset();
+    setOwnerId("");
+    setOwnerSearch("");
   }
 
   return (
@@ -48,7 +58,7 @@ export default function AnimalsPage() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+      <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
         <div>
           <Label htmlFor="aname">Име</Label>
           <Input id="aname" name="name" required />
@@ -64,6 +74,29 @@ export default function AnimalsPage() {
         <div>
           <Label htmlFor="microchip">Микрочип</Label>
           <Input id="microchip" name="microchip" />
+        </div>
+        <div>
+          <Label>Собственик</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                {ownerId ? (owners ?? []).find((o) => o._id === ownerId)?.name : "Без собственик"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+              <Command>
+                <CommandInput placeholder="Търси собственик..." value={ownerSearch} onValueChange={setOwnerSearch} />
+                <CommandList>
+                  <CommandEmpty>Няма резултати</CommandEmpty>
+                  {(owners ?? []).map((o) => (
+                    <CommandItem key={o._id} value={o._id} onSelect={(v) => { setOwnerId(v); }}>
+                      {o.name}{o.phone ? ` · ${o.phone}` : ""}
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
           <Button type="submit">Добави животно</Button>

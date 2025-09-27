@@ -173,6 +173,7 @@ export default function OwnerDetailPage() {
         </div>
       </section>
       <OwnerAuditLog ownerId={id} />
+      <OwnerInvoices ownerId={id} />
     </main>
   );
 }
@@ -197,6 +198,33 @@ function OwnerAuditLog({ ownerId }: { ownerId: Id<"owners"> }) {
                 <div className="text-muted-foreground">{l.actor ?? "system"}</div>
               </div>
               <div className="text-muted-foreground">{l.at ? fmtDateTimeBG(l.at) : ""}</div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  );
+}
+
+function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
+  const invoices = useQuery(
+    api.invoices.list,
+    useMemo(() => ({ ownerId, unpaidOnly: undefined as unknown as boolean | undefined }), [ownerId])
+  ) as { _id: string; total: number; paid?: boolean; createdAt: number }[] | undefined;
+  return (
+    <section className="space-y-2">
+      <h2 className="text-lg font-medium">Фактури</h2>
+      <div className="border rounded-md divide-y">
+        {(invoices ?? []).length === 0 ? (
+          <div className="p-3 text-sm text-muted-foreground">Няма фактури</div>
+        ) : (
+          (invoices ?? []).map((inv) => (
+            <div key={inv._id} className="p-3 flex items-center justify-between text-sm">
+              <div>#{String(inv._id)} · {fmtDateTimeBG(inv.createdAt)}</div>
+              <div className="flex items-center gap-3">
+                <span className="text-muted-foreground">{inv.paid ? "Платена" : "Неплатена"}</span>
+                <a className="text-primary underline underline-offset-2" href="/invoices">Отвори</a>
+              </div>
             </div>
           ))
         )}

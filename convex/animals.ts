@@ -67,6 +67,7 @@ export const update = mutation({
     neutered: v.optional(v.boolean()),
     dob: v.optional(v.union(v.number(), v.null())),
     microchip: v.optional(v.union(v.string(), v.null())),
+    ownerId: v.optional(v.union(v.id("owners"), v.null())),
   },
   handler: async (ctx, args) => {
     const patch: any = {};
@@ -77,6 +78,7 @@ export const update = mutation({
     if (args.neutered !== undefined) patch.neutered = args.neutered;
     if (args.dob !== undefined) patch.dob = args.dob;
     if (args.microchip !== undefined) patch.microchip = args.microchip?.trim() || null;
+    if (args.ownerId !== undefined) patch.ownerId = args.ownerId;
     await ctx.db.patch(args.id, patch);
     return { ok: true } as const;
   },

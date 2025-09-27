@@ -12,15 +12,19 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
 import { fmtDateTimeBG } from "@/lib/format";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 export default function AnimalDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id as Id<"animals">;
   const animalUnknown = useQuery(api.animals.getById, useMemo(() => ({ id }), [id])) as unknown;
   const update = useMutation(api.animals.update);
+  const owners = useQuery(api.owners.list, useMemo(() => ({ search: "" }), [])) as { _id: string; name: string; phone?: string }[] | undefined;
   const router = useRouter();
 
-  const [form, setForm] = useState({ name: "", species: "", breed: "", microchip: "", neutered: false });
+  const [form, setForm] = useState({ name: "", species: "", breed: "", microchip: "", neutered: false, ownerId: "" });
+  const [ownerOpen, setOwnerOpen] = useState(false);
 
   useEffect(() => {
     const parsed = AnimalDocSchema.safeParse(animalUnknown);
@@ -32,13 +36,14 @@ export default function AnimalDetailPage() {
         breed: a.breed ?? "",
         microchip: a.microchip ?? "",
         neutered: Boolean(a.neutered),
+        ownerId: (a as any).ownerId ?? "",
       });
     }
   }, [animalUnknown]);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
-    const res = (await update({ id, name: form.name, species: form.species, breed: form.breed || null, microchip: form.microchip || null, neutered: form.neutered })) as { ok: boolean };
+    const res = (await update({ id, name: form.name, species: form.species, breed: form.breed || null, microchip: form.microchip || null, neutered: form.neutered, ownerId: (form.ownerId || null) as any })) as { ok: boolean };
     if (res?.ok) {
       toast.success("Записът е обновен");
       router.push("/animals");
@@ -67,6 +72,29 @@ export default function AnimalDetailPage() {
         <div>
           <Label htmlFor="name">Име</Label>
           <Input id="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+        </div>
+        <div>
+          <Label>Собственик</Label>
+          <Popover open={ownerOpen} onOpenChange={setOwnerOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                {form.ownerId ? (owners ?? []).find((o) => o._id === form.ownerId)?.name : "Без собственик"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+              <Command>
+                <CommandInput placeholder="Търси собственик..." />
+                <CommandList>
+                  <CommandEmpty>Няма резултати</CommandEmpty>
+                  {(owners ?? []).map((o) => (
+                    <CommandItem key={o._id} value={o._id} onSelect={(v) => { setForm((f) => ({ ...f, ownerId: v })); setOwnerOpen(false); }}>
+                      {o.name}{o.phone ? ` · ${o.phone}` : ""}
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
           <Label htmlFor="species">Вид</Label>

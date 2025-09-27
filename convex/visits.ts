@@ -88,6 +88,7 @@ export const update = mutation({
     status: v.optional(v.string()),
     procedures: v.optional(v.array(v.string())),
     medications: v.optional(v.array(v.string())),
+    ownerId: v.optional(v.union(v.id("owners"), v.null())),
   },
   handler: async (ctx, args) => {
     const patch: any = { updatedAt: Date.now() };
@@ -97,6 +98,7 @@ export const update = mutation({
     if (args.status !== undefined) patch.status = args.status;
     if (args.procedures !== undefined) patch.procedures = args.procedures;
     if (args.medications !== undefined) patch.medications = args.medications;
+    if (args.ownerId !== undefined) patch.ownerId = args.ownerId;
     await ctx.db.patch(args.id, patch);
     return { ok: true } as const;
   },

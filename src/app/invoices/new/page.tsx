@@ -7,14 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const params = useSearchParams();
   const [ownerSearch, setOwnerSearch] = useState("");
   const [animalSearch, setAnimalSearch] = useState("");
   const owners = useQuery(api.owners.list, useMemo(() => ({ search: ownerSearch }), [ownerSearch])) as { _id: string; name: string; phone: string }[] | undefined;
-  const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string }[] | undefined;
+  const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
   const create = useMutation(api.invoices.create) as unknown as (args: { ownerId: string; animalId?: string; items: { description: string; quantity: number; price: number; total: number }[] }) => Promise<{ ok: boolean; id: string }>;
 
   const [ownerId, setOwnerId] = useState("");
@@ -36,6 +37,16 @@ export default function NewInvoicePage() {
       target.total = Number.isFinite(q * p) ? q * p : 0;
       return copy;
     });
+  }
+
+  // Prefill from query params (single-run during first render)
+  if (!ownerId) {
+    const qpOwner = params.get("ownerId") ?? "";
+    if (qpOwner) setOwnerId(qpOwner);
+  }
+  if (!animalId) {
+    const qpAnimal = params.get("animalId") ?? "";
+    if (qpAnimal) setAnimalId(qpAnimal);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -83,9 +94,11 @@ export default function NewInvoicePage() {
                   <CommandInput placeholder="Търси животно..." value={animalSearch} onValueChange={setAnimalSearch} />
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
-                    {(animals ?? []).map((an) => (
-                      <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); }}>{an.name} ({an.species})</CommandItem>
-                    ))}
+                    {(animals ?? [])
+                      .filter((an) => !ownerId || String(an.ownerId) === String(ownerId))
+                      .map((an) => (
+                        <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); }}>{an.name} ({an.species})</CommandItem>
+                      ))}
                   </CommandList>
                 </Command>
               </PopoverContent>

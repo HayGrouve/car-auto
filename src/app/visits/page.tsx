@@ -19,12 +19,25 @@ function VisitsPageInner() {
   const [status, setStatus] = useState<string>("");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
-  const visits = useQuery(api.visits.list, useMemo(() => ({ limit: 50, status: status || undefined, from: from ? Date.parse(from) : undefined, to: to ? Date.parse(to) : undefined }), [status, from, to])) as VisitDoc[] | undefined;
+  const [ownerId, setOwnerId] = useState("");
+  const [animalId, setAnimalId] = useState("");
+  const visits = useQuery(
+    api.visits.list,
+    useMemo(
+      () => ({
+        limit: 50,
+        status: status || undefined,
+        ownerId: ownerId || undefined,
+        animalId: animalId || undefined,
+        from: from ? Date.parse(from) : undefined,
+        to: to ? Date.parse(to) : undefined,
+      }),
+      [status, ownerId, animalId, from, to]
+    )
+  ) as VisitDoc[] | undefined;
   const createVisit = useMutation(api.visits.create) as unknown as (args: { ownerId: string; animalId?: string; soap: { s?: string; o?: string; a?: string; p?: string } }) => Promise<{ ok: boolean }>;
   const finalizeVisit = useMutation(api.visits.finalize) as unknown as (args: { id: string }) => Promise<{ ok: boolean }>;
 
-  const [ownerId, setOwnerId] = useState("");
-  const [animalId, setAnimalId] = useState("");
   const params = useSearchParams();
   useEffect(() => {
     const o = params.get("ownerId") ?? "";
@@ -40,7 +53,13 @@ function VisitsPageInner() {
   const [animalSearch, setAnimalSearch] = useState("");
 
   const owners = useQuery(api.owners.list, useMemo(() => ({ search: ownerSearch }), [ownerSearch])) as { _id: string; name: string; phone: string }[] | undefined;
-  const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
+  const animals = useQuery(
+    api.animals.list,
+    useMemo(
+      () => ({ search: animalSearch }),
+      [animalSearch]
+    )
+  ) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -78,7 +97,7 @@ function VisitsPageInner() {
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
                     {(owners ?? []).map((o) => (
-                      <CommandItem key={o._id} value={o._id} onSelect={(v) => { setOwnerId(v); }}>
+                      <CommandItem key={o._id} value={o._id} onSelect={(v) => { setOwnerId(v); setAnimalId(""); }}>
                         {o.name} · {o.phone}
                       </CommandItem>
                     ))}
@@ -100,8 +119,10 @@ function VisitsPageInner() {
                   <CommandInput placeholder="Търси животно..." value={animalSearch} onValueChange={setAnimalSearch} />
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
-                    {(animals ?? []).map((an) => (
-                      <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); }}>
+                    {(animals ?? [])
+                      .filter((an) => !ownerId || String(an.ownerId) === String(ownerId))
+                      .map((an) => (
+                    <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); const chosen = (animals ?? []).find((x) => x._id === v); if (chosen?.ownerId) setOwnerId(String(chosen.ownerId)); }}>
                         {an.name} ({an.species})
                       </CommandItem>
                     ))}
@@ -182,11 +203,19 @@ function VisitsPageInner() {
               <a href={`/visits/${v._id}`} className="font-medium underline-offset-2 hover:underline">#{String(v._id)} - {fmtDateTimeBG((v as VisitDoc & { datetime?: number }).datetime ?? v.createdAt)}</a>
               <div className="text-muted-foreground">Статус: {v.status}</div>
             </div>
-            {v.status === "draft" ? (
-              <Button variant="outline" onClick={async () => { const r = await finalizeVisit({ id: v._id }); if (r?.ok) toast.success("Приключено"); }}>
-                Приключи
-              </Button>
-            ) : null}
+            <div className="flex items-center gap-2">
+              {v.status === "draft" ? (
+                <Button variant="outline" onClick={async () => { const r = await finalizeVisit({ id: v._id }); if (r?.ok) toast.success("Приключено"); }}>
+                  Приключи
+                </Button>
+              ) : null}
+              <a
+                className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+                href={`/invoices/new?ownerId=${encodeURIComponent((v as any).ownerId)}${(v as any).animalId ? `&animalId=${encodeURIComponent((v as any).animalId)}` : ""}`}
+              >
+                Нова фактура
+              </a>
+            </div>
           </div>
         ))}
       </div>

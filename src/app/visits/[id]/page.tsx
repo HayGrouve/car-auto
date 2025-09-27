@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
-// import { fmtDateTimeBG } from "@/lib/format";
+import { fmtDateTimeBG } from "@/lib/format";
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
@@ -36,7 +36,9 @@ export default function VisitDetailPage() {
   const [medInput, setMedInput] = useState("");
   const [animalId, setAnimalId] = useState<string | null>(null);
   const [animalSearch, setAnimalSearch] = useState("");
-  const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string }[] | undefined;
+  const owners = useQuery(api.owners.list, useMemo(() => ({ search: "" }), [])) as { _id: string; name: string; phone?: string }[] | undefined;
+  const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
+  const [ownerId, setOwnerId] = useState<string>("");
 
   const parsed = VisitDocSchema.safeParse(visitUnknown);
   const visit: VisitDoc | null = parsed.success ? parsed.data : null;
@@ -50,6 +52,7 @@ export default function VisitDetailPage() {
       const baseTs = (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
       setDt(baseTs ? new Date(baseTs).toISOString().slice(0,16) : "");
       setAnimalId(visit.animalId ?? null);
+      setOwnerId((visit as any).ownerId ?? "");
       setProcedures(visit.procedures ?? []);
       setMedications(visit.medications ?? []);
       setHydrated(true);
@@ -65,6 +68,7 @@ export default function VisitDetailPage() {
       procedures,
       medications,
       animalId: animalId ? (animalId as Id<"animals">) : null,
+      ownerId: (ownerId || null) as any,
     })) as { ok: boolean };
     if (res?.ok) toast.success("Записът е обновен");
   }
@@ -100,6 +104,28 @@ export default function VisitDetailPage() {
       <h1 className="text-2xl font-semibold">{brand.nameBg}: Посещение</h1>
       <form onSubmit={onSave} className="grid md:grid-cols-4 gap-2">
         <div className="md:col-span-2">
+          <Label>Собственик</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                {ownerId ? (owners ?? []).find((o) => o._id === ownerId)?.name : "Изберете собственик"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+              <Command>
+                <CommandList>
+                  <CommandEmpty>Няма резултати</CommandEmpty>
+                  {(owners ?? []).map((o) => (
+                    <CommandItem key={o._id} value={o._id} onSelect={(v) => { setOwnerId(v); setAnimalId(null); }}>
+                      {o.name}{o.phone ? ` · ${o.phone}` : ""}
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="md:col-span-2">
           <Label>Животно</Label>
           <Popover>
             <PopoverTrigger asChild>
@@ -112,8 +138,8 @@ export default function VisitDetailPage() {
                 <CommandInput placeholder="Търси животно..." value={animalSearch} onValueChange={setAnimalSearch} />
                 <CommandList>
                   <CommandEmpty>Няма резултати</CommandEmpty>
-                  {(animals ?? []).map((an) => (
-                    <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); }}>
+                  {(animals ?? []).filter((an) => !ownerId || String(an.ownerId) === String(ownerId)).map((an) => (
+                    <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); const chosen = (animals ?? []).find((x) => x._id === v); if (chosen?.ownerId) setOwnerId(String(chosen.ownerId)); }}>
                       {an.name} ({an.species})
                     </CommandItem>
                   ))}
@@ -124,8 +150,20 @@ export default function VisitDetailPage() {
         </div>
         <div className="md:col-span-4 grid md:grid-cols-4 gap-2">
           <div>
+            <Label>Статус</Label>
+            <div className="h-10 flex items-center px-3 rounded-md border text-sm bg-muted/30">
+              {visit.status}
+            </div>
+          </div>
+          <div>
             <Label htmlFor="datetime">Дата/час</Label>
             <Input id="datetime" type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} />
+          </div>
+          <div className="md:col-span-2">
+            <Label>Създадено</Label>
+            <div className="h-10 flex items-center px-3 rounded-md border text-sm bg-muted/30">
+              {fmtDateTimeBG(visit.createdAt)}
+            </div>
           </div>
           <div>
             <Label htmlFor="s">S - Субективно</Label>
@@ -149,8 +187,7 @@ export default function VisitDetailPage() {
             <Label>Процедури</Label>
             <div className="flex items-end gap-2">
               <div className="flex-1">
-                <input
-                  className="border rounded-md px-3 h-10 w-full"
+                <Input
                   value={procInput}
                   onChange={(e) => setProcInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -191,8 +228,7 @@ export default function VisitDetailPage() {
             <Label>Медикаменти</Label>
             <div className="flex items-end gap-2">
               <div className="flex-1">
-                <input
-                  className="border rounded-md px-3 h-10 w-full"
+                <Input
                   value={medInput}
                   onChange={(e) => setMedInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -232,8 +268,14 @@ export default function VisitDetailPage() {
         </div>
         <div className="md:col-span-4 flex gap-2">
           <Button type="submit">Запази</Button>
-          <Button type="button" variant="outline" onClick={onFinalize}>Приключи</Button>
+          <Button type="button" variant="outline" onClick={onFinalize} disabled={visit.status !== "draft"}>Приключи</Button>
           <Button type="button" variant="secondary" onClick={onDuplicate}>Дублирай</Button>
+          <a
+            className="inline-flex items-center rounded-md border px-3 py-2 text-sm hover:bg-accent"
+            href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(visit.animalId)}` : ""}`}
+          >
+            Нова фактура
+          </a>
           <Button type="button" variant="ghost" onClick={() => router.back()}>Назад</Button>
         </div>
       </form>

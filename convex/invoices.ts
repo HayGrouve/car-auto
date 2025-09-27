@@ -2,11 +2,12 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const list = query({
-  args: { unpaidOnly: v.optional(v.boolean()) },
+  args: { unpaidOnly: v.optional(v.boolean()), ownerId: v.optional(v.id("owners")) },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("invoices").collect();
     let filtered = all;
-    if (args.unpaidOnly) filtered = all.filter((i: any) => !i.paid);
+    if (args.unpaidOnly) filtered = filtered.filter((i: any) => !i.paid);
+    if (args.ownerId) filtered = filtered.filter((i: any) => String(i.ownerId) === String(args.ownerId));
     return filtered.sort((a: any, b: any) => b.createdAt - a.createdAt);
   },
 });
