@@ -211,7 +211,7 @@ function VisitsPageInner() {
               ) : null}
               <a
                 className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
-                href={`/invoices/new?ownerId=${encodeURIComponent((v as any).ownerId)}${(v as any).animalId ? `&animalId=${encodeURIComponent((v as any).animalId)}` : ""}`}
+                href={`/invoices/new?ownerId=${encodeURIComponent((v as any).ownerId)}${(v as any).animalId ? `&animalId=${encodeURIComponent((v as any).animalId)}` : ""}&visitId=${encodeURIComponent((v as any)._id)}`}
               >
                 Нова фактура
               </a>

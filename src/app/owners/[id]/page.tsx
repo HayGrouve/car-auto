@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { brand } from "@/lib/brand";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import Link from "next/link";
-import { fmtDateTimeBG } from "@/lib/format";
+import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
 
 export default function OwnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -207,23 +207,54 @@ function OwnerAuditLog({ ownerId }: { ownerId: Id<"owners"> }) {
 }
 
 function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
+  const [unpaidOnly, setUnpaidOnly] = useState(false);
   const invoices = useQuery(
     api.invoices.list,
-    useMemo(() => ({ ownerId, unpaidOnly: undefined as unknown as boolean | undefined }), [ownerId])
-  ) as { _id: string; total: number; paid?: boolean; createdAt: number }[] | undefined;
+    useMemo(() => ({ ownerId, unpaidOnly }), [ownerId, unpaidOnly])
+  ) as { _id: string; total: number; paid?: boolean; paidAt?: number | null; createdAt: number }[] | undefined;
+  const markPaid = useMutation(api.invoices.markPaid) as unknown as (args: { id: string }) => Promise<{ ok: boolean }>;
+  const [loading, setLoading] = useState<string | null>(null);
+  const totals = (invoices ?? []).reduce(
+    (acc, inv) => {
+      if (inv.paid) acc.paid += inv.total; else acc.unpaid += inv.total;
+      return acc;
+    },
+    { paid: 0, unpaid: 0 }
+  );
   return (
     <section className="space-y-2">
-      <h2 className="text-lg font-medium">Фактури</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-medium">Фактури</h2>
+        <div className="text-sm text-muted-foreground flex items-center gap-3">
+          <span>Неплатени: {fmtNumberBG(totals.unpaid, { style: "currency", currency: "BGN" })}</span>
+          <span>Платени: {fmtNumberBG(totals.paid, { style: "currency", currency: "BGN" })}</span>
+          <label className="inline-flex items-center gap-2">
+            <input type="checkbox" checked={unpaidOnly} onChange={(e) => setUnpaidOnly(e.target.checked)} />
+            Само неплатени
+          </label>
+        </div>
+      </div>
       <div className="border rounded-md divide-y">
         {(invoices ?? []).length === 0 ? (
           <div className="p-3 text-sm text-muted-foreground">Няма фактури</div>
         ) : (
           (invoices ?? []).map((inv) => (
-            <div key={inv._id} className="p-3 flex items-center justify-between text-sm">
-              <div>#{String(inv._id)} · {fmtDateTimeBG(inv.createdAt)}</div>
-              <div className="flex items-center gap-3">
-                <span className="text-muted-foreground">{inv.paid ? "Платена" : "Неплатена"}</span>
-                <a className="text-primary underline underline-offset-2" href="/invoices">Отвори</a>
+            <div key={inv._id} className="p-3 grid md:grid-cols-6 gap-2 items-center text-sm">
+              <div className="md:col-span-3">
+                <div className="font-medium">#{String(inv._id)} · {fmtDateTimeBG(inv.createdAt)}</div>
+                <div className="text-xs text-muted-foreground">{inv.paid ? `Платена${inv.paidAt ? ` · ${fmtDateTimeBG(inv.paidAt)}` : ""}` : "Неплатена"}</div>
+              </div>
+              <div className="md:col-span-2 text-right font-medium">
+                {fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}
+              </div>
+              <div className="md:col-span-1 text-right">
+                {inv.paid ? null : (
+                  <Button
+                    variant="outline"
+                    disabled={loading === inv._id}
+                    onClick={async () => { setLoading(inv._id); const r = await markPaid({ id: inv._id }); setLoading(null); }}
+                  >Маркирай платена</Button>
+                )}
               </div>
             </div>
           ))

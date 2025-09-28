@@ -2,12 +2,19 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const list = query({
-  args: { unpaidOnly: v.optional(v.boolean()), ownerId: v.optional(v.id("owners")) },
+  args: {
+    unpaidOnly: v.optional(v.boolean()),
+    ownerId: v.optional(v.id("owners")),
+    from: v.optional(v.number()),
+    to: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("invoices").collect();
     let filtered = all;
     if (args.unpaidOnly) filtered = filtered.filter((i: any) => !i.paid);
     if (args.ownerId) filtered = filtered.filter((i: any) => String(i.ownerId) === String(args.ownerId));
+    if (args.from) filtered = filtered.filter((i: any) => i.createdAt >= args.from!);
+    if (args.to) filtered = filtered.filter((i: any) => i.createdAt <= args.to!);
     return filtered.sort((a: any, b: any) => b.createdAt - a.createdAt);
   },
 });
@@ -16,6 +23,7 @@ export const create = mutation({
   args: {
     ownerId: v.id("owners"),
     animalId: v.optional(v.id("animals")),
+    visitId: v.optional(v.id("visits")),
     items: v.array(v.object({ description: v.string(), quantity: v.number(), price: v.number(), total: v.number() })),
   },
   handler: async (ctx, args) => {
@@ -24,6 +32,7 @@ export const create = mutation({
     const id = await ctx.db.insert("invoices", {
       ownerId: args.ownerId,
       animalId: args.animalId ?? null,
+      visitId: args.visitId ?? null,
       items: args.items,
       total,
       paid: false,

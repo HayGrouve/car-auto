@@ -16,13 +16,14 @@ export default function NewInvoicePage() {
   const [animalSearch, setAnimalSearch] = useState("");
   const owners = useQuery(api.owners.list, useMemo(() => ({ search: ownerSearch }), [ownerSearch])) as { _id: string; name: string; phone: string }[] | undefined;
   const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
-  const create = useMutation(api.invoices.create) as unknown as (args: { ownerId: string; animalId?: string; items: { description: string; quantity: number; price: number; total: number }[] }) => Promise<{ ok: boolean; id: string }>;
+  const create = useMutation(api.invoices.create) as unknown as (args: { ownerId: string; animalId?: string; visitId?: string; items: { description: string; quantity: number; price: number; total: number }[] }) => Promise<{ ok: boolean; id: string }>;
 
   const [ownerId, setOwnerId] = useState("");
   const [animalId, setAnimalId] = useState("");
   const [items, setItems] = useState<{ description: string; quantity: string; price: string; total: number }[]>([
     { description: "", quantity: "1", price: "0", total: 0 }
   ]);
+  const visitId = (typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("visitId") ?? "") : "");
 
   function recalcTotal(idx: number, next?: Partial<{ description: string; quantity: string; price: string }>) {
     setItems((arr) => {
@@ -55,7 +56,7 @@ export default function NewInvoicePage() {
     const payloadItems = items
       .filter((it) => it.description.trim())
       .map((it) => ({ description: it.description.trim(), quantity: parseFloat(it.quantity || "0"), price: parseFloat(it.price || "0"), total: it.total }));
-    const res = await create({ ownerId, animalId: animalId || undefined, items: payloadItems });
+    const res = await create({ ownerId, animalId: animalId || undefined, visitId: visitId || undefined, items: payloadItems });
     if (res?.ok && res.id) router.push("/invoices");
   }
 

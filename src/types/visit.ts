@@ -21,6 +21,7 @@ export const InvoiceDocSchema = z.object({
   _id: z.string(),
   ownerId: z.string(),
   animalId: z.string().nullable().optional(),
+  visitId: z.string().nullable().optional(),
   items: z.array(z.object({ description: z.string(), quantity: z.number(), price: z.number(), total: z.number() })),
   total: z.number(),
   paid: z.boolean(),

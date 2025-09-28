@@ -97,6 +97,65 @@ export default function VisitDetailPage() {
     }
   }
 
+  function onPrint() {
+    if (!visit) return;
+    const soapRows = [
+      { label: "S - Субективно", value: s },
+      { label: "O - Обективно", value: o },
+      { label: "A - Оценка", value: a },
+      { label: "P - План", value: p },
+    ]
+      .filter((row) => (row.value ?? "").trim() !== "")
+      .map((row) => `<tr><td class=\"muted\">${row.label}</td><td>${(row.value ?? "").replace(/</g, "&lt;")}</td></tr>`) 
+      .join("");
+    const procedureRows = (procedures ?? [])
+      .map((pr) => `<li>${String(pr).replace(/</g, "&lt;")}</li>`) 
+      .join("");
+    const medRows = (medications ?? [])
+      .map((md) => `<li>${String(md).replace(/</g, "&lt;")}</li>`) 
+      .join("");
+    const when = (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
+    const html = `<!doctype html>
+      <html lang=\"bg\">
+        <head>
+          <meta charset=\"utf-8\" />
+          <title>Посещение #${String(visit._id)}</title>
+          <style>
+            body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px;color:#111}
+            h1{font-size:20px;margin:0 0 12px}
+            table{border-collapse:collapse;width:100%;margin-top:12px}
+            th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
+            .muted{color:#666;width:180px}
+            .section{margin-top:16px}
+          </style>
+        </head>
+        <body>
+          <h1>Посещение #${String(visit._id)}</h1>
+          <div class=\"muted\">Дата/час: ${new Date(when).toLocaleString('bg-BG')}</div>
+          <div class=\"muted\">Статус: ${visit.status}</div>
+          <table>
+            <tbody>
+              ${soapRows}
+            </tbody>
+          </table>
+          <div class=\"section\">
+            <div><strong>Процедури</strong></div>
+            <ul>${procedureRows || '<li class=\"muted\">(няма)</li>'}</ul>
+          </div>
+          <div class=\"section\">
+            <div><strong>Медикаменти</strong></div>
+            <ul>${medRows || '<li class=\"muted\">(няма)</li>'}</ul>
+          </div>
+          <script>window.onload = () => window.print()</script>
+        </body>
+      </html>`;
+    const w = window.open("", "_blank", "noopener,noreferrer");
+    if (!w) return;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+
   if (!visit) return <main className="p-6 max-w-3xl mx-auto">Зареждане...</main>;
 
   return (
@@ -270,9 +329,10 @@ export default function VisitDetailPage() {
           <Button type="submit">Запази</Button>
           <Button type="button" variant="outline" onClick={onFinalize} disabled={visit.status !== "draft"}>Приключи</Button>
           <Button type="button" variant="secondary" onClick={onDuplicate}>Дублирай</Button>
+          <Button type="button" variant="ghost" onClick={onPrint}>Печат</Button>
           <a
             className="inline-flex items-center rounded-md border px-3 py-2 text-sm hover:bg-accent"
-            href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(visit.animalId)}` : ""}`}
+            href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(visit.animalId)}` : ""}&visitId=${encodeURIComponent(visit._id)}`}
           >
             Нова фактура
           </a>
