@@ -52,7 +52,7 @@ export default function VisitDetailPage() {
       const baseTs = (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
       setDt(baseTs ? new Date(baseTs).toISOString().slice(0,16) : "");
       setAnimalId(visit.animalId ?? null);
-      setOwnerId((visit as any).ownerId ?? "");
+      setOwnerId(visit.ownerId ?? "");
       setProcedures(visit.procedures ?? []);
       setMedications(visit.medications ?? []);
       setHydrated(true);
@@ -68,7 +68,7 @@ export default function VisitDetailPage() {
       procedures,
       medications,
       animalId: animalId ? (animalId as Id<"animals">) : null,
-      ownerId: (ownerId || null) as any,
+      ownerId: (ownerId || null) as Id<"owners"> | null,
     })) as { ok: boolean };
     if (res?.ok) toast.success("Записът е обновен");
   }

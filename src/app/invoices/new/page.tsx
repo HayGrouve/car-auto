@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function NewInvoicePage() {
+function NewInvoicePageInner() {
   const router = useRouter();
   const params = useSearchParams();
   const [ownerSearch, setOwnerSearch] = useState("");
@@ -23,7 +23,17 @@ export default function NewInvoicePage() {
   const [items, setItems] = useState<{ description: string; quantity: string; price: string; total: number }[]>([
     { description: "", quantity: "1", price: "0", total: 0 }
   ]);
-  const visitId = (typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("visitId") ?? "") : "");
+  const [visitId, setVisitId] = useState("");
+
+  // Prefill from query params
+  useEffect(() => {
+    const qpOwner = params.get("ownerId") ?? "";
+    const qpAnimal = params.get("animalId") ?? "";
+    const qpVisit = params.get("visitId") ?? "";
+    if (qpOwner) setOwnerId(qpOwner);
+    if (qpAnimal) setAnimalId(qpAnimal);
+    if (qpVisit) setVisitId(qpVisit);
+  }, [params]);
 
   function recalcTotal(idx: number, next?: Partial<{ description: string; quantity: string; price: string }>) {
     setItems((arr) => {
@@ -139,4 +149,10 @@ export default function NewInvoicePage() {
   );
 }
 
-
+export default function NewInvoicePage() {
+  return (
+    <Suspense fallback={<main className="p-6 max-w-3xl mx-auto">Зареждане...</main>}>
+      <NewInvoicePageInner />
+    </Suspense>
+  );
+}

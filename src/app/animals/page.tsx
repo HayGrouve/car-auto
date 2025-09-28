@@ -12,6 +12,7 @@ import { PawPrint, Hash } from "lucide-react";
 import { fmtDateTimeBG } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
+import type { Id } from "@/../convex/_generated/dataModel";
 
 export default function AnimalsPage() {
   const [search, setSearch] = useState("");
@@ -32,7 +33,7 @@ export default function AnimalsPage() {
     const species = (fd.get("species") ?? "") as string;
     const breed = (fd.get("breed") ?? undefined) as string | undefined;
     const microchip = (fd.get("microchip") ?? undefined) as string | undefined;
-    const res = (await createAnimal({ name, species, breed, microchip, ownerId: ownerId || undefined })) as
+    const res = (await createAnimal({ name, species, breed, microchip, ownerId: ownerId ? (ownerId as Id<"owners">) : undefined })) as
       | { ok: true; id: string }
       | { ok: false; reason: "microchip" };
     if (!res?.ok) {

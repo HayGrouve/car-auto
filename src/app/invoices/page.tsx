@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { brand } from "@/lib/brand";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
 import type { InvoiceDoc } from "@/types/visit";
+import type { Id } from "@/../convex/_generated/dataModel";
 
 export default function InvoicesPage() {
   const [ownerId, setOwnerId] = useState("");
@@ -19,7 +20,7 @@ export default function InvoicesPage() {
     api.invoices.list,
     useMemo(() => ({
       unpaidOnly,
-      ownerId: ownerId || undefined,
+      ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
       from: from ? Date.parse(from) : undefined,
       to: to ? Date.parse(to) : undefined,
     }), [unpaidOnly, ownerId, from, to])

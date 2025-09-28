@@ -29,21 +29,21 @@ export default function AnimalDetailPage() {
   useEffect(() => {
     const parsed = AnimalDocSchema.safeParse(animalUnknown);
     if (parsed.success) {
-      const a = parsed.data;
+      const a = parsed.data as { ownerId?: string | null } & typeof parsed.data;
       setForm({
         name: a.name ?? "",
         species: a.species ?? "",
         breed: a.breed ?? "",
         microchip: a.microchip ?? "",
         neutered: Boolean(a.neutered),
-        ownerId: (a as any).ownerId ?? "",
+        ownerId: a.ownerId ?? "",
       });
     }
   }, [animalUnknown]);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
-    const res = (await update({ id, name: form.name, species: form.species, breed: form.breed || null, microchip: form.microchip || null, neutered: form.neutered, ownerId: (form.ownerId || null) as any })) as { ok: boolean };
+    const res = (await update({ id, name: form.name, species: form.species, breed: form.breed || null, microchip: form.microchip || null, neutered: form.neutered, ownerId: (form.ownerId || null) as Id<"owners"> | null })) as { ok: boolean };
     if (res?.ok) {
       toast.success("Записът е обновен");
       router.push("/animals");

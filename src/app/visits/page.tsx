@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { CalendarCheck } from "lucide-react";
 import type { VisitDoc } from "@/types/visit";
 import { fmtDateTimeBG } from "@/lib/format";
+import type { Id } from "@/../convex/_generated/dataModel";
 
 function VisitsPageInner() {
   const [status, setStatus] = useState<string>("");
@@ -27,8 +28,8 @@ function VisitsPageInner() {
       () => ({
         limit: 50,
         status: status || undefined,
-        ownerId: ownerId || undefined,
-        animalId: animalId || undefined,
+        ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
+        animalId: animalId ? (animalId as Id<"animals">) : undefined,
         from: from ? Date.parse(from) : undefined,
         to: to ? Date.parse(to) : undefined,
       }),
@@ -211,7 +212,7 @@ function VisitsPageInner() {
               ) : null}
               <a
                 className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
-                href={`/invoices/new?ownerId=${encodeURIComponent((v as any).ownerId)}${(v as any).animalId ? `&animalId=${encodeURIComponent((v as any).animalId)}` : ""}&visitId=${encodeURIComponent((v as any)._id)}`}
+                href={`/invoices/new?ownerId=${encodeURIComponent(String(v.ownerId))}${v.animalId ? `&animalId=${encodeURIComponent(String(v.animalId))}` : ""}&visitId=${encodeURIComponent(String(v._id))}`}
               >
                 Нова фактура
               </a>
