@@ -61,7 +61,7 @@ export function VisitPdf({ visit, soap, procedures, medications }: { visit: Visi
       <Page size="A4" style={styles.page}>
         <Text style={styles.header}>{brand.nameBg} · Посещение {(visit as VisitDoc & { code?: string }).code ?? `#${String(visit._id)}`}</Text>
         <Text style={styles.muted}>Дата/час: {new Date(when).toLocaleString("bg-BG")}</Text>
-        <Text style={styles.muted}>Статус: {visit.status}</Text>
+        <Text style={styles.muted}>Статус: {visit.status === "draft" ? "Чернова" : visit.status === "finalized" ? "Приключено" : visit.status}</Text>
 
         {soap.s ? (
           <View style={styles.box}>

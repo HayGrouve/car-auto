@@ -17,6 +17,11 @@ import { fmtDateTimeBG } from "@/lib/format";
 import type { Id } from "@/../convex/_generated/dataModel";
 
 function VisitsPageInner() {
+  function statusBg(s?: string) {
+    if (s === "draft") return "Чернова";
+    if (s === "finalized") return "Приключено";
+    return s ?? "";
+  }
   const [status, setStatus] = useState<string>("");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
@@ -202,7 +207,7 @@ function VisitsPageInner() {
           <div key={v._id} className="p-3 flex items-center justify-between text-sm">
             <div className="space-y-1">
               <a href={`/visits/${v._id}`} className="font-medium underline-offset-2 hover:underline">{(v as VisitDoc & { code?: string }).code ?? `#${String(v._id)}`} - {fmtDateTimeBG((v as VisitDoc & { datetime?: number }).datetime ?? v.createdAt)}</a>
-              <div className="text-muted-foreground">Статус: {v.status}</div>
+              <div className="text-muted-foreground">Статус: {statusBg(v.status)}</div>
             </div>
             <div className="flex items-center gap-2">
               {v.status === "draft" ? (
