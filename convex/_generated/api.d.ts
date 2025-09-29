@@ -17,6 +17,7 @@ import type * as animals from "../animals.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as invoices from "../invoices.js";
 import type * as owners from "../owners.js";
+import type * as seed from "../seed.js";
 import type * as visits from "../visits.js";
 import type * as weights from "../weights.js";
 
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   auditLogs: typeof auditLogs;
   invoices: typeof invoices;
   owners: typeof owners;
+  seed: typeof seed;
   visits: typeof visits;
   weights: typeof weights;
 }>;

@@ -5,6 +5,7 @@ export const VisitDocSchema = z.object({
   ownerId: z.string(),
   animalId: z.string().nullable().optional(),
   status: z.string(),
+  code: z.string().optional(),
   datetime: z.number().optional(),
   soap: z
     .object({ s: z.string().optional(), o: z.string().optional(), a: z.string().optional(), p: z.string().optional() })
@@ -22,6 +23,7 @@ export const InvoiceDocSchema = z.object({
   ownerId: z.string(),
   animalId: z.string().nullable().optional(),
   visitId: z.string().nullable().optional(),
+  code: z.string().optional(),
   items: z.array(z.object({ description: z.string(), quantity: z.number(), price: z.number(), total: z.number() })),
   total: z.number(),
   paid: z.boolean(),

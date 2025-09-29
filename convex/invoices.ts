@@ -1,6 +1,12 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+function generateHumanCode(prefix: string): string {
+  const num = Math.floor(100000 + Math.random() * 900000); // 6 digits
+  const letters = String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26));
+  return `${prefix}${num}-${letters}`;
+}
+
 export const list = query({
   args: {
     unpaidOnly: v.optional(v.boolean()),
@@ -29,10 +35,18 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
     const total = args.items.reduce((sum, it) => sum + it.total, 0);
+    // Generate a human-friendly code and attempt to avoid collisions
+    const existing = await ctx.db.query("invoices").collect();
+    let code = "";
+    for (let i = 0; i < 5; i++) {
+      const cand = generateHumanCode("INV-");
+      if (!existing.some((d: any) => d.code === cand)) { code = cand; break; }
+    }
     const id = await ctx.db.insert("invoices", {
       ownerId: args.ownerId,
       animalId: args.animalId ?? null,
       visitId: args.visitId ?? null,
+      code,
       items: args.items,
       total,
       paid: false,

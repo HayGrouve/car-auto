@@ -211,7 +211,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
   const invoices = useQuery(
     api.invoices.list,
     useMemo(() => ({ ownerId, unpaidOnly }), [ownerId, unpaidOnly])
-  ) as { _id: string; total: number; paid?: boolean; paidAt?: number | null; createdAt: number }[] | undefined;
+  ) as { _id: string; code?: string; total: number; paid?: boolean; paidAt?: number | null; createdAt: number }[] | undefined;
   const markPaid = useMutation(api.invoices.markPaid) as unknown as (args: { id: string }) => Promise<{ ok: boolean }>;
   const [loading, setLoading] = useState<string | null>(null);
   const totals = (invoices ?? []).reduce(
@@ -241,7 +241,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
           (invoices ?? []).map((inv) => (
             <div key={inv._id} className="p-3 grid md:grid-cols-6 gap-2 items-center text-sm">
               <div className="md:col-span-3">
-                <div className="font-medium">#{String(inv._id)} · {fmtDateTimeBG(inv.createdAt)}</div>
+                <div className="font-medium">{inv.code ?? `#${String(inv._id)}`} · {fmtDateTimeBG(inv.createdAt)}</div>
                 <div className="text-xs text-muted-foreground">{inv.paid ? `Платена${inv.paidAt ? ` · ${fmtDateTimeBG(inv.paidAt)}` : ""}` : "Неплатена"}</div>
               </div>
               <div className="md:col-span-2 text-right font-medium">

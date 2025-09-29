@@ -9,6 +9,8 @@ import { brand } from "@/lib/brand";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
 import type { InvoiceDoc } from "@/types/visit";
 import type { Id } from "@/../convex/_generated/dataModel";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import InvoicePdf from "@/components/pdf/InvoicePdf";
 
 export default function InvoicesPage() {
   const [ownerId, setOwnerId] = useState("");
@@ -87,7 +89,7 @@ export default function InvoicesPage() {
           (invoices ?? []).map((inv) => (
             <div key={inv._id} className="p-3 grid md:grid-cols-6 gap-2 text-sm items-center">
               <div className="md:col-span-3">
-                <div className="font-medium">#{String(inv._id)} · {fmtDateTimeBG(inv.createdAt)}</div>
+                <div className="font-medium">{inv.code ?? `#${String(inv._id)}`} · {fmtDateTimeBG(inv.createdAt)}</div>
                 <div className="text-xs text-muted-foreground">
                   {inv.paid ? `Платена${inv.paidAt ? ` · ${fmtDateTimeBG(inv.paidAt)}` : ""}` : "Неплатена"}
                   {" "}
@@ -112,11 +114,21 @@ export default function InvoicesPage() {
                     disabled={paidLoading === inv._id}
                     onClick={async () => {
                       setPaidLoading(inv._id);
-                      const r = await markPaid({ id: inv._id });
+                      await markPaid({ id: inv._id });
                       setPaidLoading(null);
                     }}
                   >Маркирай платена</Button>
                 )}
+                <PDFDownloadLink
+                  document={<InvoicePdf inv={inv} />}
+                  fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
+                >
+                  {({ loading }) => (
+                    <Button variant="ghost" className="ml-2" disabled={loading}>
+                      {loading ? "Генериране..." : "PDF"}
+                    </Button>
+                  )}
+                </PDFDownloadLink>
                 <Button
                   variant="ghost"
                   className="ml-2"
@@ -137,7 +149,7 @@ export default function InvoicesPage() {
                       <html lang=\"bg\">
                         <head>
                           <meta charset=\"utf-8\" />
-                          <title>Фактура #${String(inv._id)}</title>
+                          <title>Фактура ${inv.code ?? `#${String(inv._id)}`}</title>
                           <style>
                             body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px;color:#111}
                             h1{font-size:20px;margin:0 0 12px}
@@ -148,7 +160,7 @@ export default function InvoicesPage() {
                           </style>
                         </head>
                         <body>
-                          <h1>Фактура #${String(inv._id)}</h1>
+                          <h1>Фактура ${inv.code ?? `#${String(inv._id)}`}</h1>
                           <div class=\"muted\">Дата: ${new Date(inv.createdAt).toLocaleString('bg-BG')}</div>
                           <div class=\"muted\">Статус: ${inv.paid ? 'Платена' : 'Неплатена'}${inv.paid && inv.paidAt ? ' · ' + new Date(inv.paidAt).toLocaleString('bg-BG') : ''}</div>
                           <table>

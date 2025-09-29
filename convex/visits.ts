@@ -1,6 +1,12 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+function generateHumanCode(prefix: string): string {
+  const num = Math.floor(100000 + Math.random() * 900000);
+  const letters = String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26));
+  return `${prefix}${num}-${letters}`;
+}
+
 export const list = query({
   args: {
     limit: v.optional(v.number()),
@@ -42,6 +48,13 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    // Generate human-friendly code (best-effort uniqueness)
+    const existing = await ctx.db.query("visits").collect();
+    let code = "";
+    for (let i = 0; i < 5; i++) {
+      const cand = generateHumanCode("VIS-");
+      if (!existing.some((d: any) => d.code === cand)) { code = cand; break; }
+    }
     const id = await ctx.db.insert("visits", {
       ownerId: args.ownerId,
       animalId: args.animalId ?? null,
@@ -50,6 +63,7 @@ export const create = mutation({
       procedures: args.procedures ?? [],
       medications: args.medications ?? [],
       status: "draft",
+      code,
       createdAt: now,
       updatedAt: now,
     } as any);

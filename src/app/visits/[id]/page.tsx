@@ -119,7 +119,7 @@ export default function VisitDetailPage() {
       <html lang=\"bg\">
         <head>
           <meta charset=\"utf-8\" />
-          <title>Посещение #${String(visit._id)}</title>
+          <title>Посещение ${(visit as VisitDoc & { code?: string }).code ?? `#${String(visit._id)}`}</title>
           <style>
             body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px;color:#111}
             h1{font-size:20px;margin:0 0 12px}
@@ -130,7 +130,7 @@ export default function VisitDetailPage() {
           </style>
         </head>
         <body>
-          <h1>Посещение #${String(visit._id)}</h1>
+          <h1>Посещение ${(visit as VisitDoc & { code?: string }).code ?? `#${String(visit._id)}`}</h1>
           <div class=\"muted\">Дата/час: ${new Date(when).toLocaleString('bg-BG')}</div>
           <div class=\"muted\">Статус: ${visit.status}</div>
           <table>
