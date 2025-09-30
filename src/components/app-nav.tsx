@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
+import logoJpg from "@/../public/logo.jpg";
 import { usePathname } from "next/navigation";
 import { brand } from "@/lib/brand";
 import { Menu, PawPrint, User, CalendarCheck } from "lucide-react";
@@ -42,7 +44,8 @@ export function AppNav() {
     <div className="fixed top-0 left-0 right-0 z-50 bg-background/70 backdrop-blur border-b">
       <div className="mx-auto max-w-5xl p-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link href="/" className="font-semibold hover:underline">
+          <Link href="/" className="inline-flex items-center gap-2 font-semibold hover:underline">
+            <Image src={logoJpg} alt="Лого" width={24} height={24} className="rounded-sm h-auto w-6" priority />
             {brand.nameBg}
           </Link>
         </div>
