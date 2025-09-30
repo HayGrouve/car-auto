@@ -8,11 +8,13 @@ import { Input } from "@/components/ui/input";
 import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import type { AnimalDoc } from "@/types/animal";
-import { PawPrint, Hash } from "lucide-react";
+import { PawPrint, Hash, Eye } from "lucide-react";
 import { fmtDateTimeBG } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
 import type { Id } from "@/../convex/_generated/dataModel";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonList } from "@/components/SkeletonList";
 
 export default function AnimalsPage() {
   const [search, setSearch] = useState("");
@@ -72,7 +74,7 @@ export default function AnimalsPage() {
       <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
         <div>
           <Label htmlFor="aname">Име</Label>
-          <Input id="aname" name="name" required />
+          <Input id="aname" name="name" required aria-label="Име на животно" />
         </div>
         <div>
           <Label htmlFor="species">Вид</Label>
@@ -114,12 +116,19 @@ export default function AnimalsPage() {
         </div>
       </form>
       <div className="border rounded-md divide-y">
-        {(animals ?? []).map((a) => (
-          <div key={a._id} className="p-3 flex justify-between items-center text-sm">
+        {animals === undefined ? (
+          <SkeletonList rows={6} />
+        ) : (animals ?? []).length === 0 ? (
+          <EmptyState icon={PawPrint} title="Няма животни" description="Добавете животно към собственик." />
+        ) : (
+        (animals ?? []).map((a) => (
+          <div key={a._id} className="p-3 flex justify-between items-center text-sm hover:bg-accent">
             <div className="flex items-center gap-3">
               <PawPrint className="size-5 text-primary" aria-hidden />
               <div>
-                <a href={`/animals/${a._id}`} className="font-medium underline-offset-2 hover:underline">{a.name} ({a.species})</a>
+                <a href={`/animals/${a._id}`} className="font-medium underline-offset-2 hover:underline inline-flex items-center gap-1" aria-label={`Преглед на ${a.name}`}>
+                  <Eye className="size-4" aria-hidden /> {a.name} ({a.species})
+                </a>
                 <div className="text-muted-foreground flex items-center gap-3">
                   <span>{a.breed ?? ""}</span>
                   {a.microchip ? <span className="inline-flex items-center gap-1"><Hash className="size-4" />{a.microchip}</span> : null}
@@ -128,7 +137,7 @@ export default function AnimalsPage() {
             </div>
             <div className="text-muted-foreground">{fmtDateTimeBG(a.createdAt)}</div>
           </div>
-        ))}
+        )))}
       </div>
       <div className="flex items-center justify-between pt-2">
         <Button variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Назад</Button>

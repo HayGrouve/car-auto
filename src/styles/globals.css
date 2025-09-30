@@ -124,4 +124,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  :focus-visible {
+    outline: 3px solid color-mix(in oklab, var(--ring) 70%, transparent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
 }

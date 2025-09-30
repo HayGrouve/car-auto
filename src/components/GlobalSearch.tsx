@@ -14,7 +14,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, User, PawPrint, CalendarCheck, FileText } from "lucide-react";
 import { fmtDateTimeBG } from "@/lib/format";
 
 // Bulgarian transliteration + normalization helpers (to match both Cyrillic and Latin input)
@@ -139,6 +139,7 @@ export function GlobalSearch() {
             <CommandGroup heading="Собственици">
               {(owners ?? []).slice(0, 10).map((o) => (
                 <CommandItem key={`owner-${o._id}`} value={`owner-${o._id}`} onSelect={() => onNavigate(`/owners/${o._id}`)}>
+                  <User className="mr-2 size-4" aria-hidden />
                   <span className="font-medium">{o.name}</span>
                   {o.phone ? <span className="text-muted-foreground ml-2">· {o.phone}</span> : null}
                   <CommandShortcut>Owner</CommandShortcut>
@@ -151,6 +152,7 @@ export function GlobalSearch() {
             <CommandGroup heading="Животни">
               {(animals ?? []).slice(0, 10).map((a) => (
                 <CommandItem key={`animal-${a._id}`} value={`animal-${a._id}`} onSelect={() => onNavigate(`/animals/${a._id}`)}>
+                  <PawPrint className="mr-2 size-4" aria-hidden />
                   <span className="font-medium">{a.name}</span>
                   <span className="text-muted-foreground ml-2">· {a.species}</span>
                   <CommandShortcut>Animal</CommandShortcut>
@@ -163,6 +165,7 @@ export function GlobalSearch() {
             <CommandGroup heading="Посещения">
               {(visits ?? []).map((v) => (
                 <CommandItem key={`visit-${v._id}`} value={`visit-${v._id}`} onSelect={() => onNavigate(`/visits/${v._id}`)}>
+                  <CalendarCheck className="mr-2 size-4" aria-hidden />
                   <span className="font-medium">{v.code ?? `#${String(v._id)}`}</span>
                   <span className="text-muted-foreground ml-2">· {fmtDateTimeBG(v.createdAt)}</span>
                   <CommandShortcut>Visit</CommandShortcut>
@@ -175,6 +178,7 @@ export function GlobalSearch() {
             <CommandGroup heading="Фактури">
               {(invoices ?? []).map((inv) => (
                 <CommandItem key={`inv-${inv._id}`} value={`inv-${inv._id}`} onSelect={() => onNavigate(`/invoices/${inv._id}`)}>
+                  <FileText className="mr-2 size-4" aria-hidden />
                   <span className="font-medium">{inv.code ?? `#${String(inv._id)}`}</span>
                   <span className="text-muted-foreground ml-2">· {fmtDateTimeBG(inv.createdAt)}</span>
                   <CommandShortcut>Invoice</CommandShortcut>

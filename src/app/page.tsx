@@ -87,11 +87,13 @@ export default function HomePage() {
               <div className="p-3 text-sm text-muted-foreground">Няма фактури</div>
             ) : (
               recentInvoices.map((inv) => (
-                <Link key={inv._id} href={`/invoices/${inv._id}`} className="p-3 grid grid-cols-2 md:grid-cols-3 gap-2 items-center text-sm hover:bg-accent">
-                  <div className="font-medium">{inv.code ?? `#${String(inv._id)}`}</div>
-                  <div className="text-muted-foreground">{fmtDateTimeBG(inv.createdAt)}</div>
-                  <div className="text-right md:col-span-1 font-medium">{fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}</div>
-                </Link>
+                <div key={inv._id} className="p-3 flex items-center justify-between text-sm">
+                  <div className="space-y-0.5">
+                    <Link href={`/invoices/${inv._id}`} className="font-medium underline-offset-2 hover:underline">{inv.code ?? `#${String(inv._id)}`}</Link>
+                    <div className="text-muted-foreground">{fmtDateTimeBG(inv.createdAt)}</div>
+                  </div>
+                  <div className="font-medium text-right">{fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}</div>
+                </div>
               ))
             )}
           </div>

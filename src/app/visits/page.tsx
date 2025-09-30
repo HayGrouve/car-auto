@@ -11,17 +11,15 @@ import { Command, CommandInput, CommandItem, CommandList, CommandEmpty } from "@
 import { Input } from "@/components/ui/input";
 import { brand } from "@/lib/brand";
 import { toast } from "sonner";
-import { CalendarCheck } from "lucide-react";
+import { CalendarCheck, CheckCircle, FilePlus } from "lucide-react";
 import type { VisitDoc } from "@/types/visit";
 import { fmtDateTimeBG } from "@/lib/format";
 import type { Id } from "@/../convex/_generated/dataModel";
+import { EmptyState } from "@/components/EmptyState";
+import { VisitStatusBadge } from "@/components/StatusBadge";
+import { SkeletonList } from "../../components/SkeletonList";
 
 function VisitsPageInner() {
-  function statusBg(s?: string) {
-    if (s === "draft") return "Чернова";
-    if (s === "finalized") return "Приключено";
-    return s ?? "";
-  }
   const [status, setStatus] = useState<string>("");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
@@ -215,27 +213,39 @@ function VisitsPageInner() {
       </form>
 
       <div className="border rounded-md divide-y">
-        {(visits ?? []).map((v) => (
+        {visits === undefined ? (
+          <SkeletonList rows={5} />
+        ) : (visits ?? []).length === 0 ? (
+          <EmptyState icon={CalendarCheck} title="Няма посещения" description="Създайте ново посещение от тази страница." action={<Button type="submit" variant="secondary">Ново посещение</Button>} />
+        ) : (
+        (visits ?? []).map((v) => (
           <div key={v._id} className="p-3 flex items-center justify-between text-sm">
             <div className="space-y-1">
-              <a href={`/visits/${v._id}`} className="font-medium underline-offset-2 hover:underline">{(v as VisitDoc & { code?: string }).code ?? `#${String(v._id)}`} - {fmtDateTimeBG((v as VisitDoc & { datetime?: number }).datetime ?? v.createdAt)}</a>
-              <div className="text-muted-foreground">Статус: {statusBg(v.status)}</div>
+              <a href={`/visits/${v._id}`} className="font-medium underline-offset-2 hover:underline inline-flex items-center gap-1" aria-label={`Преглед на посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}>
+                <CalendarCheck className="size-4" aria-hidden /> {(v as VisitDoc & { code?: string }).code ?? `#${String(v._id)}`} - {fmtDateTimeBG((v as VisitDoc & { datetime?: number }).datetime ?? v.createdAt)}
+              </a>
+              <VisitStatusBadge status={v.status} />
             </div>
             <div className="flex items-center gap-2">
               {v.status === "draft" ? (
-                <Button variant="outline" onClick={async () => { const r = await finalizeVisit({ id: v._id }); if (r?.ok) toast.success("Приключено"); }}>
-                  Приключи
+                <Button
+                  variant="outline"
+                  aria-label={`Приключи посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
+                  onClick={async () => { const r = await finalizeVisit({ id: v._id }); if (r?.ok) toast.success("Приключено"); }}
+                >
+                  <CheckCircle className="mr-1 size-4" aria-hidden /> Приключи
                 </Button>
               ) : null}
               <a
                 className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
                 href={`/invoices/new?ownerId=${encodeURIComponent(String(v.ownerId))}${v.animalId ? `&animalId=${encodeURIComponent(String(v.animalId))}` : ""}&visitId=${encodeURIComponent(String(v._id))}`}
+                aria-label={`Нова фактура за посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
               >
-                Нова фактура
+                <FilePlus className="mr-1 size-4" aria-hidden /> Нова фактура
               </a>
             </div>
           </div>
-        ))}
+        )))}
       </div>
       <div className="flex items-center justify-between pt-2">
         <Button variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Назад</Button>

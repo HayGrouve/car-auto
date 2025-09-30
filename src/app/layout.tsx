@@ -6,6 +6,7 @@ import { brand } from "@/lib/brand";
 import { Toaster } from "sonner";
 import { AppNav } from "@/components/app-nav";
 import { Footer } from "@/components/ui/Footer";
+import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,12 +38,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ConvexClientProvider>
+          <a href="#main" className="sr-only focus:not-sr-only fixed top-2 left-2 z-50 bg-background border px-3 py-1 rounded">Към съдържание</a>
           <AppNav />
           <div className="pt-14 min-h-screen flex flex-col">
-            <main className="flex-1">{children}</main>
+            <main id="main" className="flex-1">{children}</main>
             <Footer />
           </div>
           <Toaster richColors position="top-center" />
+          <KeyboardShortcuts />
         </ConvexClientProvider>
       </body>
     </html>

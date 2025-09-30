@@ -14,8 +14,10 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
 import { fmtDateTimeBG } from "@/lib/format";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import VisitPdf from "@/components/pdf/VisitPdf";
+import dynamic from "next/dynamic";
+import VisitPdfButton from "@/components/pdf/VisitPdfButton";
+import { CalendarCheck, FileText, Printer, FilePlus } from "lucide-react";
+const VisitPdf = dynamic(() => import("@/components/pdf/VisitPdf"), { ssr: false });
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
@@ -368,22 +370,27 @@ export default function VisitDetailPage() {
         </div>
         <div className="md:col-span-4 flex gap-2">
           <Button type="submit" disabled={isFinalized}>Запази</Button>
-          <Button type="button" variant="outline" onClick={onFinalize} disabled={visit.status !== "draft"}>Приключи</Button>
-          <Button type="button" variant="secondary" onClick={onDuplicate}>Дублирай</Button>
-          <Button type="button" variant="ghost" onClick={onPrint}>Печат</Button>
-          <PDFDownloadLink
-            document={<VisitPdf visit={visit} soap={{ s, o, a, p }} procedures={procedures} medications={medications} />}
+          <Button type="button" variant="outline" onClick={onFinalize} disabled={visit.status !== "draft"} aria-label="Приключи посещението">
+            <CalendarCheck className="mr-1 size-4" aria-hidden /> Приключи
+          </Button>
+          <Button type="button" variant="secondary" onClick={onDuplicate} aria-label="Дублирай посещението">
+            <FilePlus className="mr-1 size-4" aria-hidden /> Дублирай
+          </Button>
+          <Button type="button" variant="ghost" onClick={onPrint} aria-label="Печат на посещението">
+            <Printer className="mr-1 size-4" aria-hidden /> Печат
+          </Button>
+          <VisitPdfButton
+            visit={visit}
+            soap={{ s, o, a, p }}
+            procedures={procedures}
+            medications={medications}
             fileName={`visit-${(visit as VisitDoc & { code?: string }).code ?? String(visit._id)}.pdf`}
-          >
-            {({ loading }) => (
-              <Button type="button" variant="ghost" disabled={loading}>{loading ? "Генериране..." : "PDF"}</Button>
-            )}
-          </PDFDownloadLink>
+          />
           <a
             className="inline-flex items-center rounded-md border px-3 py-2 text-sm hover:bg-accent"
             href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(visit.animalId)}` : ""}&visitId=${encodeURIComponent(visit._id)}`}
           >
-            Нова фактура
+            <FilePlus className="mr-1 size-4" aria-hidden /> Нова фактура
           </a>
           <Button type="button" variant="ghost" onClick={() => router.back()}>Назад</Button>
         </div>

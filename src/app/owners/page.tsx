@@ -6,11 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { brand } from "@/lib/brand";
-import { User as UserIcon, ShieldCheck, Phone as PhoneIcon, Mail as MailIcon } from "lucide-react";
+import { User as UserIcon, ShieldCheck, Phone as PhoneIcon, Mail as MailIcon, Eye } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { OwnerDoc } from "@/types/owner";
 import { toast } from "sonner";
 import { fmtDateTimeBG } from "@/lib/format";
+import { EmptyState } from "@/components/EmptyState";
+import Link from "next/link";
+import { SkeletonList } from "@/components/SkeletonList";
 
 export default function OwnersPage() {
   const [search, setSearch] = useState("");
@@ -67,7 +70,8 @@ export default function OwnersPage() {
         </div>
         <div className="md:col-span-1">
           <Label htmlFor="phone">Телефон</Label>
-          <Input id="phone" name="phone" required />
+          <Input id="phone" name="phone" required aria-describedby="phone-help" />
+          <span id="phone-help" className="sr-only">Въведете телефонния номер във формат 08xx xxx xxx</span>
         </div>
         <div className="md:col-span-1">
           <Label htmlFor="email">Имейл</Label>
@@ -87,12 +91,24 @@ export default function OwnersPage() {
         </div>
       </form>
       <div className="border rounded-md divide-y">
-        {(owners ?? []).map((o) => (
-          <div key={o._id} className="p-3 flex justify-between items-center text-sm">
+        {owners === undefined ? (
+          <SkeletonList rows={6} />
+        ) : (owners ?? []).length === 0 ? (
+          <EmptyState
+            icon={UserIcon}
+            title="Няма собственици"
+            description="Добавете първия собственик за да започнете."
+            action={<Link href="/owners" className="inline-flex items-center rounded-md border px-3 py-2 text-sm hover:bg-accent">Обнови</Link>}
+          />
+        ) : (
+        (owners ?? []).map((o) => (
+          <div key={o._id} className="p-3 flex justify-between items-center text-sm hover:bg-accent">
             <div className="flex items-center gap-3">
               <UserIcon className="size-5 text-primary" aria-hidden />
               <div>
-                <a href={`/owners/${o._id}`} className="font-medium underline-offset-2 hover:underline">{o.name}</a>
+                <Link href={`/owners/${o._id}`} className="font-medium underline-offset-2 hover:underline inline-flex items-center gap-1" aria-label={`Преглед на ${o.name}`}>
+                  <Eye className="size-4" aria-hidden /> {o.name}
+                </Link>
                 <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
                   <span className="inline-flex items-center gap-1"><PhoneIcon className="size-4" />{o.phone}</span>
                   {o.email ? <span className="inline-flex items-center gap-1"><MailIcon className="size-4" />{o.email}</span> : null}
@@ -104,7 +120,7 @@ export default function OwnersPage() {
               <span className="text-muted-foreground">{fmtDateTimeBG(o.createdAt)}</span>
             </div>
           </div>
-        ))}
+        )))}
       </div>
       <div className="flex items-center justify-between pt-2">
         <Button variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Назад</Button>

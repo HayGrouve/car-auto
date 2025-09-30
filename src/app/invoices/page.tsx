@@ -10,8 +10,13 @@ import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
 import { toast } from "sonner";
 import type { InvoiceDoc } from "@/types/visit";
 import type { Id } from "@/../convex/_generated/dataModel";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import InvoicePdf from "@/components/pdf/InvoicePdf";
+import InvoicePdfButton from "@/components/pdf/InvoicePdfButton";
+import { EmptyState } from "@/components/EmptyState";
+import { FileText, Printer, FileDown, CheckCircle, ExternalLink } from "lucide-react";
+import { SkeletonList } from "@/components/SkeletonList";
+import dynamic from "next/dynamic";
+const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
+import { InvoiceStatusBadge } from "@/components/StatusBadge";
 
 export default function InvoicesPage() {
   const [ownerId, setOwnerId] = useState("");
@@ -97,18 +102,23 @@ export default function InvoicesPage() {
       </div>
 
       <div className="border rounded-md divide-y">
-        {(invoices ?? []).length === 0 ? (
-          <div className="p-3 text-sm text-muted-foreground">Няма фактури</div>
+        {invoices === undefined ? (
+          <SkeletonList rows={6} />
+        ) : (invoices ?? []).length === 0 ? (
+          <EmptyState icon={FileText} title="Няма фактури" description="Създайте нова фактура от посещение или от страницата за фактури." />
         ) : (
           (invoices ?? []).map((inv) => (
-            <div key={inv._id} className="p-3 grid md:grid-cols-6 gap-2 text-sm items-center">
+            <div key={inv._id} className="p-3 grid md:grid-cols-6 gap-2 text-sm items-center hover:bg-accent">
               <div className="md:col-span-3">
-                <a href={`/invoices/${inv._id}`} className="font-medium underline-offset-2 hover:underline">{inv.code ?? `#${String(inv._id)}`} · {fmtDateTimeBG(inv.createdAt)}</a>
-                <div className="text-xs text-muted-foreground">
-                  {inv.paid ? `Платена${inv.paidAt ? ` · ${fmtDateTimeBG(inv.paidAt)}` : ""}` : "Неплатена"}
-                  {" "}
+                <a href={`/invoices/${inv._id}`} className="font-medium underline-offset-2 hover:underline inline-flex items-center gap-1" aria-label={`Преглед на фактура ${inv.code ?? String(inv._id)}`}>
+                  <FileText className="size-4" aria-hidden /> {inv.code ?? `#${String(inv._id)}`} · {fmtDateTimeBG(inv.createdAt)}
+                </a>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <InvoiceStatusBadge paid={inv.paid} paidAt={inv.paidAt} />
                   {inv.visitId ? (
-                    <a className="underline underline-offset-2" href={`/visits/${inv.visitId}`}>Към посещение</a>
+                    <a className="inline-flex items-center gap-1 underline underline-offset-2" href={`/visits/${inv.visitId}`} aria-label="Към посещение">
+                      <ExternalLink className="size-3" aria-hidden /> Към посещение
+                    </a>
                   ) : null}
                 </div>
                 <ul className="list-disc ml-5 text-muted-foreground">
@@ -126,27 +136,26 @@ export default function InvoicesPage() {
                   <Button
                     variant="outline"
                     disabled={paidLoading === inv._id}
+                    aria-label="Маркирай фактура като платена"
                     onClick={async () => {
                       setPaidLoading(inv._id);
                       await markPaid({ id: inv._id });
                       setPaidLoading(null);
                       toast.success("Фактура маркирана като платена");
                     }}
-                  >Маркирай платена</Button>
+                  >
+                    <CheckCircle className="mr-1 size-4" aria-hidden /> Маркирай платена
+                  </Button>
                 )}
-                <PDFDownloadLink
-                  document={<InvoicePdf inv={inv} />}
+                <InvoicePdfButton
+                  inv={inv}
                   fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
-                >
-                  {({ loading }) => (
-                    <Button variant="ghost" className="ml-2" disabled={loading}>
-                      {loading ? "Генериране..." : "PDF"}
-                    </Button>
-                  )}
-                </PDFDownloadLink>
+                  className="ml-2"
+                />
                 <Button
                   variant="ghost"
                   className="ml-2"
+                  aria-label={`Печат за фактура ${inv.code ?? String(inv._id)}`}
                   onClick={() => {
                     const w = window.open("", "_blank", "noopener,noreferrer");
                     if (!w) return;
@@ -204,7 +213,9 @@ export default function InvoicesPage() {
                     w.document.write(html);
                     w.document.close();
                   }}
-                >Печат</Button>
+                >
+                  <Printer className="mr-1 size-4" aria-hidden /> Печат
+                </Button>
               </div>
             </div>
           ))

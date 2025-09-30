@@ -14,6 +14,7 @@ import { brand } from "@/lib/brand";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import Link from "next/link";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
+import { InvoiceStatusBadge } from "@/components/StatusBadge";
 
 export default function OwnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -252,7 +253,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
             <div key={inv._id} className="p-3 grid md:grid-cols-6 gap-2 items-center text-sm">
               <div className="md:col-span-3">
                 <div className="font-medium"><a href={`/invoices/${inv._id}`} className="underline underline-offset-2 hover:underline">{inv.code ?? `#${String(inv._id)}`}</a> · {fmtDateTimeBG(inv.createdAt)}</div>
-                <div className="text-xs text-muted-foreground">{inv.paid ? `Платена${inv.paidAt ? ` · ${fmtDateTimeBG(inv.paidAt)}` : ""}` : "Неплатена"}</div>
+                <div className="text-xs text-muted-foreground"><InvoiceStatusBadge paid={inv.paid} paidAt={inv.paidAt ?? null} /></div>
               </div>
               <div className="md:col-span-2 text-right font-medium">
                 {fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}

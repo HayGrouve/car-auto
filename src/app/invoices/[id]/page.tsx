@@ -6,8 +6,9 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
-import { PDFDownloadLink } from "@react-pdf/renderer";
-import InvoicePdf from "@/components/pdf/InvoicePdf";
+import InvoicePdfButton from "@/components/pdf/InvoicePdfButton";
+import dynamic from "next/dynamic";
+const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
 import type { InvoiceDoc } from "@/types/visit";
 
 export default function InvoiceDetailPage() {
@@ -72,9 +73,7 @@ export default function InvoiceDetailPage() {
                 onClick={async () => { setLoading(true); await markPaid({ id: inv._id }); setLoading(false); }}
               >Маркирай платена</Button>
             )}
-            <PDFDownloadLink document={<InvoicePdf inv={inv} />} fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}>
-              {({ loading }) => <Button variant="ghost" disabled={loading}>{loading ? "Генериране..." : "PDF"}</Button>}
-            </PDFDownloadLink>
+            <InvoicePdfButton inv={inv} fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`} />
             <Button variant="ghost" onClick={onPrint}>Печат</Button>
           </div>
         </div>
