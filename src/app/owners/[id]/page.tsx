@@ -23,6 +23,7 @@ export default function OwnerDetailPage() {
   const softDelete = useMutation(api.owners.softDelete);
   const setLegalHold = useMutation(api.owners.setLegalHold);
   const animals = useQuery(api.animals.listByOwner, useMemo(() => ({ ownerId: id }), [id])) as { _id: string; name: string; species: string }[] | undefined;
+  const ownerUnpaid = useQuery(api.invoices.list, useMemo(() => ({ ownerId: id, unpaidOnly: true }), [id])) as { total: number }[] | undefined;
   const router = useRouter();
 
   const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", gdpr: false, legalHold: false });
@@ -51,6 +52,15 @@ export default function OwnerDetailPage() {
   return (
     <main className="p-6 max-w-3xl mx-auto space-y-4">
       <h1 className="text-2xl font-semibold">{brand.nameBg}: Собственик</h1>
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">Неплатени общо: {fmtNumberBG((ownerUnpaid ?? []).reduce((s: number, i) => s + (i.total ?? 0), 0), { style: "currency", currency: "BGN" })}</div>
+        <div>
+          <a
+            className="inline-flex items-center rounded-md border px-3 py-2 text-sm hover:bg-accent"
+            href={`/invoices/new?ownerId=${encodeURIComponent(String(id))}`}
+          >Нова фактура</a>
+        </div>
+      </div>
       <p className="text-sm text-muted-foreground">
         Прочетете нашата <Link className="underline underline-offset-2" href="/privacy">политика за поверителност</Link>.
       </p>
@@ -241,7 +251,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
           (invoices ?? []).map((inv) => (
             <div key={inv._id} className="p-3 grid md:grid-cols-6 gap-2 items-center text-sm">
               <div className="md:col-span-3">
-                <div className="font-medium">{inv.code ?? `#${String(inv._id)}`} · {fmtDateTimeBG(inv.createdAt)}</div>
+                <div className="font-medium"><a href={`/invoices/${inv._id}`} className="underline underline-offset-2 hover:underline">{inv.code ?? `#${String(inv._id)}`}</a> · {fmtDateTimeBG(inv.createdAt)}</div>
                 <div className="text-xs text-muted-foreground">{inv.paid ? `Платена${inv.paidAt ? ` · ${fmtDateTimeBG(inv.paidAt)}` : ""}` : "Неплатена"}</div>
               </div>
               <div className="md:col-span-2 text-right font-medium">
@@ -252,7 +262,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
                   <Button
                     variant="outline"
                     disabled={loading === inv._id}
-                    onClick={async () => { setLoading(inv._id); await markPaid({ id: inv._id }); setLoading(null); }}
+                    onClick={async () => { setLoading(inv._id); const r = await markPaid({ id: inv._id }); setLoading(null); if (r?.ok) toast.success("Фактура маркирана като платена"); }}
                   >Маркирай платена</Button>
                 )}
               </div>

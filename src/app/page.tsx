@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { brand } from "@/lib/brand";
@@ -12,8 +12,12 @@ export default function HomePage() {
   const owners = useQuery(api.owners.list, useMemo(() => ({ search: "" }), [])) as { _id: string; name?: string }[] | undefined;
   const animals = useQuery(api.animals.list, useMemo(() => ({ search: "" }), [])) as { _id: string }[] | undefined;
   const visits = useQuery(api.visits.list, useMemo(() => ({ limit: 5 }), [])) as VisitDoc[] | undefined;
-  const invoices = useQuery(api.invoices.list, useMemo(() => ({ unpaidOnly: undefined }), [])) as InvoiceDoc[] | undefined;
+  const [unpaidOnly, setUnpaidOnly] = useState(false);
+  const invoices = useQuery(api.invoices.list, useMemo(() => ({ unpaidOnly }), [unpaidOnly])) as InvoiceDoc[] | undefined;
   const todayTotals = useQuery(api.invoices.totals, useMemo(() => ({ day: Date.now() }), [])) as { paidTotal: number; unpaidTotal: number; count: number } | undefined;
+  const weekStart = (() => { const d = new Date(); d.setDate(d.getDate() - 6); d.setHours(0,0,0,0); return d.getTime(); })();
+  const weekTotals = useQuery(api.invoices.totals, useMemo(() => ({ day: weekStart }), [weekStart])) as { paidTotal: number; unpaidTotal: number; count: number } | undefined;
+  const draftVisits = useQuery(api.visits.list, useMemo(() => ({ limit: 1000, status: "draft" }), [])) as VisitDoc[] | undefined;
 
   const recentInvoices = (invoices ?? []).slice(0, 5);
 
@@ -44,8 +48,8 @@ export default function HomePage() {
           <div className="mt-3"><Link href="/invoices"><Button size="sm" variant="outline">Към фактури</Button></Link></div>
         </div>
         <div className="rounded-md border p-4">
-          <div className="text-sm text-muted-foreground">Последни посещения</div>
-          <div className="text-2xl font-semibold">{(visits ?? []).length}</div>
+          <div className="text-sm text-muted-foreground">Чернови посещения</div>
+          <div className="text-2xl font-semibold">{(draftVisits ?? []).length}</div>
           <div className="mt-3"><Link href="/visits"><Button size="sm" variant="outline">Към посещения</Button></Link></div>
         </div>
       </section>
@@ -72,20 +76,26 @@ export default function HomePage() {
           </div>
         </div>
         <div className="space-y-2">
-          <h2 className="text-lg font-medium">Последни фактури</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium">Последни фактури</h2>
+            <label className="text-xs text-muted-foreground inline-flex items-center gap-2">
+              <input type="checkbox" checked={unpaidOnly} onChange={(e) => setUnpaidOnly(e.target.checked)} /> Само неплатени
+            </label>
+          </div>
           <div className="border rounded-md divide-y">
             {recentInvoices.length === 0 ? (
               <div className="p-3 text-sm text-muted-foreground">Няма фактури</div>
             ) : (
               recentInvoices.map((inv) => (
-                <div key={inv._id} className="p-3 grid grid-cols-2 md:grid-cols-3 gap-2 items-center text-sm">
+                <Link key={inv._id} href={`/invoices/${inv._id}`} className="p-3 grid grid-cols-2 md:grid-cols-3 gap-2 items-center text-sm hover:bg-accent">
                   <div className="font-medium">{inv.code ?? `#${String(inv._id)}`}</div>
                   <div className="text-muted-foreground">{fmtDateTimeBG(inv.createdAt)}</div>
                   <div className="text-right md:col-span-1 font-medium">{fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}</div>
-                </div>
+                </Link>
               ))
             )}
           </div>
+          <div className="text-xs text-muted-foreground">Последни 7 дни — Платено: {fmtNumberBG(weekTotals?.paidTotal ?? 0, { style: "currency", currency: "BGN" })} · Неплатено: {fmtNumberBG(weekTotals?.unpaidTotal ?? 0, { style: "currency", currency: "BGN" })}</div>
         </div>
       </section>
     </main>

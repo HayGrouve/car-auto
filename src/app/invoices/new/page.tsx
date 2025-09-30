@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
 import { useRouter, useSearchParams } from "next/navigation";
+import { fmtNumberBG } from "@/lib/format";
+import type { Id } from "@/../convex/_generated/dataModel";
+import { toast } from "sonner";
 
 function NewInvoicePageInner() {
   const router = useRouter();
@@ -17,6 +20,7 @@ function NewInvoicePageInner() {
   const owners = useQuery(api.owners.list, useMemo(() => ({ search: ownerSearch }), [ownerSearch])) as { _id: string; name: string; phone: string }[] | undefined;
   const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
   const create = useMutation(api.invoices.create) as unknown as (args: { ownerId: string; animalId?: string; visitId?: string; items: { description: string; quantity: number; price: number; total: number }[] }) => Promise<{ ok: boolean; id: string }>;
+  const markPaid = useMutation(api.invoices.markPaid) as unknown as (args: { id: string }) => Promise<{ ok: boolean }>;
 
   const [ownerId, setOwnerId] = useState("");
   const [animalId, setAnimalId] = useState("");
@@ -24,6 +28,10 @@ function NewInvoicePageInner() {
     { description: "", quantity: "1", price: "0", total: 0 }
   ]);
   const [visitId, setVisitId] = useState("");
+  const visit = useQuery(api.visits.getById, visitId ? ({ id: visitId as Id<"visits"> }) : "skip") as { procedures?: string[]; medications?: string[] } | undefined;
+  const procSuggestions = useQuery(api.visits.suggestProcedures, useMemo(() => ({ limit: 8 }), [])) as string[] | undefined;
+  const medSuggestions = useQuery(api.visits.suggestMedications, useMemo(() => ({ limit: 8 }), [])) as string[] | undefined;
+  const [markPaidNow, setMarkPaidNow] = useState(false);
 
   // Prefill from query params
   useEffect(() => {
@@ -66,8 +74,14 @@ function NewInvoicePageInner() {
     const payloadItems = items
       .filter((it) => it.description.trim())
       .map((it) => ({ description: it.description.trim(), quantity: parseFloat(it.quantity || "0"), price: parseFloat(it.price || "0"), total: it.total }));
-    const res = await create({ ownerId, animalId: animalId || undefined, visitId: visitId || undefined, items: payloadItems });
-    if (res?.ok && res.id) router.push("/invoices");
+    const res = await create({ ownerId, animalId: animalId || undefined, visitId: visitId || undefined, items: payloadItems }) as { ok: boolean; id: string; code?: string };
+    if (res?.ok && res.id) {
+      if (markPaidNow) {
+        await markPaid({ id: res.id });
+      }
+      toast.success(`Създадена фактура ${res.code ?? res.id}`);
+      router.push(`/invoices/${res.id}`);
+    }
   }
 
   return (
@@ -135,13 +149,68 @@ function NewInvoicePageInner() {
               <div className="text-right">{Number.isFinite(it.total) ? it.total.toFixed(2) : "0.00"} BGN</div>
             </div>
           ))}
-          <div className="p-3">
+          <div className="p-3 flex flex-wrap gap-2 items-center">
             <Button type="button" variant="secondary" onClick={() => setItems((arr) => [...arr, { description: "", quantity: "1", price: "0", total: 0 }])}>Добави ред</Button>
+            {visit && (visit.procedures?.length || visit.medications?.length) ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setItems((arr) => {
+                    const next = [...arr];
+                    const add = (name: string) => {
+                      next.push({ description: name, quantity: "1", price: "0", total: 0 });
+                    };
+                    (visit.procedures ?? []).forEach(add);
+                    (visit.medications ?? []).forEach(add);
+                    return next;
+                  });
+                }}
+              >Добави от посещение</Button>
+            ) : null}
           </div>
+          {(procSuggestions ?? []).length > 0 || (medSuggestions ?? []).length > 0 ? (
+            <div className="p-3 space-y-2">
+              {(procSuggestions ?? []).length > 0 ? (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {(procSuggestions ?? []).map((name, i) => (
+                    <button
+                      key={`proc-${i}`}
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-full border px-2 py-1 hover:bg-accent"
+                      onClick={() => setItems((arr) => [...arr, { description: name, quantity: "1", price: "0", total: 0 }])}
+                    >{name}</button>
+                  ))}
+                </div>
+              ) : null}
+              {(medSuggestions ?? []).length > 0 ? (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {(medSuggestions ?? []).map((name, i) => (
+                    <button
+                      key={`med-${i}`}
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-full border px-2 py-1 hover:bg-accent"
+                      onClick={() => setItems((arr) => [...arr, { description: name, quantity: "1", price: "0", total: 0 }])}
+                    >{name}</button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">
+            Общо: {fmtNumberBG(items.reduce((s, it) => s + (Number.isFinite(it.total) ? it.total : 0), 0), { style: "currency", currency: "BGN" })}
+          </div>
+          <div className="flex gap-3 items-center">
+            <label className="text-sm inline-flex items-center gap-2">
+              <input type="checkbox" checked={markPaidNow} onChange={(e) => setMarkPaidNow(e.target.checked)} /> Маркирай платена
+            </label>
+            <Button type="submit">Създай</Button>
+          </div>
+        </div>
         <div className="flex gap-2">
-          <Button type="submit">Създай</Button>
           <Button type="button" variant="ghost" onClick={() => router.back()}>Назад</Button>
         </div>
       </form>

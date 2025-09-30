@@ -174,7 +174,7 @@ export function GlobalSearch() {
           {(invoices ?? []).length > 0 && (
             <CommandGroup heading="Фактури">
               {(invoices ?? []).map((inv) => (
-                <CommandItem key={`inv-${inv._id}`} value={`inv-${inv._id}`} onSelect={() => onNavigate(`/invoices`)}>
+                <CommandItem key={`inv-${inv._id}`} value={`inv-${inv._id}`} onSelect={() => onNavigate(`/invoices/${inv._id}`)}>
                   <span className="font-medium">{inv.code ?? `#${String(inv._id)}`}</span>
                   <span className="text-muted-foreground ml-2">· {fmtDateTimeBG(inv.createdAt)}</span>
                   <CommandShortcut>Invoice</CommandShortcut>

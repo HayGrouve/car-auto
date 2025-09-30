@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { brand } from "@/lib/brand";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
+import { toast } from "sonner";
 import type { InvoiceDoc } from "@/types/visit";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { PDFDownloadLink } from "@react-pdf/renderer";
@@ -102,7 +103,7 @@ export default function InvoicesPage() {
           (invoices ?? []).map((inv) => (
             <div key={inv._id} className="p-3 grid md:grid-cols-6 gap-2 text-sm items-center">
               <div className="md:col-span-3">
-                <div className="font-medium">{inv.code ?? `#${String(inv._id)}`} · {fmtDateTimeBG(inv.createdAt)}</div>
+                <a href={`/invoices/${inv._id}`} className="font-medium underline-offset-2 hover:underline">{inv.code ?? `#${String(inv._id)}`} · {fmtDateTimeBG(inv.createdAt)}</a>
                 <div className="text-xs text-muted-foreground">
                   {inv.paid ? `Платена${inv.paidAt ? ` · ${fmtDateTimeBG(inv.paidAt)}` : ""}` : "Неплатена"}
                   {" "}
@@ -129,6 +130,7 @@ export default function InvoicesPage() {
                       setPaidLoading(inv._id);
                       await markPaid({ id: inv._id });
                       setPaidLoading(null);
+                      toast.success("Фактура маркирана като платена");
                     }}
                   >Маркирай платена</Button>
                 )}

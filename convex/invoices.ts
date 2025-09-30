@@ -62,7 +62,7 @@ export const create = mutation({
       paidAt: null,
       createdAt: now,
     } as any);
-    return { ok: true, id } as const;
+    return { ok: true, id, code } as const;
   },
 });
 
@@ -86,6 +86,13 @@ export const totals = query({
     const paidTotal = rows.filter((r: any) => r.paid).reduce((s: number, r: any) => s + (r.total ?? 0), 0);
     const unpaidTotal = rows.filter((r: any) => !r.paid).reduce((s: number, r: any) => s + (r.total ?? 0), 0);
     return { paidTotal, unpaidTotal, count: rows.length } as const;
+  },
+});
+
+export const getById = query({
+  args: { id: v.id("invoices") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
   },
 });
 
