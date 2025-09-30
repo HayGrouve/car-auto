@@ -14,7 +14,13 @@ import { fmtDateTimeBG } from "@/lib/format";
 
 export default function OwnersPage() {
   const [search, setSearch] = useState("");
-  const owners = useQuery(api.owners.list, useMemo(() => ({ search }), [search])) as OwnerDoc[] | undefined;
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
+  const [sort, setSort] = useState<"createdAtDesc" | "createdAtAsc">("createdAtDesc");
+  const owners = useQuery(
+    api.owners.list,
+    useMemo(() => ({ search, limit: pageSize, offset: page * pageSize, sort }), [search, page, sort])
+  ) as OwnerDoc[] | undefined;
   const createOwner = useMutation(api.owners.create);
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
@@ -47,8 +53,12 @@ export default function OwnersPage() {
           placeholder="Търсене по име, телефон, имейл"
           className="border rounded-md px-3 h-10 w-full"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(0); }}
         />
+        <select className="border rounded-md h-10 px-3" value={sort} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSort(e.target.value as "createdAtDesc" | "createdAtAsc"); setPage(0); }}>
+          <option value="createdAtDesc">Най-нови</option>
+          <option value="createdAtAsc">Най-стари</option>
+        </select>
       </div>
       <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
         <div className="md:col-span-1">
@@ -95,6 +105,15 @@ export default function OwnersPage() {
             </div>
           </div>
         ))}
+      </div>
+      <div className="flex items-center justify-between pt-2">
+        <Button variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Назад</Button>
+        <div className="text-sm text-muted-foreground">Страница {page + 1}</div>
+        <Button
+          variant="outline"
+          onClick={() => setPage((p) => ((owners ?? []).length < pageSize ? p : p + 1))}
+          disabled={(owners ?? []).length < pageSize}
+        >Напред</Button>
       </div>
     </main>
   );

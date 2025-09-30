@@ -17,6 +17,9 @@ export default function InvoicesPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [unpaidOnly, setUnpaidOnly] = useState(true);
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
+  const [sort, setSort] = useState<"createdAtDesc" | "createdAtAsc">("createdAtDesc");
   const owners = useQuery(api.owners.list, useMemo(() => ({ search: "" }), [])) as { _id: string; name: string }[] | undefined;
   const invoices = useQuery(
     api.invoices.list,
@@ -25,7 +28,10 @@ export default function InvoicesPage() {
       ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
       from: from ? Date.parse(from) : undefined,
       to: to ? Date.parse(to) : undefined,
-    }), [unpaidOnly, ownerId, from, to])
+      limit: pageSize,
+      offset: page * pageSize,
+      sort,
+    }), [unpaidOnly, ownerId, from, to, page, sort])
   ) as InvoiceDoc[] | undefined;
   const [totalsDay, setTotalsDay] = useState("");
   const totals = useQuery(
@@ -46,7 +52,7 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-4 gap-2 items-end">
+      <div className="grid md:grid-cols-5 gap-2 items-end">
         <div>
           <Label>Собственик</Label>
           <select className="border rounded-md h-9 px-3 w-full" value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
@@ -58,16 +64,23 @@ export default function InvoicesPage() {
         </div>
         <div>
           <Label htmlFor="from">От дата</Label>
-          <Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <Input id="from" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); }} />
         </div>
         <div>
           <Label htmlFor="to">До дата</Label>
-          <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <Input id="to" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(0); }} />
         </div>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={unpaidOnly} onChange={(e) => setUnpaidOnly(e.target.checked)} />
+          <input type="checkbox" checked={unpaidOnly} onChange={(e) => { setUnpaidOnly(e.target.checked); setPage(0); }} />
           Показвай само неплатени
         </label>
+        <div>
+          <Label>Подредба</Label>
+          <select className="border rounded-md h-9 px-3 w-full" value={sort} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSort(e.target.value as "createdAtDesc" | "createdAtAsc"); setPage(0); }}>
+            <option value="createdAtDesc">Най-нови първо</option>
+            <option value="createdAtAsc">Най-стари първо</option>
+          </select>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-2 items-end">
@@ -194,6 +207,15 @@ export default function InvoicesPage() {
             </div>
           ))
         )}
+      </div>
+      <div className="flex items-center justify-between pt-2">
+        <Button variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Назад</Button>
+        <div className="text-sm text-muted-foreground">Страница {page + 1}</div>
+        <Button
+          variant="outline"
+          onClick={() => setPage((p) => ((invoices ?? []).length < pageSize ? p : p + 1))}
+          disabled={(invoices ?? []).length < pageSize}
+        >Напред</Button>
       </div>
     </main>
   );

@@ -4,6 +4,9 @@ import { usePathname } from "next/navigation";
 import { brand } from "@/lib/brand";
 import { Menu, PawPrint, User, CalendarCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+
+const GlobalSearch = dynamic(() => import("@/components/GlobalSearch"), { ssr: false });
 
 export function AppNav() {
   const pathname = usePathname();
@@ -45,6 +48,7 @@ export function AppNav() {
         </div>
         <div className="hidden md:flex items-center gap-2">
           <NavLinks />
+          <GlobalSearch />
         </div>
         <button className="md:hidden p-2" aria-label="Меню" onClick={() => setOpen((o) => !o)}>
           <Menu className="size-5" />

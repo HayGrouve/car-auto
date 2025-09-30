@@ -13,6 +13,9 @@ export const list = query({
     ownerId: v.optional(v.id("owners")),
     from: v.optional(v.number()),
     to: v.optional(v.number()),
+    limit: v.optional(v.number()),
+    offset: v.optional(v.number()),
+    sort: v.optional(v.union(v.literal("createdAtAsc"), v.literal("createdAtDesc"))),
   },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("invoices").collect();
@@ -21,7 +24,13 @@ export const list = query({
     if (args.ownerId) filtered = filtered.filter((i: any) => String(i.ownerId) === String(args.ownerId));
     if (args.from) filtered = filtered.filter((i: any) => i.createdAt >= args.from!);
     if (args.to) filtered = filtered.filter((i: any) => i.createdAt <= args.to!);
-    return filtered.sort((a: any, b: any) => b.createdAt - a.createdAt);
+    const sorted = filtered.sort((a: any, b: any) => {
+      if (args.sort === "createdAtAsc") return a.createdAt - b.createdAt;
+      return b.createdAt - a.createdAt;
+    });
+    const start = Math.max(0, args.offset ?? 0);
+    const end = (args.limit ?? sorted.length) + start;
+    return sorted.slice(start, end);
   },
 });
 

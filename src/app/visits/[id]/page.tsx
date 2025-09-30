@@ -36,9 +36,12 @@ export default function VisitDetailPage() {
   const [medications, setMedications] = useState<string[]>([]);
   const [procInput, setProcInput] = useState("");
   const [medInput, setMedInput] = useState("");
+  const procedureSuggestions = useQuery(api.visits.suggestProcedures, useMemo(() => ({ limit: 8 }), [])) as string[] | undefined;
+  const medicationSuggestions = useQuery(api.visits.suggestMedications, useMemo(() => ({ limit: 8 }), [])) as string[] | undefined;
   const [animalId, setAnimalId] = useState<string | null>(null);
   const [animalSearch, setAnimalSearch] = useState("");
-  const owners = useQuery(api.owners.list, useMemo(() => ({ search: "" }), [])) as { _id: string; name: string; phone?: string }[] | undefined;
+  const [ownerSearch, setOwnerSearch] = useState("");
+  const owners = useQuery(api.owners.list, useMemo(() => ({ search: ownerSearch }), [ownerSearch])) as { _id: string; name: string; phone?: string }[] | undefined;
   const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
   const [ownerId, setOwnerId] = useState<string>("");
 
@@ -159,6 +162,7 @@ export default function VisitDetailPage() {
   }
 
   if (!visit) return <main className="p-6 max-w-3xl mx-auto">Зареждане...</main>;
+  const isFinalized = visit.status !== "draft";
 
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-4">
@@ -168,12 +172,13 @@ export default function VisitDetailPage() {
           <Label>Собственик</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
+              <Button variant="outline" className="w-full justify-between" disabled={isFinalized}>
                 {ownerId ? (owners ?? []).find((o) => o._id === ownerId)?.name : "Изберете собственик"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
               <Command>
+                <CommandInput placeholder="Търси собственик..." value={ownerSearch} onValueChange={setOwnerSearch} />
                 <CommandList>
                   <CommandEmpty>Няма резултати</CommandEmpty>
                   {(owners ?? []).map((o) => (
@@ -190,7 +195,7 @@ export default function VisitDetailPage() {
           <Label>Животно</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
+              <Button variant="outline" className="w-full justify-between" disabled={isFinalized}>
                 {animalId ? (animals ?? []).find((a) => a._id === animalId)?.name : "Без животно"}
               </Button>
             </PopoverTrigger>
@@ -200,7 +205,7 @@ export default function VisitDetailPage() {
                 <CommandList>
                   <CommandEmpty>Няма резултати</CommandEmpty>
                   {(animals ?? []).filter((an) => !ownerId || String(an.ownerId) === String(ownerId)).map((an) => (
-                    <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); const chosen = (animals ?? []).find((x) => x._id === v); if (chosen?.ownerId) setOwnerId(String(chosen.ownerId)); }}>
+                    <CommandItem key={an._id} value={an._id} onSelect={(v) => { if (isFinalized) return; setAnimalId(v); const chosen = (animals ?? []).find((x) => x._id === v); if (chosen?.ownerId) setOwnerId(String(chosen.ownerId)); }}>
                       {an.name} ({an.species})
                     </CommandItem>
                   ))}
@@ -218,7 +223,7 @@ export default function VisitDetailPage() {
           </div>
           <div>
             <Label htmlFor="datetime">Дата/час</Label>
-            <Input id="datetime" type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} />
+            <Input id="datetime" type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} disabled={isFinalized} />
           </div>
           <div className="md:col-span-2">
             <Label>Създадено</Label>
@@ -228,19 +233,19 @@ export default function VisitDetailPage() {
           </div>
           <div>
             <Label htmlFor="s">S - Субективно</Label>
-            <Textarea id="s" value={s} onChange={(e) => setS(e.target.value)} />
+            <Textarea id="s" value={s} onChange={(e) => setS(e.target.value)} disabled={isFinalized} />
           </div>
           <div>
             <Label htmlFor="o">O - Обективно</Label>
-            <Textarea id="o" value={o} onChange={(e) => setO(e.target.value)} />
+            <Textarea id="o" value={o} onChange={(e) => setO(e.target.value)} disabled={isFinalized} />
           </div>
           <div>
             <Label htmlFor="a">A - Оценка</Label>
-            <Textarea id="a" value={a} onChange={(e) => setA(e.target.value)} />
+            <Textarea id="a" value={a} onChange={(e) => setA(e.target.value)} disabled={isFinalized} />
           </div>
           <div>
             <Label htmlFor="p">P - План</Label>
-            <Textarea id="p" value={p} onChange={(e) => setP(e.target.value)} />
+            <Textarea id="p" value={p} onChange={(e) => setP(e.target.value)} disabled={isFinalized} />
           </div>
         </div>
         <div className="md:col-span-4 grid md:grid-cols-2 gap-4">
@@ -252,6 +257,7 @@ export default function VisitDetailPage() {
                   value={procInput}
                   onChange={(e) => setProcInput(e.target.value)}
                   onKeyDown={(e) => {
+                    if (isFinalized) return;
                     if (e.key === "Enter") {
                       e.preventDefault();
                       const v = procInput.trim();
@@ -261,26 +267,42 @@ export default function VisitDetailPage() {
                     }
                   }}
                   placeholder="напр. Ваксинация"
+                  disabled={isFinalized}
                 />
               </div>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => {
+                  if (isFinalized) return;
                   const v = procInput.trim();
                   if (!v) return;
                   setProcedures((arr) => (arr.includes(v) ? arr : [...arr, v]));
                   setProcInput("");
                 }}
+                disabled={isFinalized}
               >
                 Добави
               </Button>
             </div>
+            {(procedureSuggestions ?? []).length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                {(procedureSuggestions ?? []).map((name, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-full border px-2 py-1 hover:bg-accent"
+                    onClick={() => { if (isFinalized) return; setProcedures((arr) => (arr.includes(name) ? arr : [...arr, name])); }}
+                    disabled={isFinalized}
+                  >{name}</button>
+                ))}
+              </div>
+            ) : null}
             <ul className="mt-2 space-y-1 text-sm">
               {procedures.map((pr, i) => (
                 <li key={i} className="flex justify-between">
                   <span>{pr}</span>
-                  <Button type="button" variant="ghost" onClick={() => setProcedures((arr) => arr.filter((_, idx) => idx !== i))}>Премахни</Button>
+                  <Button type="button" variant="ghost" onClick={() => setProcedures((arr) => arr.filter((_, idx) => idx !== i))} disabled={isFinalized}>Премахни</Button>
                 </li>
               ))}
             </ul>
@@ -293,6 +315,7 @@ export default function VisitDetailPage() {
                   value={medInput}
                   onChange={(e) => setMedInput(e.target.value)}
                   onKeyDown={(e) => {
+                    if (isFinalized) return;
                     if (e.key === "Enter") {
                       e.preventDefault();
                       const v = medInput.trim();
@@ -302,33 +325,49 @@ export default function VisitDetailPage() {
                     }
                   }}
                   placeholder="напр. Амоксицилин"
+                  disabled={isFinalized}
                 />
               </div>
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => {
+                  if (isFinalized) return;
                   const v = medInput.trim();
                   if (!v) return;
                   setMedications((arr) => (arr.includes(v) ? arr : [...arr, v]));
                   setMedInput("");
                 }}
+                disabled={isFinalized}
               >
                 Добави
               </Button>
             </div>
+            {(medicationSuggestions ?? []).length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                {(medicationSuggestions ?? []).map((name, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-full border px-2 py-1 hover:bg-accent"
+                    onClick={() => { if (isFinalized) return; setMedications((arr) => (arr.includes(name) ? arr : [...arr, name])); }}
+                    disabled={isFinalized}
+                  >{name}</button>
+                ))}
+              </div>
+            ) : null}
             <ul className="mt-2 space-y-1 text-sm">
               {medications.map((md, i) => (
                 <li key={i} className="flex justify-between">
                   <span>{md}</span>
-                  <Button type="button" variant="ghost" onClick={() => setMedications((arr) => arr.filter((_, idx) => idx !== i))}>Премахни</Button>
+                  <Button type="button" variant="ghost" onClick={() => setMedications((arr) => arr.filter((_, idx) => idx !== i))} disabled={isFinalized}>Премахни</Button>
                 </li>
               ))}
             </ul>
           </div>
         </div>
         <div className="md:col-span-4 flex gap-2">
-          <Button type="submit">Запази</Button>
+          <Button type="submit" disabled={isFinalized}>Запази</Button>
           <Button type="button" variant="outline" onClick={onFinalize} disabled={visit.status !== "draft"}>Приключи</Button>
           <Button type="button" variant="secondary" onClick={onDuplicate}>Дублирай</Button>
           <Button type="button" variant="ghost" onClick={onPrint}>Печат</Button>

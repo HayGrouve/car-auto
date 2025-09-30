@@ -27,18 +27,23 @@ function VisitsPageInner() {
   const [to, setTo] = useState<string>("");
   const [ownerId, setOwnerId] = useState("");
   const [animalId, setAnimalId] = useState("");
+  const [page, setPage] = useState(0);
+  const [sort, setSort] = useState<"datetimeDesc" | "datetimeAsc">("datetimeDesc");
+  const pageSize = 20;
   const visits = useQuery(
     api.visits.list,
     useMemo(
       () => ({
-        limit: 50,
+        limit: pageSize,
+        offset: page * pageSize,
+        sort,
         status: status || undefined,
         ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
         animalId: animalId ? (animalId as Id<"animals">) : undefined,
         from: from ? Date.parse(from) : undefined,
         to: to ? Date.parse(to) : undefined,
       }),
-      [status, ownerId, animalId, from, to]
+      [status, ownerId, animalId, from, to, page, sort]
     )
   ) as VisitDoc[] | undefined;
   const createVisit = useMutation(api.visits.create) as unknown as (args: { ownerId: string; animalId?: string; soap: { s?: string; o?: string; a?: string; p?: string } }) => Promise<{ ok: boolean }>;
@@ -99,11 +104,11 @@ function VisitsPageInner() {
               </PopoverTrigger>
               <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
                 <Command>
-                  <CommandInput placeholder="Търси собственик..." value={ownerSearch} onValueChange={setOwnerSearch} />
+                  <CommandInput placeholder="Търси собственик..." value={ownerSearch} onValueChange={(v) => { setOwnerSearch(v); setPage(0); }} />
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
                     {(owners ?? []).map((o) => (
-                      <CommandItem key={o._id} value={o._id} onSelect={(v) => { setOwnerId(v); setAnimalId(""); }}>
+                      <CommandItem key={o._id} value={o._id} onSelect={(v) => { setOwnerId(v); setAnimalId(""); setPage(0); }}>
                         {o.name} · {o.phone}
                       </CommandItem>
                     ))}
@@ -122,13 +127,13 @@ function VisitsPageInner() {
               </PopoverTrigger>
               <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
                 <Command>
-                  <CommandInput placeholder="Търси животно..." value={animalSearch} onValueChange={setAnimalSearch} />
+                  <CommandInput placeholder="Търси животно..." value={animalSearch} onValueChange={(v) => { setAnimalSearch(v); setPage(0); }} />
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
                     {(animals ?? [])
                       .filter((an) => !ownerId || String(an.ownerId) === String(ownerId))
                       .map((an) => (
-                    <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); const chosen = (animals ?? []).find((x) => x._id === v); if (chosen?.ownerId) setOwnerId(String(chosen.ownerId)); }}>
+                    <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); const chosen = (animals ?? []).find((x) => x._id === v); if (chosen?.ownerId) setOwnerId(String(chosen.ownerId)); setPage(0); }}>
                         {an.name} ({an.species})
                       </CommandItem>
                     ))}
@@ -138,7 +143,7 @@ function VisitsPageInner() {
             </Popover>
           </div>
         </div>
-        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-2">
           <div>
             <Label>Статус</Label>
             <Popover>
@@ -148,9 +153,9 @@ function VisitsPageInner() {
               <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
                 <Command>
                   <CommandList>
-                    <CommandItem onSelect={() => setStatus("")}>Всички</CommandItem>
-                    <CommandItem onSelect={() => setStatus("draft")}>Чернова</CommandItem>
-                    <CommandItem onSelect={() => setStatus("finalized")}>Приключени</CommandItem>
+                    <CommandItem onSelect={() => { setStatus(""); setPage(0); }}>Всички</CommandItem>
+                    <CommandItem onSelect={() => { setStatus("draft"); setPage(0); }}>Чернова</CommandItem>
+                    <CommandItem onSelect={() => { setStatus("finalized"); setPage(0); }}>Приключени</CommandItem>
                   </CommandList>
                 </Command>
               </PopoverContent>
@@ -158,11 +163,18 @@ function VisitsPageInner() {
           </div>
           <div>
             <Label htmlFor="from">От дата</Label>
-            <Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <Input id="from" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(0); }} />
           </div>
           <div>
             <Label htmlFor="to">До дата</Label>
-            <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <Input id="to" type="date" value={to} onChange={(e) => { setTo(e.target.value); setPage(0); }} />
+          </div>
+          <div>
+            <Label>Подредба</Label>
+            <select className="border rounded-md h-9 px-3 w-full" value={sort} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSort(e.target.value as "datetimeDesc" | "datetimeAsc"); setPage(0); }}>
+              <option value="datetimeDesc">Най-нови първо</option>
+              <option value="datetimeAsc">Най-стари първо</option>
+            </select>
           </div>
         </div>
         <div className="md:col-span-4 grid grid-cols-1 gap-2">
@@ -224,6 +236,15 @@ function VisitsPageInner() {
             </div>
           </div>
         ))}
+      </div>
+      <div className="flex items-center justify-between pt-2">
+        <Button variant="outline" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>Назад</Button>
+        <div className="text-sm text-muted-foreground">Страница {page + 1}</div>
+        <Button
+          variant="outline"
+          onClick={() => setPage((p) => ((visits ?? []).length < pageSize ? p : p + 1))}
+          disabled={(visits ?? []).length < pageSize}
+        >Напред</Button>
       </div>
     </main>
   );

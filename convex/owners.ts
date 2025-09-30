@@ -2,17 +2,65 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const list = query({
-  args: { search: v.optional(v.string()) },
+  args: {
+    search: v.optional(v.string()),
+    limit: v.optional(v.number()),
+    offset: v.optional(v.number()),
+    sort: v.optional(v.string()), // 'createdAtAsc' | 'createdAtDesc'
+  },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("owners").collect();
     const filtered = all.filter((o: any) => !o.deletedAt);
-    const search = args.search?.toLowerCase() ?? "";
-    if (!search) return filtered.sort((a: any, b: any) => b.createdAt - a.createdAt);
-    return filtered
+    const translitMap: Record<string, string> = {
+      А: "A", а: "a", Б: "B", б: "b", В: "V", в: "v", Г: "G", г: "g",
+      Д: "D", д: "d", Е: "E", е: "e", Ж: "zh", ж: "zh", З: "Z", з: "z",
+      И: "i", и: "i", Й: "y", й: "y", К: "k", к: "k", Л: "l", л: "l",
+      М: "m", м: "m", Н: "n", н: "n", О: "o", о: "o", П: "p", п: "p",
+      Р: "r", р: "r", С: "s", с: "s", Т: "t", т: "t", У: "u", у: "u",
+      Ф: "f", ф: "f", Х: "h", х: "h", Ц: "ts", ц: "ts", Ч: "ch", ч: "ch",
+      Ш: "sh", ш: "sh", Щ: "sht", щ: "sht", Ъ: "a", ъ: "a", Ь: "", ь: "",
+      Ю: "yu", ю: "yu", Я: "ya", я: "ya",
+    };
+    const toAscii = (s: string) => Array.from(String(s)).map((ch) => translitMap[ch] ?? ch).join("");
+    const normalizePair = (s: string) => {
+      const base = String(s)
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("bg")
+        .replace(/["'`„“”]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const ascii = toAscii(base).toLowerCase();
+      return { base, ascii };
+    };
+    const q = normalizePair(args.search ?? "");
+    const byDateDesc = (a: any, b: any) => b.createdAt - a.createdAt;
+    const byDateAsc = (a: any, b: any) => a.createdAt - b.createdAt;
+    if (!q.base && !q.ascii) {
+      const sorted = (args.sort === "createdAtAsc" ? filtered.sort(byDateAsc) : filtered.sort(byDateDesc));
+      const start = Math.max(0, args.offset ?? 0);
+      const end = (args.limit ?? sorted.length) + start;
+      return sorted.slice(start, end);
+    }
+    const matches = (value: unknown) => {
+      const p = normalizePair(String(value ?? ""));
+      return (
+        (p.base && q.base && p.base.includes(q.base)) ||
+        (p.ascii && q.ascii && p.ascii.includes(q.ascii)) ||
+        (p.base && q.ascii && p.base.includes(q.ascii)) ||
+        (p.ascii && q.base && p.ascii.includes(q.base))
+      );
+    };
+    const matched = filtered
       .filter((o: any) =>
-        [o.name, o.phone, o.email].filter(Boolean).some((v: string) => v.toLowerCase().includes(search))
-      )
-      .sort((a: any, b: any) => b.createdAt - a.createdAt);
+        [o.name, o.phone, o.email]
+          .filter(Boolean)
+          .some((v: string) => matches(v))
+      );
+    const sorted = (args.sort === "createdAtAsc" ? matched.sort(byDateAsc) : matched.sort(byDateDesc));
+    const start = Math.max(0, args.offset ?? 0);
+    const end = (args.limit ?? sorted.length) + start;
+    return sorted.slice(start, end);
   },
 });
 

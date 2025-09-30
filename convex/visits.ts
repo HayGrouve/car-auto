@@ -10,6 +10,8 @@ function generateHumanCode(prefix: string): string {
 export const list = query({
   args: {
     limit: v.optional(v.number()),
+    offset: v.optional(v.number()),
+    sort: v.optional(v.string()), // 'datetimeAsc' | 'datetimeDesc'
     status: v.optional(v.string()),
     ownerId: v.optional(v.id("owners")),
     animalId: v.optional(v.id("animals")),
@@ -27,8 +29,12 @@ export const list = query({
       if (args.to && t > args.to) return false;
       return true;
     });
-    const sorted = filtered.sort((a: any, b: any) => (b.datetime ?? b.createdAt) - (a.datetime ?? a.createdAt));
-    return sorted.slice(0, args.limit ?? 50);
+    const byDesc = (a: any, b: any) => (b.datetime ?? b.createdAt) - (a.datetime ?? a.createdAt);
+    const byAsc = (a: any, b: any) => (a.datetime ?? a.createdAt) - (b.datetime ?? b.createdAt);
+    const sorted = (args.sort === "datetimeAsc" ? filtered.sort(byAsc) : filtered.sort(byDesc));
+    const start = Math.max(0, args.offset ?? 0);
+    const size = args.limit ?? 50;
+    return sorted.slice(start, start + size);
   },
 });
 
@@ -77,6 +83,28 @@ export const finalize = mutation({
     const visit = await ctx.db.get(args.id);
     if (!visit) return { ok: false } as const;
     await ctx.db.patch(args.id, { status: "finalized", updatedAt: Date.now() });
+    // Upsert procedure/medication catalogs with simple frequency counts
+    const procedures: string[] = (visit as any).procedures ?? [];
+    const medications: string[] = (visit as any).medications ?? [];
+    // We store catalogs as documents in a dedicated table if it exists; otherwise, no-op
+    try {
+      for (const name of procedures) {
+        const existing = await ctx.db.query("procedureCatalog").filter((q: any) => q.eq(q.field("name"), name)).first();
+        if (existing) await ctx.db.patch(existing._id, { count: (existing as any).count + 1 } as any);
+        else await ctx.db.insert("procedureCatalog", { name, count: 1 } as any);
+      }
+    } catch (_) {
+      // table may not exist; ignore
+    }
+    try {
+      for (const name of medications) {
+        const existing = await ctx.db.query("medicationCatalog").filter((q: any) => q.eq(q.field("name"), name)).first();
+        if (existing) await ctx.db.patch(existing._id, { count: (existing as any).count + 1 } as any);
+        else await ctx.db.insert("medicationCatalog", { name, count: 1 } as any);
+      }
+    } catch (_) {
+      // table may not exist; ignore
+    }
     return { ok: true } as const;
   },
 });
@@ -115,6 +143,35 @@ export const update = mutation({
     if (args.ownerId !== undefined) patch.ownerId = args.ownerId;
     await ctx.db.patch(args.id, patch);
     return { ok: true } as const;
+  },
+});
+
+// Suggestions for procedures/medications (most frequent first)
+export const suggestProcedures = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    try {
+      const list = await ctx.db.query("procedureCatalog").collect();
+      const sorted = list.sort((a: any, b: any) => (b.count ?? 0) - (a.count ?? 0));
+      const limit = args.limit ?? 10;
+      return sorted.slice(0, limit).map((r: any) => r.name);
+    } catch (_) {
+      return [] as string[];
+    }
+  },
+});
+
+export const suggestMedications = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    try {
+      const list = await ctx.db.query("medicationCatalog").collect();
+      const sorted = list.sort((a: any, b: any) => (b.count ?? 0) - (a.count ?? 0));
+      const limit = args.limit ?? 10;
+      return sorted.slice(0, limit).map((r: any) => r.name);
+    } catch (_) {
+      return [] as string[];
+    }
   },
 });
 

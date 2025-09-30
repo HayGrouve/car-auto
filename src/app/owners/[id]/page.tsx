@@ -252,7 +252,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
                   <Button
                     variant="outline"
                     disabled={loading === inv._id}
-                    onClick={async () => { setLoading(inv._id); const r = await markPaid({ id: inv._id }); setLoading(null); }}
+                    onClick={async () => { setLoading(inv._id); await markPaid({ id: inv._id }); setLoading(null); }}
                   >Маркирай платена</Button>
                 )}
               </div>
