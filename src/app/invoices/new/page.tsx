@@ -32,6 +32,7 @@ function NewInvoicePageInner() {
   const procSuggestions = useQuery(api.visits.suggestProcedures, useMemo(() => ({ limit: 8 }), [])) as string[] | undefined;
   const medSuggestions = useQuery(api.visits.suggestMedications, useMemo(() => ({ limit: 8 }), [])) as string[] | undefined;
   const [markPaidNow, setMarkPaidNow] = useState(false);
+  const [prefilledFromVisit, setPrefilledFromVisit] = useState(false);
 
   // Prefill from query params
   useEffect(() => {
@@ -57,6 +58,23 @@ function NewInvoicePageInner() {
       return copy;
     });
   }
+
+  // Auto-prefill items from visit once when visitId is provided and visit data loads
+  useEffect(() => {
+    if (!visitId || !visit || prefilledFromVisit) return;
+    const baseItems = [
+      ...((visit.procedures ?? []).map((name) => ({ description: name, quantity: "1", price: "0", total: 0 }))),
+      ...((visit.medications ?? []).map((name) => ({ description: name, quantity: "1", price: "0", total: 0 }))),
+    ];
+    // Only override initial blank row to avoid clobbering user edits
+    const first = items[0];
+    const isPristine = items.length === 1 && first && !first.description.trim() && (parseFloat(first.price || "0") === 0) && (parseFloat(first.quantity || "1") === 1) && first.total === 0;
+    if (baseItems.length > 0 && isPristine) {
+      setItems(baseItems);
+      setPrefilledFromVisit(true);
+      toast.success("Добавени редове от посещението");
+    }
+  }, [visitId, visit, prefilledFromVisit, items]);
 
   // Prefill from query params (single-run during first render)
   if (!ownerId) {

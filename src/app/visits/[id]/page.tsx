@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
-import { VisitDocSchema, type VisitDoc } from "@/types/visit";
+import { type VisitDoc } from "@/types/visit";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -14,15 +14,15 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
 import { fmtDateTimeBG } from "@/lib/format";
-import dynamic from "next/dynamic";
 import VisitPdfButton from "@/components/pdf/VisitPdfButton";
-import { CalendarCheck, FileText, Printer, FilePlus } from "lucide-react";
-const VisitPdf = dynamic(() => import("@/components/pdf/VisitPdf"), { ssr: false });
+import { CalendarCheck, Printer, FilePlus } from "lucide-react";
+import VisitWizard from "./VisitWizard";
+import { usePathname, useSearchParams } from "next/navigation";
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id as Id<"visits">;
-  const visitUnknown = useQuery(api.visits.getById, useMemo(() => ({ id }), [id])) as unknown;
+  const visitUnknown = useQuery(api.visits.getById, useMemo(() => ({ id }), [id])) as VisitDoc | null | undefined;
   const update = useMutation(api.visits.update);
   const finalize = useMutation(api.visits.finalize);
   const createVisit = useMutation(api.visits.create) as unknown as (args: { ownerId: string; animalId?: string | null; datetime?: number; soap: { s?: string; o?: string; a?: string; p?: string }; procedures?: string[]; medications?: string[] }) => Promise<{ ok: boolean; id: string }>;
@@ -47,8 +47,17 @@ export default function VisitDetailPage() {
   const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
   const [ownerId, setOwnerId] = useState<string>("");
 
-  const parsed = VisitDocSchema.safeParse(visitUnknown);
-  const visit: VisitDoc | null = parsed.success ? parsed.data : null;
+  const visit: VisitDoc | null = visitUnknown ?? null;
+
+  // Wizard visibility & URL step handling must be declared before any early returns
+  const [showWizard, setShowWizard] = useState(false);
+  const pathname = usePathname();
+  const sp = useSearchParams();
+  const isFinalized = !!visit && visit.status !== "draft";
+  useEffect(() => {
+    const hasStep = sp.get("step");
+    setShowWizard(Boolean(hasStep) && !isFinalized);
+  }, [sp, isFinalized]);
 
   useEffect(() => {
     if (!hydrated && visit) {
@@ -75,7 +84,7 @@ export default function VisitDetailPage() {
       procedures,
       medications,
       animalId: animalId ? (animalId as Id<"animals">) : null,
-      ownerId: (ownerId || null) as Id<"owners"> | null,
+      ownerId: ownerId ? (ownerId as Id<"owners">) : null,
     })) as { ok: boolean };
     if (res?.ok) toast.success("Записът е обновен");
   }
@@ -163,12 +172,34 @@ export default function VisitDetailPage() {
     w.document.close();
   }
 
-  if (!visit) return <main className="p-6 max-w-3xl mx-auto">Зареждане...</main>;
-  const isFinalized = visit.status !== "draft";
+  if (visitUnknown === undefined) return <main className="p-6 max-w-3xl mx-auto">Зареждане...</main>;
+  if (!visit) return <main className="p-6 max-w-3xl mx-auto">Не е намерено посещение</main>;
 
   return (
     <main className="p-6 max-w-4xl mx-auto space-y-4">
       <h1 className="text-2xl font-semibold">{brand.nameBg}: Посещение</h1>
+      {!isFinalized && !sp.get("step") ? (
+        <div className="border rounded-md p-3 bg-muted/20 flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">Посещението е чернова. Можете да продължите с ръководен режим.</div>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const next = new URLSearchParams(sp.toString());
+              next.set("step", "1");
+              router.replace(`${pathname}?${next.toString()}`);
+            }}
+          >Продължи ръководството</Button>
+        </div>
+      ) : null}
+      {!isFinalized ? (
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-muted-foreground">Ръководен режим</div>
+          <Button variant="secondary" onClick={() => setShowWizard((v) => !v)} aria-label="Стартирай ръководство">
+            {showWizard ? "Скрий ръководство" : "Стартирай ръководство"}
+          </Button>
+        </div>
+      ) : null}
+      {showWizard && !isFinalized ? <VisitWizard id={id} onClose={() => setShowWizard(false)} /> : null}
       <form onSubmit={onSave} className="grid md:grid-cols-4 gap-2">
         <div className="md:col-span-2">
           <Label>Собственик</Label>

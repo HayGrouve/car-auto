@@ -12,10 +12,10 @@ import type { InvoiceDoc } from "@/types/visit";
 import type { Id } from "@/../convex/_generated/dataModel";
 import InvoicePdfButton from "@/components/pdf/InvoicePdfButton";
 import { EmptyState } from "@/components/EmptyState";
-import { FileText, Printer, FileDown, CheckCircle, ExternalLink } from "lucide-react";
+import { FileText, Printer, CheckCircle, ExternalLink } from "lucide-react";
 import { SkeletonList } from "@/components/SkeletonList";
-import dynamic from "next/dynamic";
-const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
+// import dynamic from "next/dynamic";
+// const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
 import { InvoiceStatusBadge } from "@/components/StatusBadge";
 
 export default function InvoicesPage() {

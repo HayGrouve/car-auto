@@ -129,4 +129,12 @@
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
+  /* Touch target baseline for mobile */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
 }

@@ -47,7 +47,7 @@ export default function InvoicePdfButton({
   }
 
   return (
-    <Button type="button" variant={variant as any} className={className} disabled={loading} aria-label={ariaLabel} onClick={onClick}>
+    <Button type="button" variant={variant as "default" | "secondary" | "outline" | "ghost"} className={className} disabled={loading} aria-label={ariaLabel} onClick={onClick}>
       {loading ? "Генериране..." : <FileText className="size-4" />}
     </Button>
   );

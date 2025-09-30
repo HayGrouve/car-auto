@@ -20,6 +20,7 @@ export default function AnimalDetailPage() {
   const id = params.id as Id<"animals">;
   const animalUnknown = useQuery(api.animals.getById, useMemo(() => ({ id }), [id])) as unknown;
   const update = useMutation(api.animals.update);
+  const createVisit = useMutation(api.visits.create) as unknown as (args: { ownerId: string; animalId?: string | null; datetime?: number; soap: { s?: string; o?: string; a?: string; p?: string }; procedures?: string[]; medications?: string[] }) => Promise<{ ok: boolean; id: string }>;
   const owners = useQuery(api.owners.list, useMemo(() => ({ search: "" }), [])) as { _id: string; name: string; phone?: string }[] | undefined;
   const router = useRouter();
 
@@ -47,6 +48,23 @@ export default function AnimalDetailPage() {
     if (res?.ok) {
       toast.success("Записът е обновен");
       router.push("/animals");
+    }
+  }
+
+  async function onStartVisit() {
+    if (!form.ownerId) { toast.error("Изберете собственик преди да започнете посещение"); return; }
+    const res = await createVisit({
+      ownerId: form.ownerId as unknown as string,
+      animalId: (form.ownerId ? (id as unknown as string) : undefined),
+      datetime: Date.now(),
+      soap: {},
+      procedures: [],
+      medications: [],
+    });
+    if (res?.ok && res.id) {
+      toast.success("Стартирано посещение");
+      // Open with wizard step=1
+      router.push(`/visits/${res.id}?step=1`);
     }
   }
 
@@ -114,6 +132,7 @@ export default function AnimalDetailPage() {
         </label>
         <div className="flex gap-2">
           <Button type="submit">Запази</Button>
+          <Button type="button" variant="secondary" onClick={onStartVisit}>Започни посещение</Button>
           <Button type="button" variant="outline" onClick={() => router.back()}>Назад</Button>
         </div>
       </form>

@@ -31,32 +31,47 @@ export default function HomePage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <Link href="/owners"><Button size="sm" variant="secondary" aria-label="Нов собственик">Нов собственик</Button></Link>
+        <Link href="/animals"><Button size="sm" variant="secondary" aria-label="Ново животно">Ново животно</Button></Link>
+        <Link href="/visits"><Button size="sm" variant="secondary" aria-label="Ново посещение">Ново посещение</Button></Link>
+        <Link href="/invoices/new"><Button size="sm" variant="secondary" aria-label="Нова фактура">Нова фактура</Button></Link>
+      </div>
+
       <section className="grid gap-3 md:grid-cols-4">
-        <div className="rounded-md border p-4">
+        <Link href="/owners" className="rounded-md border p-4 hover:bg-accent block" aria-label="Към собственици">
           <div className="text-sm text-muted-foreground">Собственици</div>
           <div className="text-2xl font-semibold">{(owners ?? []).length}</div>
-          <div className="mt-3"><Link href="/owners"><Button size="sm" variant="outline">Към списъка</Button></Link></div>
-        </div>
-        <div className="rounded-md border p-4">
+          <div className="mt-3"><span className="text-sm underline underline-offset-2">Към списъка</span></div>
+        </Link>
+        <Link href="/animals" className="rounded-md border p-4 hover:bg-accent block" aria-label="Към животни">
           <div className="text-sm text-muted-foreground">Животни</div>
           <div className="text-2xl font-semibold">{(animals ?? []).length}</div>
-          <div className="mt-3"><Link href="/animals"><Button size="sm" variant="outline">Към списъка</Button></Link></div>
-        </div>
-        <div className="rounded-md border p-4">
+          <div className="mt-3"><span className="text-sm underline underline-offset-2">Към списъка</span></div>
+        </Link>
+        <Link href="/invoices" className="rounded-md border p-4 hover:bg-accent block" aria-label="Към фактури">
           <div className="text-sm text-muted-foreground">Фактури (днес)</div>
           <div className="text-2xl font-semibold">{todayTotals?.count ?? 0}</div>
-          <div className="mt-3"><Link href="/invoices"><Button size="sm" variant="outline">Към фактури</Button></Link></div>
-        </div>
-        <div className="rounded-md border p-4">
+          <div className="mt-3"><span className="text-sm underline underline-offset-2">Към фактури</span></div>
+        </Link>
+        <Link href="/visits" className="rounded-md border p-4 hover:bg-accent block" aria-label="Към посещения">
           <div className="text-sm text-muted-foreground">Чернови посещения</div>
           <div className="text-2xl font-semibold">{(draftVisits ?? []).length}</div>
-          <div className="mt-3"><Link href="/visits"><Button size="sm" variant="outline">Към посещения</Button></Link></div>
-        </div>
+          <div className="mt-3"><span className="text-sm underline underline-offset-2">Към посещения</span></div>
+        </Link>
       </section>
 
       <section className="grid md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <h2 className="text-lg font-medium">Последни посещения</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium">Последни посещения</h2>
+            <label
+              aria-hidden
+              className="text-xs text-muted-foreground inline-flex items-center gap-2 opacity-0 select-none"
+            >
+              <input type="checkbox" disabled /> Само неплатени
+            </label>
+          </div>
           <div className="border rounded-md divide-y">
             {(visits ?? []).length === 0 ? (
               <div className="p-3 text-sm text-muted-foreground">Няма записи</div>

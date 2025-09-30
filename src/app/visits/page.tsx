@@ -44,7 +44,7 @@ function VisitsPageInner() {
       [status, ownerId, animalId, from, to, page, sort]
     )
   ) as VisitDoc[] | undefined;
-  const createVisit = useMutation(api.visits.create) as unknown as (args: { ownerId: string; animalId?: string; soap: { s?: string; o?: string; a?: string; p?: string } }) => Promise<{ ok: boolean }>;
+  const createVisit = useMutation(api.visits.create) as unknown as (args: { ownerId: string; animalId?: string; soap: { s?: string; o?: string; a?: string; p?: string } }) => Promise<{ ok: boolean; id: string }>;
   const finalizeVisit = useMutation(api.visits.finalize) as unknown as (args: { id: string }) => Promise<{ ok: boolean }>;
 
   const params = useSearchParams();
@@ -77,9 +77,11 @@ function VisitsPageInner() {
       return;
     }
     const res = await createVisit({ ownerId, animalId: animalId || undefined, soap: { s, o, a, p } });
-    if (res?.ok) {
+    if (res?.ok && res.id) {
       toast.success("Посещението е създадено");
       setS(""); setO(""); setA(""); setP("");
+      // Redirect to guided wizard at step 1
+      window.location.href = `/visits/${res.id}?step=1`;
     }
   }
 
@@ -235,6 +237,15 @@ function VisitsPageInner() {
                 >
                   <CheckCircle className="mr-1 size-4" aria-hidden /> Приключи
                 </Button>
+              ) : null}
+              {v.status === "draft" ? (
+                <a
+                  className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+                  href={`/visits/${v._id}?step=1`}
+                  aria-label={`Стартирай ръководство за ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
+                >
+                  Ръководство
+                </a>
               ) : null}
               <a
                 className="inline-flex items-center rounded-md border px-3 py-1.5 text-sm hover:bg-accent"

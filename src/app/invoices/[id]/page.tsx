@@ -7,8 +7,8 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
 import InvoicePdfButton from "@/components/pdf/InvoicePdfButton";
-import dynamic from "next/dynamic";
-const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
+// import dynamic from "next/dynamic";
+// const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
 import type { InvoiceDoc } from "@/types/visit";
 
 export default function InvoiceDetailPage() {

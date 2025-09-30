@@ -67,6 +67,13 @@ export function GlobalSearch() {
     useMemo(() => ({ search: query, limit: 10 }), [query])
   ) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
 
+  // Build a quick map of owners for disambiguation display
+  const ownerMap = useMemo(() => {
+    const map: Record<string, { name: string; phone?: string }> = {};
+    (owners ?? []).forEach((o) => { map[o._id] = { name: o.name, phone: o.phone }; });
+    return map;
+  }, [owners]);
+
   const visitsRaw = useQuery(
     api.visits.list,
     useMemo(() => ({ limit: 50 }), [])
@@ -155,6 +162,9 @@ export function GlobalSearch() {
                   <PawPrint className="mr-2 size-4" aria-hidden />
                   <span className="font-medium">{a.name}</span>
                   <span className="text-muted-foreground ml-2">· {a.species}</span>
+                  {a.ownerId ? (
+                    <span className="text-muted-foreground ml-2">· {(ownerMap[String(a.ownerId)]?.name) ?? ""}{ownerMap[String(a.ownerId)]?.phone ? ` · ${ownerMap[String(a.ownerId)]?.phone}` : ""}</span>
+                  ) : null}
                   <CommandShortcut>Animal</CommandShortcut>
                 </CommandItem>
               ))}

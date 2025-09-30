@@ -7,6 +7,10 @@ export const VisitDocSchema = z.object({
   status: z.string(),
   code: z.string().optional(),
   datetime: z.number().optional(),
+  // Guided wizard measurements (optional for drafts)
+  weight: z.number().optional(),
+  temperature: z.number().optional(),
+  pulse: z.number().optional(),
   soap: z
     .object({ s: z.string().optional(), o: z.string().optional(), a: z.string().optional(), p: z.string().optional() })
     .optional(),

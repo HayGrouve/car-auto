@@ -43,6 +43,10 @@ export const create = mutation({
     ownerId: v.id("owners"),
     animalId: v.optional(v.id("animals")),
     datetime: v.optional(v.number()),
+    // Measurements (optional)
+    weight: v.optional(v.number()),
+    temperature: v.optional(v.number()),
+    pulse: v.optional(v.number()),
     soap: v.object({
       s: v.optional(v.string()),
       o: v.optional(v.string()),
@@ -65,6 +69,9 @@ export const create = mutation({
       ownerId: args.ownerId,
       animalId: args.animalId ?? null,
       datetime: args.datetime ?? now,
+      weight: args.weight ?? null,
+      temperature: args.temperature ?? null,
+      pulse: args.pulse ?? null,
       soap: args.soap,
       procedures: args.procedures ?? [],
       medications: args.medications ?? [],
@@ -120,6 +127,9 @@ export const update = mutation({
   args: {
     id: v.id("visits"),
     datetime: v.optional(v.union(v.number(), v.null())),
+    weight: v.optional(v.union(v.number(), v.null())),
+    temperature: v.optional(v.union(v.number(), v.null())),
+    pulse: v.optional(v.union(v.number(), v.null())),
     soap: v.optional(v.object({
       s: v.optional(v.string()),
       o: v.optional(v.string()),
@@ -135,6 +145,9 @@ export const update = mutation({
   handler: async (ctx, args) => {
     const patch: any = { updatedAt: Date.now() };
     if (args.datetime !== undefined) patch.datetime = args.datetime;
+    if (args.weight !== undefined) patch.weight = args.weight;
+    if (args.temperature !== undefined) patch.temperature = args.temperature;
+    if (args.pulse !== undefined) patch.pulse = args.pulse;
     if (args.soap !== undefined) patch.soap = args.soap;
     if (args.animalId !== undefined) patch.animalId = args.animalId;
     if (args.status !== undefined) patch.status = args.status;
