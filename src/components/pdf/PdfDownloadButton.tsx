@@ -1,14 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type React from "react";
-import type { DocumentProps } from "@react-pdf/renderer";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { toast } from "sonner";
 
 type PdfDownloadButtonProps = {
-  getDocument: () => Promise<React.ReactElement> | React.ReactElement;
+  generatePdf: () => Blob | Promise<Blob>;
   fileName: string;
   variant?: string;
   className?: string;
@@ -17,7 +15,7 @@ type PdfDownloadButtonProps = {
 };
 
 export default function PdfDownloadButton({
-  getDocument,
+  generatePdf,
   fileName,
   variant = "ghost",
   className,
@@ -29,9 +27,7 @@ export default function PdfDownloadButton({
   async function onClick() {
     try {
       setLoading(true);
-      const docEl = (await Promise.resolve(getDocument())) as React.ReactElement<DocumentProps>;
-      const { pdf } = await import("@react-pdf/renderer");
-      const blob = await pdf(docEl).toBlob();
+      const blob = await generatePdf();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -40,19 +36,25 @@ export default function PdfDownloadButton({
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      toast.success("PDF файлът е свален успешно");
     } catch (err) {
       console.error("PDF download failed", err);
-      try { toast.error("Неуспешно генериране на PDF"); } catch {}
+      toast.error("Неуспешно генериране на PDF");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Button type="button" variant={variant as "default" | "secondary" | "outline" | "ghost"} className={className} disabled={loading} aria-label={ariaLabel} onClick={onClick}>
+    <Button
+      type="button"
+      variant={variant as "default" | "secondary" | "outline" | "ghost"}
+      className={className}
+      disabled={loading}
+      aria-label={ariaLabel}
+      onClick={onClick}
+    >
       {loading ? "Генериране..." : children ?? <FileText className="size-4" />}
     </Button>
   );
 }
-
-

@@ -15,4 +15,16 @@ export function fmtNumberBG(value: number, options?: Intl.NumberFormatOptions): 
   return new Intl.NumberFormat("bg-BG", options).format(value);
 }
 
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("bg-BG", {
+    style: "currency",
+    currency: "BGN",
+  }).format(value);
+}
+
+export function formatDate(value: number | string | Date): string {
+  const date = typeof value === "string" || typeof value === "number" ? new Date(value) : value;
+  return new Intl.DateTimeFormat("bg-BG", { dateStyle: "medium" }).format(date);
+}
+
 
