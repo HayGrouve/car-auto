@@ -1,119 +1,254 @@
-"use client";
-import { useMemo, useState } from "react";
+﻿"use client";
+
+import Link from "next/link";
 import { useQuery } from "convex/react";
+import { Users, PawPrint, ClipboardList, FileText } from "lucide-react";
+
 import { api } from "@/../convex/_generated/api";
 import { brand } from "@/lib/brand";
-import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
-import type { VisitDoc, InvoiceDoc } from "@/types/visit";
+import { fmtNumberBG } from "@/lib/format";
+import GlobalSearch from "@/components/GlobalSearch";
+import { SkeletonList } from "@/components/SkeletonList";
+import { MetricCard } from "@/components/dashboard/MetricCard";
+import { QuickActionsCard } from "@/components/dashboard/QuickActionsCard";
+import { VisitList, type VisitListItem } from "@/components/dashboard/VisitList";
+import { InvoiceList, type InvoiceListItem } from "@/components/dashboard/InvoiceList";
+import { AlertList } from "@/components/dashboard/AlertList";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+
+const ICON_CLASS = "size-5 text-muted-foreground";
+
+type DashboardCounts = {
+  owners: number;
+  animals: number;
+  draftVisits: number;
+  unpaidInvoices: number;
+};
+
+type DashboardTotals = {
+  today: { paid: number; unpaid: number };
+  week: { paid: number; unpaid: number };
+  unpaidInvoicesTotal: number;
+};
+
+type DashboardVisit = {
+  _id: string;
+  code: string | null;
+  datetime: number;
+  status: string;
+  ownerId: string | null;
+  ownerName: string | null;
+  animalId: string | null;
+};
+
+type DashboardInvoice = {
+  _id: string;
+  code: string | null;
+  createdAt: number;
+  total: number;
+  paid: boolean;
+};
+
+type DashboardPatient = {
+  _id: string;
+  name: string;
+  species: string | null;
+  ownerId: string | null;
+  ownerName: string | null;
+};
+
+type DashboardOverview = {
+  counts: DashboardCounts;
+  totals: DashboardTotals;
+  recentVisits: DashboardVisit[];
+  recentInvoices: DashboardInvoice[];
+  todayVisits: DashboardVisit[];
+  patientBook: DashboardPatient[];
+  alerts: string[];
+};
 
 export default function HomePage() {
-  const owners = useQuery(api.owners.list, useMemo(() => ({ search: "" }), [])) as { _id: string; name?: string }[] | undefined;
-  const animals = useQuery(api.animals.list, useMemo(() => ({ search: "" }), [])) as { _id: string }[] | undefined;
-  const visits = useQuery(api.visits.list, useMemo(() => ({ limit: 5 }), [])) as VisitDoc[] | undefined;
-  const [unpaidOnly, setUnpaidOnly] = useState(false);
-  const invoices = useQuery(api.invoices.list, useMemo(() => ({ unpaidOnly }), [unpaidOnly])) as InvoiceDoc[] | undefined;
-  const todayTotals = useQuery(api.invoices.totals, useMemo(() => ({ day: Date.now() }), [])) as { paidTotal: number; unpaidTotal: number; count: number } | undefined;
-  const weekStart = (() => { const d = new Date(); d.setDate(d.getDate() - 6); d.setHours(0,0,0,0); return d.getTime(); })();
-  const weekTotals = useQuery(api.invoices.totals, useMemo(() => ({ day: weekStart }), [weekStart])) as { paidTotal: number; unpaidTotal: number; count: number } | undefined;
-  const draftVisits = useQuery(api.visits.list, useMemo(() => ({ limit: 1000, status: "draft" }), [])) as VisitDoc[] | undefined;
+  const overview = useQuery(api.dashboard.overview, {}) as DashboardOverview | undefined;
 
-  const recentInvoices = (invoices ?? []).slice(0, 5);
+  if (!overview) {
+    return (
+      <main className="p-6 max-w-5xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">{brand.nameBg}: Табло</h1>
+          <div className="w-72">
+            <SkeletonList rows={1} />
+          </div>
+        </div>
+        <SkeletonList rows={4} />
+        <SkeletonList rows={6} />
+      </main>
+    );
+  }
+
+  const metrics: Array<{
+    label: string;
+    value: number;
+    href: string;
+    icon: React.ReactNode;
+    description?: string;
+  }> = [
+    {
+      label: "Собственици",
+      value: overview.counts.owners,
+      href: "/owners",
+      icon: <Users className={ICON_CLASS} aria-hidden />,
+    },
+    {
+      label: "Животни",
+      value: overview.counts.animals,
+      href: "/animals",
+      icon: <PawPrint className={ICON_CLASS} aria-hidden />,
+    },
+    {
+      label: "Чернови посещения",
+      value: overview.counts.draftVisits,
+      href: "/visits?status=draft",
+      icon: <ClipboardList className={ICON_CLASS} aria-hidden />,
+      description:
+        overview.todayVisits.length === 0
+          ? undefined
+          : `Планирани днес: ${overview.todayVisits.length}`,
+    },
+    {
+      label: "Неплатени фактури",
+      value: overview.counts.unpaidInvoices,
+      href: "/invoices?unpaid=true",
+      icon: <FileText className={ICON_CLASS} aria-hidden />,
+      description:
+        overview.totals.unpaidInvoicesTotal === 0
+          ? undefined
+          : `Общо: ${fmtNumberBG(overview.totals.unpaidInvoicesTotal, { style: "currency", currency: "BGN" })}`,
+    },
+  ];
+
+  const recentVisits: VisitListItem[] = overview.recentVisits.map((visit) => ({
+    _id: visit._id,
+    code: visit.code ?? null,
+    datetime: visit.datetime,
+    status: visit.status,
+    ownerName: visit.ownerName,
+    ownerId: visit.ownerId,
+    animalId: visit.animalId,
+  }));
+
+  const todayVisits: VisitListItem[] = overview.todayVisits.map((visit) => ({
+    _id: visit._id,
+    code: visit.code ?? null,
+    datetime: visit.datetime,
+    status: visit.status,
+    ownerName: visit.ownerName,
+    ownerId: visit.ownerId,
+    animalId: visit.animalId,
+  }));
+
+  const recentInvoices: InvoiceListItem[] = overview.recentInvoices.map((invoice) => ({
+    _id: invoice._id,
+    code: invoice.code ?? null,
+    createdAt: invoice.createdAt,
+    total: invoice.total,
+    paid: invoice.paid,
+  }));
 
   return (
     <main className="p-6 max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{brand.nameBg}: Табло</h1>
-        <div className="text-sm text-muted-foreground">
-          <span className="mr-4">Неплатено днес: {fmtNumberBG(todayTotals?.unpaidTotal ?? 0, { style: "currency", currency: "BGN" })}</span>
-          <span>Платено днес: {fmtNumberBG(todayTotals?.paidTotal ?? 0, { style: "currency", currency: "BGN" })}</span>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {brand.nameBg}
+          </span>
+          <h1 className="text-2xl font-semibold">Основно табло</h1>
+          <p className="text-sm text-muted-foreground">
+            Дневен преглед на пациенти, посещения, фактури и важни събития за клиниката.
+          </p>
+        </div>
+        <div className="w-full max-w-md">
+          <GlobalSearch />
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Link href="/owners"><Button size="sm" variant="secondary" aria-label="Нов собственик">Нов собственик</Button></Link>
-        <Link href="/animals"><Button size="sm" variant="secondary" aria-label="Ново животно">Ново животно</Button></Link>
-        <Link href="/visits"><Button size="sm" variant="secondary" aria-label="Ново посещение">Ново посещение</Button></Link>
-        <Link href="/invoices/new"><Button size="sm" variant="secondary" aria-label="Нова фактура">Нова фактура</Button></Link>
-      </div>
+      <AlertList alerts={overview.alerts} title="Известия" />
+
+      <QuickActionsCard className="lg:grid-cols-4" />
 
       <section className="grid gap-3 md:grid-cols-4">
-        <Link href="/owners" className="rounded-md border p-4 hover:bg-accent block" aria-label="Към собственици">
-          <div className="text-sm text-muted-foreground">Собственици</div>
-          <div className="text-2xl font-semibold">{(owners ?? []).length}</div>
-          <div className="mt-3"><span className="text-sm underline underline-offset-2">Към списъка</span></div>
-        </Link>
-        <Link href="/animals" className="rounded-md border p-4 hover:bg-accent block" aria-label="Към животни">
-          <div className="text-sm text-muted-foreground">Животни</div>
-          <div className="text-2xl font-semibold">{(animals ?? []).length}</div>
-          <div className="mt-3"><span className="text-sm underline underline-offset-2">Към списъка</span></div>
-        </Link>
-        <Link href="/invoices" className="rounded-md border p-4 hover:bg-accent block" aria-label="Към фактури">
-          <div className="text-sm text-muted-foreground">Фактури (днес)</div>
-          <div className="text-2xl font-semibold">{todayTotals?.count ?? 0}</div>
-          <div className="mt-3"><span className="text-sm underline underline-offset-2">Към фактури</span></div>
-        </Link>
-        <Link href="/visits" className="rounded-md border p-4 hover:bg-accent block" aria-label="Към посещения">
-          <div className="text-sm text-muted-foreground">Чернови посещения</div>
-          <div className="text-2xl font-semibold">{(draftVisits ?? []).length}</div>
-          <div className="mt-3"><span className="text-sm underline underline-offset-2">Към посещения</span></div>
-        </Link>
+        {metrics.map(({ label, value, href, icon, description }) => (
+          <MetricCard
+            key={label}
+            label={label}
+            value={value}
+            href={href}
+            icon={icon}
+            description={description}
+          />
+        ))}
       </section>
 
       <section className="grid md:grid-cols-2 gap-4">
-        <div className="space-y-2">
+        <VisitList
+          title="Последни посещения"
+          visits={recentVisits}
+          emptyLabel="Няма посещения"
+          actionLabel="Всички посещения"
+          footer={`Общо посещения: ${overview.recentVisits.length}`}
+        />
+
+        <InvoiceList
+          title="Последни фактури"
+          invoices={recentInvoices}
+          emptyLabel="Няма фактури"
+          summary={
+            <span>
+              Последни 7 дни — Платено: {fmtNumberBG(overview.totals.week.paid, { style: "currency", currency: "BGN" })} · Неплатено: {fmtNumberBG(overview.totals.week.unpaid, { style: "currency", currency: "BGN" })}
+            </span>
+          }
+        />
+      </section>
+
+      <section className="grid md:grid-cols-2 gap-4">
+        <VisitList
+          title="Посещения днес"
+          visits={todayVisits}
+          emptyLabel="Няма планирани посещения"
+          footer={`Планирани днес: ${overview.todayVisits.length}`}
+        />
+
+        <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Последни посещения</h2>
-            <label
-              aria-hidden
-              className="text-xs text-muted-foreground inline-flex items-center gap-2 opacity-0 select-none"
-            >
-              <input type="checkbox" disabled /> Само неплатени
-            </label>
+            <h2 className="text-lg font-medium">Пациентски дневник</h2>
+            <Link href="/animals" className="text-xs text-muted-foreground underline underline-offset-2">
+              Към животни
+            </Link>
           </div>
           <div className="border rounded-md divide-y">
-            {(visits ?? []).length === 0 ? (
-              <div className="p-3 text-sm text-muted-foreground">Няма записи</div>
+            {overview.patientBook.length === 0 ? (
+              <div className="p-3 text-sm text-muted-foreground">Няма пациенти</div>
             ) : (
-              (visits ?? []).map((v) => (
-                <div key={v._id} className="p-3 flex items-center justify-between text-sm">
-                  <div className="space-y-0.5">
-                    <a href={`/visits/${v._id}`} className="font-medium underline-offset-2 hover:underline">{(v as VisitDoc & { code?: string }).code ?? `#${String(v._id)}`}</a>
-                    <div className="text-muted-foreground">{fmtDateTimeBG((v as VisitDoc & { datetime?: number }).datetime ?? v.createdAt)} · {v.status === "draft" ? "Чернова" : v.status === "finalized" ? "Приключено" : v.status}</div>
+              overview.patientBook.map((animal) => (
+                <div key={animal._id} className="p-3 flex items-center justify-between text-sm">
+                  <div>
+                    <Link href={`/animals/${animal._id}`} className="font-medium underline-offset-2 hover:underline">
+                      {animal.name}
+                    </Link>
+                    <div className="text-muted-foreground flex gap-2">
+                      <span>{animal.species}</span>
+                      {animal.ownerName ? <span>· {animal.ownerName}</span> : null}
+                    </div>
                   </div>
-                  <Link href={`/invoices/new?ownerId=${encodeURIComponent(v.ownerId)}${v.animalId ? `&animalId=${encodeURIComponent(v.animalId)}` : ""}&visitId=${encodeURIComponent(v._id)}`}>
-                    <Button size="sm" variant="outline">Нова фактура</Button>
+                  <Link href={`/visits?animalId=${encodeURIComponent(animal._id)}`}>
+                    <Button size="sm" variant="ghost">
+                      Ново посещение
+                    </Button>
                   </Link>
                 </div>
               ))
             )}
           </div>
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Последни фактури</h2>
-            <label className="text-xs text-muted-foreground inline-flex items-center gap-2">
-              <input type="checkbox" checked={unpaidOnly} onChange={(e) => setUnpaidOnly(e.target.checked)} /> Само неплатени
-            </label>
-          </div>
-          <div className="border rounded-md divide-y">
-            {recentInvoices.length === 0 ? (
-              <div className="p-3 text-sm text-muted-foreground">Няма фактури</div>
-            ) : (
-              recentInvoices.map((inv) => (
-                <div key={inv._id} className="p-3 flex items-center justify-between text-sm">
-                  <div className="space-y-0.5">
-                    <Link href={`/invoices/${inv._id}`} className="font-medium underline-offset-2 hover:underline">{inv.code ?? `#${String(inv._id)}`}</Link>
-                    <div className="text-muted-foreground">{fmtDateTimeBG(inv.createdAt)}</div>
-                  </div>
-                  <div className="font-medium text-right">{fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}</div>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="text-xs text-muted-foreground">Последни 7 дни — Платено: {fmtNumberBG(weekTotals?.paidTotal ?? 0, { style: "currency", currency: "BGN" })} · Неплатено: {fmtNumberBG(weekTotals?.unpaidTotal ?? 0, { style: "currency", currency: "BGN" })}</div>
-        </div>
+        </section>
       </section>
     </main>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
@@ -41,9 +41,13 @@ const normalizePair = (s: string) => {
   return { base, ascii };
 };
 
+const HISTORY_STORAGE_KEY = "alisa.searchHistory.v1";
+const HISTORY_LIMIT = 8;
+
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [history, setHistory] = useState<string[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -57,15 +61,72 @@ export function GlobalSearch() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (!raw) return;
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const sanitized = parsed.filter((item): item is string => typeof item === "string");
+        setHistory(sanitized);
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, []);
+
+  const persistHistory = useCallback((term: string) => {
+    const normalized = term.trim();
+    if (!normalized) return;
+    setHistory((prev) => {
+      const next = [normalized, ...prev.filter((item) => item !== normalized)].slice(0, HISTORY_LIMIT);
+      try {
+        localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(next));
+      } catch {/* ignore */}
+      return next;
+    });
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    setHistory([]);
+    try {
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+    } catch {/* ignore */}
+  }, []);
+
   const owners = useQuery(
     api.owners.list,
     useMemo(() => ({ search: query, limit: 10 }), [query])
   ) as { _id: string; name: string; phone?: string }[] | undefined;
 
+  const listRef = useRef<HTMLDivElement | null>(null);
+
+  const handleInputKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
+    const list = listRef.current;
+    if (!list) return;
+    const items = Array.from(list.querySelectorAll<HTMLElement>("[cmdk-item]"))
+      .filter((item) => !item.hasAttribute("aria-disabled"));
+    if (items.length === 0) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      items[0]?.focus();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      items[items.length - 1]?.focus();
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      items[0]?.focus();
+    } else if (event.key === "End") {
+      event.preventDefault();
+      items[items.length - 1]?.focus();
+    }
+  }, []);
+
   const animals = useQuery(
     api.animals.list,
     useMemo(() => ({ search: query, limit: 10 }), [query])
-  ) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
+  ) as { _id: string; name: string; species: string; ownerId?: string | null; ownerName?: string | null; ownerPhone?: string | null }[] | undefined;
 
   // Build a quick map of owners for disambiguation display
   const ownerMap = useMemo(() => {
@@ -120,10 +181,13 @@ export function GlobalSearch() {
       .slice(0, 10);
   }, [query, owners, visits, invoicesRaw]);
 
-  const onNavigate = useCallback((href: string) => {
+  const onNavigate = useCallback((href: string, shouldPersist = true) => {
+    if (shouldPersist && query.trim()) {
+      persistHistory(query);
+    }
     setOpen(false);
     router.push(href);
-  }, [router]);
+  }, [router, query, persistHistory]);
 
   return (
     <>
@@ -138,9 +202,23 @@ export function GlobalSearch() {
         <span className="ml-2 hidden lg:inline text-xs text-muted-foreground">Ctrl/⌘ K</span>
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen} title="Търсене" description="Намери собственици, животни, посещения, фактури">
-        <CommandInput autoFocus placeholder="Търси по име, код..." onValueChange={setQuery} />
-        <CommandList>
+        <CommandInput autoFocus placeholder="Търси по име, код..." onValueChange={setQuery} value={query} onKeyDown={handleInputKeyDown} />
+        <CommandList ref={listRef}>
           <CommandEmpty>Няма резултати</CommandEmpty>
+
+          {history.length > 0 && !query ? (
+            <CommandGroup heading="Скорошни заявки">
+              {history.map((term) => (
+                <CommandItem key={`history-${term}`} value={`history-${term}`} onSelect={() => setQuery(term)}>
+                  <Search className="mr-2 size-4" aria-hidden />
+                  <span>{term}</span>
+                </CommandItem>
+              ))}
+              <CommandItem value="history-clear" onSelect={clearHistory}>
+                <span className="text-muted-foreground">Изчисти историята</span>
+              </CommandItem>
+            </CommandGroup>
+          ) : null}
 
           {(owners ?? []).length > 0 && query ? (
             <CommandGroup heading="Собственици">
@@ -157,17 +235,20 @@ export function GlobalSearch() {
 
           {(animals ?? []).length > 0 && query ? (
             <CommandGroup heading="Животни">
-              {(animals ?? []).slice(0, 10).map((a) => (
-                <CommandItem key={`animal-${a._id}`} value={`animal-${a._id}`} onSelect={() => onNavigate(`/animals/${a._id}`)}>
-                  <PawPrint className="mr-2 size-4" aria-hidden />
-                  <span className="font-medium">{a.name}</span>
-                  <span className="text-muted-foreground ml-2">· {a.species}</span>
-                  {a.ownerId ? (
-                    <span className="text-muted-foreground ml-2">· {(ownerMap[String(a.ownerId)]?.name) ?? ""}{ownerMap[String(a.ownerId)]?.phone ? ` · ${ownerMap[String(a.ownerId)]?.phone}` : ""}</span>
-                  ) : null}
-                  <CommandShortcut>Animal</CommandShortcut>
-                </CommandItem>
-              ))}
+              {(animals ?? []).slice(0, 10).map((a) => {
+                const ownerDisplay = a.ownerName ?? (a.ownerId ? ownerMap[String(a.ownerId)]?.name : undefined);
+                return (
+                  <CommandItem key={`animal-${a._id}`} value={`animal-${a._id}`} onSelect={() => onNavigate(`/animals/${a._id}`)}>
+                    <PawPrint className="mr-2 size-4" aria-hidden />
+                    <span className="font-medium">{a.name}</span>
+                    <span className="text-muted-foreground ml-2">· {a.species}</span>
+                    {ownerDisplay ? (
+                      <span className="text-muted-foreground ml-2">· {ownerDisplay}</span>
+                    ) : null}
+                    <CommandShortcut>Animal</CommandShortcut>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           ) : null}
 

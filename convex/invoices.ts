@@ -15,22 +15,54 @@ export const list = query({
     to: v.optional(v.number()),
     limit: v.optional(v.number()),
     offset: v.optional(v.number()),
-    sort: v.optional(v.union(v.literal("createdAtAsc"), v.literal("createdAtDesc"))),
+    sort: v.optional(v.union(v.literal("createdAtAsc"), v.literal("createdAtDesc"), v.literal("totalAsc"), v.literal("totalDesc"))),
+    includePaid: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("invoices").collect();
     let filtered = all;
     if (args.unpaidOnly) filtered = filtered.filter((i: any) => !i.paid);
+    if (args.includePaid === false) filtered = filtered.filter((i: any) => !i.paid);
     if (args.ownerId) filtered = filtered.filter((i: any) => String(i.ownerId) === String(args.ownerId));
     if (args.from) filtered = filtered.filter((i: any) => i.createdAt >= args.from!);
     if (args.to) filtered = filtered.filter((i: any) => i.createdAt <= args.to!);
     const sorted = filtered.sort((a: any, b: any) => {
-      if (args.sort === "createdAtAsc") return a.createdAt - b.createdAt;
-      return b.createdAt - a.createdAt;
+      switch (args.sort) {
+        case "createdAtAsc":
+          return a.createdAt - b.createdAt;
+        case "totalAsc":
+          return (a.total ?? 0) - (b.total ?? 0);
+        case "totalDesc":
+          return (b.total ?? 0) - (a.total ?? 0);
+        case "createdAtDesc":
+        default:
+          return b.createdAt - a.createdAt;
+      }
     });
     const start = Math.max(0, args.offset ?? 0);
     const end = (args.limit ?? sorted.length) + start;
     return sorted.slice(start, end);
+  },
+});
+
+export const invoicesSummary = query({
+  args: {},
+  handler: async (ctx) => {
+    const invoices = await ctx.db.query("invoices").collect();
+    const unpaid = invoices.filter((i: any) => !i.paid);
+    const totals = unpaid.reduce(
+      (acc: { total: number; latest?: number }, inv: any) => {
+        acc.total += inv.total ?? 0;
+        acc.latest = Math.max(acc.latest ?? 0, inv.createdAt ?? 0);
+        return acc;
+      },
+      { total: 0, latest: undefined }
+    );
+    return {
+      unpaidCount: unpaid.length,
+      unpaidTotal: totals.total,
+      latestCreatedAt: totals.latest,
+    } as const;
   },
 });
 

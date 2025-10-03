@@ -17,9 +17,44 @@ export const list = query({
     animalId: v.optional(v.id("animals")),
     from: v.optional(v.number()),
     to: v.optional(v.number()),
+    search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const items = await ctx.db.query("visits").collect();
+    const translitMap: Record<string, string> = {
+      А: "A", а: "a", Б: "B", б: "b", В: "V", в: "v", Г: "G", г: "g",
+      Д: "D", д: "d", Е: "E", е: "e", Ж: "zh", ж: "zh", З: "Z", з: "z",
+      И: "i", и: "i", Й: "y", й: "y", К: "k", к: "k", Л: "l", л: "l",
+      М: "m", м: "m", Н: "n", н: "n", О: "o", о: "o", П: "p", п: "p",
+      Р: "r", р: "r", С: "s", с: "s", Т: "t", т: "t", У: "u", у: "u",
+      Ф: "f", ф: "f", Х: "h", х: "h", Ц: "ts", ц: "ts", Ч: "ch", ч: "ch",
+      Ш: "sh", ш: "sh", Щ: "sht", щ: "sht", Ъ: "a", ъ: "a", Ь: "", ь: "",
+      Ю: "yu", ю: "yu", Я: "ya", я: "ya",
+    };
+    const toAscii = (s: string) => Array.from(String(s)).map((ch) => translitMap[ch] ?? ch).join("");
+    const normalizePair = (s: string) => {
+      const base = String(s ?? "")
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("bg")
+        .replace(/["'`„“”]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const ascii = toAscii(base).toLowerCase();
+      return { base, ascii };
+    };
+    const queryPair = normalizePair(args.search ?? "");
+    const matchesSearch = (value: unknown) => {
+      if (!queryPair.base && !queryPair.ascii) return true;
+      const p = normalizePair(String(value ?? ""));
+      return (
+        (p.base && queryPair.base && p.base.includes(queryPair.base)) ||
+        (p.ascii && queryPair.ascii && p.ascii.includes(queryPair.ascii)) ||
+        (p.base && queryPair.ascii && p.base.includes(queryPair.ascii)) ||
+        (p.ascii && queryPair.base && p.ascii.includes(queryPair.base))
+      );
+    };
+
     const filtered = items.filter((vDoc: any) => {
       if (args.status && vDoc.status !== args.status) return false;
       if (args.ownerId && String(vDoc.ownerId) !== String(args.ownerId)) return false;
@@ -27,6 +62,10 @@ export const list = query({
       const t = vDoc.datetime ?? vDoc.createdAt;
       if (args.from && t < args.from) return false;
       if (args.to && t > args.to) return false;
+      if (queryPair.base || queryPair.ascii) {
+        const haystacks = [vDoc.code ?? vDoc._id, vDoc.subjective, vDoc.objective, ...(vDoc.procedures ?? []), ...(vDoc.medications ?? [])];
+        if (!haystacks.some((v: any) => matchesSearch(v))) return false;
+      }
       return true;
     });
     const byDesc = (a: any, b: any) => (b.datetime ?? b.createdAt) - (a.datetime ?? a.createdAt);
@@ -35,6 +74,26 @@ export const list = query({
     const start = Math.max(0, args.offset ?? 0);
     const size = args.limit ?? 50;
     return sorted.slice(start, start + size);
+  },
+});
+
+export const visitsFilters = query({
+  args: {},
+  handler: async (ctx) => {
+    const visits = await ctx.db.query("visits").collect();
+    const statusCounts: Record<string, number> = {};
+    const ownerIds = new Set<string>();
+    const animalIds = new Set<string>();
+    for (const visit of visits) {
+      statusCounts[visit.status] = (statusCounts[visit.status] ?? 0) + 1;
+      if (visit.ownerId) ownerIds.add(String(visit.ownerId));
+      if (visit.animalId) animalIds.add(String(visit.animalId));
+    }
+    return {
+      statusCounts,
+      ownerIds: Array.from(ownerIds),
+      animalIds: Array.from(animalIds),
+    } as const;
   },
 });
 

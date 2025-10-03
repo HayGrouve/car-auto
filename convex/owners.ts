@@ -7,10 +7,19 @@ export const list = query({
     limit: v.optional(v.number()),
     offset: v.optional(v.number()),
     sort: v.optional(v.string()), // 'createdAtAsc' | 'createdAtDesc'
+    phone: v.optional(v.string()),
+    gdpr: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("owners").collect();
-    const filtered = all.filter((o: any) => !o.deletedAt);
+    let filtered = all.filter((o: any) => !o.deletedAt);
+    if (args.phone) {
+      const normalized = args.phone.replace(/\D/g, "");
+      filtered = filtered.filter((o: any) => String(o.phone ?? "").includes(normalized));
+    }
+    if (args.gdpr !== undefined) {
+      filtered = filtered.filter((o: any) => Boolean(o.gdprConsent) === Boolean(args.gdpr));
+    }
     const translitMap: Record<string, string> = {
       А: "A", а: "a", Б: "B", б: "b", В: "V", в: "v", Г: "G", г: "g",
       Д: "D", д: "d", Е: "E", е: "e", Ж: "zh", ж: "zh", З: "Z", з: "z",
@@ -61,6 +70,30 @@ export const list = query({
     const start = Math.max(0, args.offset ?? 0);
     const end = (args.limit ?? sorted.length) + start;
     return sorted.slice(start, end);
+  },
+});
+
+export const ownersFilters = query({
+  args: {},
+  handler: async (ctx) => {
+    const owners = await ctx.db.query("owners").collect();
+    const phonePrefixes = new Set<string>();
+    let gdprGranted = 0;
+    for (const owner of owners) {
+      const phone = String(owner.phone ?? "");
+      if (phone.length >= 2) {
+        phonePrefixes.add(phone.slice(0, 2));
+      }
+      if (owner.gdprConsent) gdprGranted += 1;
+    }
+    return {
+      phonePrefixes: Array.from(phonePrefixes).sort(),
+      statistics: {
+        total: owners.length,
+        gdprGranted,
+        gdprMissing: owners.length - gdprGranted,
+      },
+    } as const;
   },
 });
 

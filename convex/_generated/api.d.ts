@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as animals from "../animals.js";
 import type * as auditLogs from "../auditLogs.js";
+import type * as dashboard from "../dashboard.js";
 import type * as invoices from "../invoices.js";
 import type * as owners from "../owners.js";
 import type * as seed from "../seed.js";
@@ -32,6 +33,7 @@ import type * as weights from "../weights.js";
 declare const fullApi: ApiFromModules<{
   animals: typeof animals;
   auditLogs: typeof auditLogs;
+  dashboard: typeof dashboard;
   invoices: typeof invoices;
   owners: typeof owners;
   seed: typeof seed;

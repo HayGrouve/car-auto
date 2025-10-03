@@ -7,9 +7,26 @@ export const list = query({
     limit: v.optional(v.number()),
     offset: v.optional(v.number()),
     sort: v.optional(v.string()), // 'createdAtAsc' | 'createdAtDesc'
+    ownerId: v.optional(v.id("owners")),
+    species: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("animals").collect();
+    const owners = await ctx.db.query("owners").collect();
+    const ownerMap = new Map<string, { name: string; phone?: string }>();
+    owners.forEach((owner: any) => {
+      if (!owner?.deletedAt) {
+        ownerMap.set(String(owner._id), { name: owner.name, phone: owner.phone ?? undefined });
+      }
+    });
+    let filtered = all;
+    if (args.ownerId) {
+      filtered = filtered.filter((a: any) => String(a.ownerId ?? "") === String(args.ownerId));
+    }
+    if (args.species) {
+      const speciesLower = args.species.toLocaleLowerCase("bg");
+      filtered = filtered.filter((a: any) => String(a.species ?? "").toLocaleLowerCase("bg") === speciesLower);
+    }
     const translitMap: Record<string, string> = {
       А: "A", а: "a", Б: "B", б: "b", В: "V", в: "v", Г: "G", г: "g",
       Д: "D", д: "d", Е: "E", е: "e", Ж: "zh", ж: "zh", З: "Z", з: "z",
@@ -35,11 +52,21 @@ export const list = query({
     const q = normalizePair(args.search ?? "");
     const byDateDesc = (a: any, b: any) => b.createdAt - a.createdAt;
     const byDateAsc = (a: any, b: any) => a.createdAt - b.createdAt;
-    if (!q.base && !q.ascii) {
-      const sorted = (args.sort === "createdAtAsc" ? all.sort(byDateAsc) : all.sort(byDateDesc));
+    const sliceWithOwner = (rows: any[]) => {
       const start = Math.max(0, args.offset ?? 0);
-      const end = (args.limit ?? sorted.length) + start;
-      return sorted.slice(start, end);
+      const end = (args.limit ?? rows.length) + start;
+      return rows.slice(start, end).map((doc: any) => {
+        const ownerInfo = doc.ownerId ? ownerMap.get(String(doc.ownerId)) : undefined;
+        return {
+          ...doc,
+          ownerName: ownerInfo?.name ?? null,
+          ownerPhone: ownerInfo?.phone ?? null,
+        };
+      });
+    };
+    if (!q.base && !q.ascii) {
+      const sorted = (args.sort === "createdAtAsc" ? filtered.sort(byDateAsc) : filtered.sort(byDateDesc));
+      return sliceWithOwner(sorted);
     }
     const matches = (value: unknown) => {
       const p = normalizePair(String(value ?? ""));
@@ -50,13 +77,25 @@ export const list = query({
         (p.ascii && q.base && p.ascii.includes(q.base))
       );
     };
-    const matched = all
+    const matched = filtered
       .filter((a: any) => [a.name, a.species, a.breed, a.microchip]
         .filter(Boolean).some((v: string) => matches(v)));
     const sorted = (args.sort === "createdAtAsc" ? matched.sort(byDateAsc) : matched.sort(byDateDesc));
-    const start = Math.max(0, args.offset ?? 0);
-    const end = (args.limit ?? sorted.length) + start;
-    return sorted.slice(start, end);
+    return sliceWithOwner(sorted);
+  },
+});
+
+export const speciesOptions = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("animals").collect();
+    const set = new Set<string>();
+    for (const doc of all) {
+      if (doc?.species) {
+        set.add(String(doc.species));
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "bg"));
   },
 });
 
