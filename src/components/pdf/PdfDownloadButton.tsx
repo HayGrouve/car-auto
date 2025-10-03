@@ -12,6 +12,8 @@ type PdfDownloadButtonProps = {
   className?: string;
   ariaLabel?: string;
   children?: React.ReactNode;
+  onStart?: () => void;
+  onComplete?: (blob: Blob) => void;
 };
 
 export default function PdfDownloadButton({
@@ -21,12 +23,15 @@ export default function PdfDownloadButton({
   className,
   ariaLabel = "Изтегли PDF",
   children,
+  onStart,
+  onComplete,
 }: PdfDownloadButtonProps) {
   const [loading, setLoading] = useState(false);
 
   async function onClick() {
     try {
       setLoading(true);
+      onStart?.();
       const blob = await generatePdf();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -36,6 +41,7 @@ export default function PdfDownloadButton({
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      onComplete?.(blob);
       toast.success("PDF файлът е свален успешно");
     } catch (err) {
       console.error("PDF download failed", err);
