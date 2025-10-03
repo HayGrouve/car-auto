@@ -16,7 +16,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
 import { generateVaccinationCertificatePdf } from "@/lib/pdf-generator";
-import type { AnimalDoc } from "@/types/animal";
 
 export default function AnimalDetailPage() {
   const params = useParams<{ id: string }>();
@@ -175,12 +174,12 @@ export default function AnimalDetailPage() {
             generatePdf={async () => {
               const parsedAnimal = AnimalDocSchema.safeParse(animalUnknown);
               if (!parsedAnimal.success) throw new Error("Invalid animal data");
-              const animal = parsedAnimal.data as AnimalDoc;
+              const animal = parsedAnimal.data;
               const owner = (owners ?? []).find((o) => o._id === form.ownerId);
               return generateVaccinationCertificatePdf(animal, {
-                name: owner?.name ?? animal.ownerName ?? brand.nameBg,
-                phone: owner?.phone ?? animal.ownerPhone,
-                email: (animal as any).ownerEmail,
+                name: owner?.name ?? brand.nameBg,
+                phone: owner?.phone,
+                email: undefined,
               });
             }}
           >

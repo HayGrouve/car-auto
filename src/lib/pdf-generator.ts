@@ -3,14 +3,14 @@
 import { jsPDF } from "jspdf";
 import type { AnimalDoc } from "@/types/animal";
 import type { InvoiceDoc } from "@/types/visit";
-import { brand } from "./brand";
-import { formatCurrency, formatDate } from "./format";
+import { brand } from "@/lib/brand";
+import { formatCurrency, formatDate } from "@/lib/format";
 
 const FONT_REGULAR_PATH = "/fonts/NotoSans-Regular.ttf";
 const FONT_BOLD_PATH = "/fonts/NotoSans-Bold.ttf";
 
 let cachedFonts: { regular: string; bold: string } | null = null;
-let fontsPromise: Promise<{ regular: string; bold: string } | null> | null = null;
+let fontsPromise: Promise<{ regular: string; bold: string }> | null = null;
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   let binary = "";
@@ -24,7 +24,6 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 }
 
 async function fetchFont(path: string): Promise<string> {
-  if (typeof window === "undefined") throw new Error("Font loading supported only in browser");
   const response = await fetch(path);
   if (!response.ok) throw new Error(`Failed to load font at ${path}`);
   const buffer = await response.arrayBuffer();
@@ -36,27 +35,46 @@ async function loadFonts(): Promise<{ regular: string; bold: string }> {
   return { regular, bold };
 }
 
-async function ensureFonts(doc: jsPDF) {
+async function ensureFonts(doc: jsPDF): Promise<void> {
   if (!cachedFonts) {
     fontsPromise = fontsPromise ?? loadFonts();
     cachedFonts = await fontsPromise;
   }
-  if (!cachedFonts) throw new Error("Unable to cache fonts");
   doc.addFileToVFS("NotoSans-Regular.ttf", cachedFonts.regular);
   doc.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
   doc.addFileToVFS("NotoSans-Bold.ttf", cachedFonts.bold);
   doc.addFont("NotoSans-Bold.ttf", "NotoSans", "bold");
 }
 
-/**
- * Generate a vaccination certificate PDF for an animal
- */
+type VaccinationOwnerInfo = {
+  name?: string;
+  phone?: string;
+  email?: string;
+};
+
+type InvoicePdfMeta = {
+  ownerName?: string;
+  issuedAt?: Date | number | string;
+  status?: "paid" | "pending" | "cancelled" | "draft";
+};
+
+type VisitSummaryData = {
+  date: Date | number | string;
+  animalName: string;
+  ownerName: string;
+  subjective?: string;
+  objective?: string;
+  assessment?: string;
+  plan?: string;
+};
+
 export async function generateVaccinationCertificatePdf(
   animal: AnimalDoc,
-  owner: { name?: string | null; phone?: string | null; email?: string | null } = {}
+  owner: VaccinationOwnerInfo = {}
 ): Promise<Blob> {
   const doc = new jsPDF();
   await ensureFonts(doc);
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const centerX = pageWidth / 2;
 
@@ -71,24 +89,23 @@ export async function generateVaccinationCertificatePdf(
   doc.setFontSize(12);
 
   let yPos = 50;
-  const microchip = (animal as any).microchip ?? (animal as any).microchipId ?? "Няма";
-  const sexLabel = animal.sex === "male" ? "Мъжки" : animal.sex === "female" ? "Женски" : "Неизвестен";
-  const birthDate = (animal as any).dob ?? (animal as any).dateOfBirth ?? null;
+  const microchip = animal.microchip ?? "Няма";
+  const sex = animal.sex === "male" ? "Мъжки" : animal.sex === "female" ? "Женски" : "Неизвестен";
 
-  doc.text(`Име на пациента: ${animal.name ?? ""}`, 20, yPos);
+  doc.text(`Име на пациента: ${animal.name}`, 20, yPos);
   yPos += 10;
-  doc.text(`Вид: ${animal.species ?? ""}`, 20, yPos);
+  doc.text(`Вид: ${animal.species}`, 20, yPos);
   yPos += 10;
   if (animal.breed) {
     doc.text(`Порода: ${animal.breed}`, 20, yPos);
     yPos += 10;
   }
-  doc.text(`Микрочип: ${microchip || "Няма"}`, 20, yPos);
+  doc.text(`Микрочип: ${microchip}`, 20, yPos);
   yPos += 10;
-  doc.text(`Пол: ${sexLabel}`, 20, yPos);
+  doc.text(`Пол: ${sex}`, 20, yPos);
   yPos += 10;
-  if (birthDate) {
-    doc.text(`Дата на раждане: ${formatDate(birthDate)}`, 20, yPos);
+  if (animal.dob !== undefined && animal.dob !== null) {
+    doc.text(`Дата на раждане: ${formatDate(animal.dob)}`, 20, yPos);
     yPos += 10;
   }
 
@@ -97,8 +114,10 @@ export async function generateVaccinationCertificatePdf(
   doc.text("Притежател:", 20, yPos);
   doc.setFont("NotoSans", "normal");
   yPos += 10;
-  doc.text(owner.name || "", 20, yPos);
-  yPos += 10;
+  if (owner.name) {
+    doc.text(owner.name, 20, yPos);
+    yPos += 10;
+  }
   if (owner.phone) {
     doc.text(`Телефон: ${owner.phone}`, 20, yPos);
     yPos += 10;
@@ -116,12 +135,10 @@ export async function generateVaccinationCertificatePdf(
   return doc.output("blob");
 }
 
-/**
- * Generate an invoice PDF
- */
-export async function generateInvoicePdf(invoice: InvoiceDoc): Promise<Blob> {
+export async function generateInvoicePdf(invoice: InvoiceDoc, meta: InvoicePdfMeta = {}): Promise<Blob> {
   const doc = new jsPDF();
   await ensureFonts(doc);
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const centerX = pageWidth / 2;
 
@@ -136,21 +153,27 @@ export async function generateInvoicePdf(invoice: InvoiceDoc): Promise<Blob> {
   doc.setFontSize(12);
 
   let yPos = 50;
-  doc.text(`Номер: ${invoice.invoiceNumber}`, 20, yPos);
+  const invoiceNumber = meta.ownerName ? `${meta.ownerName}` : `${invoice.code ?? `#${invoice._id}`}`;
+  doc.text(`Номер: ${invoiceNumber}`, 20, yPos);
   yPos += 10;
-  doc.text(`Дата: ${formatDate(invoice.issueDate)}`, 20, yPos);
+  const issuedAt = meta.issuedAt ?? invoice.createdAt;
+  doc.text(`Дата: ${formatDate(issuedAt)}`, 20, yPos);
   yPos += 10;
-  const status = invoice.status === "paid" ? "Платена" : invoice.status === "pending" ? "Чакаща" : "Отменена";
-  doc.text(`Статус: ${status}`, 20, yPos);
+  const statusKey = meta.status ?? (invoice.paid ? "paid" : "draft");
+  const statusLabel = statusKey === "paid" ? "Платена" : statusKey === "pending" ? "Чакаща" : statusKey === "cancelled" ? "Отменена" : "Чернова";
+  doc.text(`Статус: ${statusLabel}`, 20, yPos);
 
   yPos += 20;
   doc.setFont("NotoSans", "bold");
   doc.text("Клиент:", 20, yPos);
-  yPos += 10;
   doc.setFont("NotoSans", "normal");
-  doc.text(invoice.ownerName ?? "", 20, yPos);
+  yPos += 10;
+  if (meta.ownerName) {
+    doc.text(meta.ownerName, 20, yPos);
+    yPos += 10;
+  }
 
-  yPos += 20;
+  yPos += 10;
   doc.setFont("NotoSans", "bold");
   doc.text("Описание", 20, yPos);
   doc.text("Количество", 110, yPos);
@@ -160,17 +183,19 @@ export async function generateInvoicePdf(invoice: InvoiceDoc): Promise<Blob> {
   doc.setFont("NotoSans", "normal");
   yPos += 10;
   invoice.items.forEach((item) => {
-    doc.text(item.description ?? "", 20, yPos);
-    doc.text(String(item.quantity ?? 0), 110, yPos);
-    doc.text(formatCurrency(item.unitPrice ?? 0), 150, yPos);
-    doc.text(formatCurrency((item.quantity ?? 0) * (item.unitPrice ?? 0)), 180, yPos, { align: "right" });
+    const unitPrice = item.price;
+    const total = item.total;
+    doc.text(item.description, 20, yPos);
+    doc.text(String(item.quantity), 110, yPos);
+    doc.text(formatCurrency(unitPrice), 150, yPos);
+    doc.text(formatCurrency(total), 180, yPos, { align: "right" });
     yPos += 10;
   });
 
   yPos += 10;
   doc.setFont("NotoSans", "bold");
   doc.text("Общо:", 150, yPos);
-  doc.text(formatCurrency(invoice.totalAmount ?? 0), 180, yPos, { align: "right" });
+  doc.text(formatCurrency(invoice.total), 180, yPos, { align: "right" });
 
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFontSize(10);
@@ -179,12 +204,10 @@ export async function generateInvoicePdf(invoice: InvoiceDoc): Promise<Blob> {
   return doc.output("blob");
 }
 
-/**
- * Generate a visit summary PDF
- */
-export async function generateVisitSummaryPdf(visit: any): Promise<Blob> {
+export async function generateVisitSummaryPdf(data: VisitSummaryData): Promise<Blob> {
   const doc = new jsPDF();
   await ensureFonts(doc);
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const centerX = pageWidth / 2;
 
@@ -199,11 +222,11 @@ export async function generateVisitSummaryPdf(visit: any): Promise<Blob> {
   doc.setFontSize(12);
 
   let yPos = 50;
-  doc.text(`Дата: ${formatDate(visit.date)}`, 20, yPos);
+  doc.text(`Дата: ${formatDate(data.date)}`, 20, yPos);
   yPos += 10;
-  doc.text(`Пациент: ${visit.animalName ?? ""}`, 20, yPos);
+  doc.text(`Пациент: ${data.animalName}`, 20, yPos);
   yPos += 10;
-  doc.text(`Притежател: ${visit.ownerName ?? ""}`, 20, yPos);
+  doc.text(`Притежател: ${data.ownerName}`, 20, yPos);
 
   yPos += 20;
   doc.setFont("NotoSans", "bold");
@@ -211,21 +234,21 @@ export async function generateVisitSummaryPdf(visit: any): Promise<Blob> {
   yPos += 10;
   doc.setFont("NotoSans", "normal");
 
-  const addSection = (title: string, content?: string) => {
-    if (!content) return;
+  const addSection = (title: string, value?: string) => {
+    if (!value) return;
     doc.setFont("NotoSans", "bold");
     doc.text(title, 20, yPos);
     yPos += 7;
     doc.setFont("NotoSans", "normal");
-    const lines = doc.splitTextToSize(content, pageWidth - 40);
+    const lines: string[] = doc.splitTextToSize(value, pageWidth - 40) as string[];
     doc.text(lines, 25, yPos);
     yPos += lines.length * 7 + 5;
   };
 
-  addSection("Субективни:", visit.subjective);
-  addSection("Обективни:", visit.objective);
-  addSection("Оценка:", visit.assessment);
-  addSection("План:", visit.plan);
+  addSection("Субективни:", data.subjective);
+  addSection("Обективни:", data.objective);
+  addSection("Оценка:", data.assessment);
+  addSection("План:", data.plan);
 
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFont("NotoSans", "bold");

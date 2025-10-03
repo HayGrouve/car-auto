@@ -14,7 +14,8 @@ import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
 import { fmtDateTimeBG } from "@/lib/format";
-import VisitPdfButton from "@/components/pdf/VisitPdfButton";
+import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
+import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
 import { CalendarCheck, Printer, FilePlus } from "lucide-react";
 import VisitWizard from "./VisitWizard";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -410,13 +411,37 @@ export default function VisitDetailPage() {
           <Button type="button" variant="ghost" onClick={onPrint} aria-label="Печат на посещението">
             <Printer className="mr-1 size-4" aria-hidden /> Печат
           </Button>
-          <VisitPdfButton
-            visit={visit}
-            soap={{ s, o, a, p }}
-            procedures={procedures}
-            medications={medications}
-            fileName={`visit-${(visit as VisitDoc & { code?: string }).code ?? String(visit._id)}.pdf`}
-          />
+          <PdfDownloadButton
+            fileName={`visit-${id}.pdf`}
+            ariaLabel="Изтегли резюме на посещението"
+            variant="outline"
+            generatePdf={async () => {
+              if (!visit) throw new Error("Visit not loaded");
+              const datetime = (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
+              const animalName = (() => {
+                const animal = (animals ?? []).find((a) => a._id === visit.animalId);
+                return animal?.name ?? "";
+              })();
+              const ownerName = (() => {
+                const owner = (owners ?? []).find((o) => o._id === visit.ownerId);
+                return owner?.name ?? "";
+              })();
+              return generateVisitSummaryPdf({
+                date: datetime,
+                animalName,
+                ownerName,
+                subjective: s,
+                objective: o,
+                assessment: a,
+                plan: p,
+              });
+            }}
+          >
+            <span className="flex items-center gap-2">
+              <FilePlus className="size-4" />
+              PDF Резюме
+            </span>
+          </PdfDownloadButton>
           <a
             className="inline-flex items-center rounded-md border px-3 py-2 text-sm hover:bg-accent"
             href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(visit.animalId)}` : ""}&visitId=${encodeURIComponent(visit._id)}`}

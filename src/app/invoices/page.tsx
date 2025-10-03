@@ -150,7 +150,6 @@ export default function InvoicesPage() {
                 <InvoicePdfButton
                   inv={inv}
                   fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
-                  className="ml-2"
                 />
                 <Button
                   variant="ghost"
