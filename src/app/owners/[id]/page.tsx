@@ -268,7 +268,7 @@ export default function OwnerDetailPage() {
                 изтриването е блокирано.
               </p>
               <DialogFooter>
-                <Button variant="ghost">Отказ</Button>
+                <Button variant="outline">Отказ</Button>
                 <Button
                   variant="destructive"
                   onClick={async () => {

@@ -40,22 +40,30 @@ export default function InvoiceDetailPage() {
       `,
       )
       .join("");
-    const html = `<!doctype html><html lang=\"bg\"><head><meta charset=\"utf-8\" /><title>Фактура ${inv.code ?? `#${String(inv._id)}`}</title>
+    const html = `<!doctype html><html lang="bg"><head><meta charset="utf-8" /><title>Фактура ${inv.code ?? `#${String(inv._id)}`}</title>
       <style>body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px;color:#111} h1{font-size:20px;margin:0 0 12px} table{border-collapse:collapse;width:100%;margin-top:12px} th,td{border:1px solid #ddd;padding:8px;vertical-align:top} tfoot td{font-weight:600} .muted{color:#666}</style></head><body>
       <h1>Фактура ${inv.code ?? `#${String(inv._id)}`}</h1>
-      <div class=\"muted\">Дата: ${new Date(inv.createdAt).toLocaleString("bg-BG")}</div>
-      <div class=\"muted\">Статус: ${inv.paid ? "Платена" : "Неплатена"}${inv.paid && inv.paidAt ? " · " + new Date(inv.paidAt).toLocaleString("bg-BG") : ""}</div>
-      <table><thead><tr><th>Описание</th><th style=\"text-align:right;\">Кол-во</th><th style=\"text-align:right;\">Цена</th><th style=\"text-align:right;\">Сума</th></tr></thead>
+      <div class="muted">Дата: ${new Date(inv.createdAt).toLocaleString("bg-BG")}</div>
+      <div class="muted">Статус: ${inv.paid ? "Платена" : "Неплатена"}${inv.paid && inv.paidAt ? " · " + new Date(inv.paidAt).toLocaleString("bg-BG") : ""}</div>
+      <table><thead><tr><th>Описание</th><th style="text-align:right;">Кол-во</th><th style="text-align:right;">Цена</th><th style="text-align:right;">Сума</th></tr></thead>
       <tbody>${rows}</tbody>
-      <tfoot><tr><td colspan=\"3\" style=\"text-align:right;\">Общо</td><td style=\"text-align:right;\">${fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}</td></tr></tfoot>
+      <tfoot><tr><td colspan="3" style="text-align:right;">Общо</td><td style="text-align:right;">${fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}</td></tr></tfoot>
       </table>
-      <script>window.onload = () => window.print()</script>
     </body></html>`;
-    const w = window.open("", "_blank", "noopener,noreferrer");
-    if (!w) return;
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank");
+    if (!w) {
+      URL.revokeObjectURL(url);
+      return;
+    }
+    const handleLoad = () => {
+      w.focus();
+      w.print();
+      w.removeEventListener("load", handleLoad);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+    w.addEventListener("load", handleLoad);
   }
 
   return (
@@ -63,7 +71,7 @@ export default function InvoiceDetailPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Фактура</h1>
         <div className="flex items-center gap-2">
-          <Button type="button" variant="ghost" onClick={() => router.back()}>
+          <Button type="button" variant="outline" onClick={() => router.back()}>
             Назад
           </Button>
         </div>
@@ -99,7 +107,7 @@ export default function InvoiceDetailPage() {
               inv={inv}
               fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
             />
-            <Button variant="ghost" onClick={onPrint}>
+            <Button variant="outline" onClick={onPrint}>
               Печат
             </Button>
           </div>

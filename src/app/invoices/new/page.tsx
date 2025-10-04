@@ -409,7 +409,7 @@ function NewInvoicePageInner() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="ghost" onClick={() => router.back()}>
+          <Button type="button" variant="outline" onClick={() => router.back()}>
             Назад
           </Button>
         </div>

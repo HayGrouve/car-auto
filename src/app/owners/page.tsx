@@ -212,7 +212,7 @@ export default function OwnersPage() {
               <h2 className="font-medium">Нов собственик</h2>
               <Button
                 className="md:hidden"
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => setShowCreatePanel(false)}
                 aria-label="Затвори панела"

@@ -106,7 +106,9 @@ export function GlobalSearch() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      const isCtrlSpace =
+        (e.ctrlKey || e.metaKey) && (e.code === "Space" || e.key === " ");
+      if (isCtrlSpace) {
         e.preventDefault();
         setOpen((v) => !v);
       }
@@ -329,7 +331,7 @@ export function GlobalSearch() {
         <Search className="size-4" />
         Търсене...
         <span className="text-muted-foreground ml-2 hidden text-xs lg:inline">
-          Ctrl/⌘ K
+          Ctrl/⌘ Space
         </span>
       </Button>
       <CommandDialog

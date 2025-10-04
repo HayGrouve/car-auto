@@ -551,7 +551,7 @@ export default function VisitWizard({
                     <div>{name}</div>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       onClick={() =>
                         setProcedures((arr) => arr.filter((_, i) => i !== idx))
                       }
@@ -622,7 +622,7 @@ export default function VisitWizard({
                     <div>{name}</div>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       onClick={() =>
                         setMedications((arr) => arr.filter((_, i) => i !== idx))
                       }

@@ -197,27 +197,32 @@ export async function generateInvoicePdf(
 
   yPos += 10;
   doc.setFont("NotoSans", "bold");
-  doc.text("Описание", 20, yPos);
-  doc.text("Количество", 110, yPos);
-  doc.text("Цена", 150, yPos);
-  doc.text("Сума", 180, yPos, { align: "right" });
+  const descriptionX = 20;
+  const quantityX = 120;
+  const priceX = 150;
+  const amountX = pageWidth - 20;
+
+  doc.text("Описание", descriptionX, yPos);
+  doc.text("Количество", quantityX, yPos, { align: "center" });
+  doc.text("Цена", priceX, yPos, { align: "right" });
+  doc.text("Сума", amountX, yPos, { align: "right" });
 
   doc.setFont("NotoSans", "normal");
   yPos += 10;
   invoice.items.forEach((item) => {
     const unitPrice = item.price;
     const total = item.total;
-    doc.text(item.description, 20, yPos);
-    doc.text(String(item.quantity), 110, yPos);
-    doc.text(formatCurrency(unitPrice), 150, yPos);
-    doc.text(formatCurrency(total), 180, yPos, { align: "right" });
+    doc.text(item.description, descriptionX, yPos);
+    doc.text(String(item.quantity), quantityX, yPos, { align: "center" });
+    doc.text(formatCurrency(unitPrice), priceX, yPos, { align: "right" });
+    doc.text(formatCurrency(total), amountX, yPos, { align: "right" });
     yPos += 10;
   });
 
   yPos += 10;
   doc.setFont("NotoSans", "bold");
-  doc.text("Общо:", 150, yPos);
-  doc.text(formatCurrency(invoice.total), 180, yPos, { align: "right" });
+  doc.text("Общо:", priceX, yPos, { align: "right" });
+  doc.text(formatCurrency(invoice.total), amountX, yPos, { align: "right" });
 
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFontSize(10);

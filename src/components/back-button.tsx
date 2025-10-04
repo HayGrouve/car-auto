@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 export function BackButton({ label = "Назад" }: { label?: string }) {
   const router = useRouter();
   return (
-    <Button variant="ghost" className="gap-2" onClick={() => router.back()}>
+    <Button variant="outline" className="gap-2" onClick={() => router.back()}>
       <ArrowLeft className="size-4" />
       <span>{label}</span>
     </Button>

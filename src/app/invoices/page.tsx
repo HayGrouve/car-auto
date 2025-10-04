@@ -256,7 +256,7 @@ export default function InvoicesPage() {
                   fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
                 />
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   className="ml-2"
                   aria-label={`Печат за фактура ${inv.code ?? String(inv._id)}`}
                   onClick={() => {

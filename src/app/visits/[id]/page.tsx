@@ -475,7 +475,7 @@ export default function VisitDetailPage() {
                   <span>{pr}</span>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     onClick={() =>
                       setProcedures((arr) => arr.filter((_, idx) => idx !== i))
                     }
@@ -553,7 +553,7 @@ export default function VisitDetailPage() {
                   <span>{md}</span>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     onClick={() =>
                       setMedications((arr) => arr.filter((_, idx) => idx !== i))
                     }

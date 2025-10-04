@@ -7,7 +7,6 @@ import { Users, PawPrint, ClipboardList, FileText } from "lucide-react";
 import { api } from "@/../convex/_generated/api";
 import { brand } from "@/lib/brand";
 import { fmtNumberBG } from "@/lib/format";
-import GlobalSearch from "@/components/GlobalSearch";
 import { SkeletonList } from "@/components/SkeletonList";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { QuickActionsCard } from "@/components/dashboard/QuickActionsCard";
@@ -177,9 +176,6 @@ export default function HomePage() {
             клиниката.
           </p>
         </div>
-        <div className="w-full max-w-md">
-          <GlobalSearch />
-        </div>
       </div>
 
       <AlertList alerts={overview.alerts} title="Известия" />
@@ -275,7 +271,7 @@ export default function HomePage() {
                   <Link
                     href={`/visits?animalId=${encodeURIComponent(animal._id)}`}
                   >
-                    <Button size="sm" variant="ghost">
+                    <Button size="sm" variant="outline">
                       Ново посещение
                     </Button>
                   </Link>

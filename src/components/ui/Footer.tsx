@@ -86,7 +86,7 @@ export function Footer() {
                 </div>
                 <div>
                   <kbd className="rounded border px-1 py-0.5">Ctrl/Cmd</kbd> +{" "}
-                  <kbd className="rounded border px-1 py-0.5">K</kbd> — Глобално
+                  <kbd className="rounded border px-1 py-0.5">Space</kbd> — Глобално
                   търсене
                 </div>
               </div>
