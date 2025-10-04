@@ -12,5 +12,3 @@ export const OwnerDocSchema = z.object({
 });
 
 export type OwnerDoc = z.infer<typeof OwnerDocSchema>;
-
-

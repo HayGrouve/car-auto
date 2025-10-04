@@ -31,7 +31,10 @@ async function fetchFont(path: string): Promise<string> {
 }
 
 async function loadFonts(): Promise<{ regular: string; bold: string }> {
-  const [regular, bold] = await Promise.all([fetchFont(FONT_REGULAR_PATH), fetchFont(FONT_BOLD_PATH)]);
+  const [regular, bold] = await Promise.all([
+    fetchFont(FONT_REGULAR_PATH),
+    fetchFont(FONT_BOLD_PATH),
+  ]);
   return { regular, bold };
 }
 
@@ -70,7 +73,7 @@ type VisitSummaryData = {
 
 export async function generateVaccinationCertificatePdf(
   animal: AnimalDoc,
-  owner: VaccinationOwnerInfo = {}
+  owner: VaccinationOwnerInfo = {},
 ): Promise<Blob> {
   const doc = new jsPDF();
   await ensureFonts(doc);
@@ -90,7 +93,12 @@ export async function generateVaccinationCertificatePdf(
 
   let yPos = 50;
   const microchip = animal.microchip ?? "Няма";
-  const sex = animal.sex === "male" ? "Мъжки" : animal.sex === "female" ? "Женски" : "Неизвестен";
+  const sex =
+    animal.sex === "male"
+      ? "Мъжки"
+      : animal.sex === "female"
+        ? "Женски"
+        : "Неизвестен";
 
   doc.text(`Име на пациента: ${animal.name}`, 20, yPos);
   yPos += 10;
@@ -130,12 +138,17 @@ export async function generateVaccinationCertificatePdf(
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFont("NotoSans", "bold");
   doc.setFontSize(10);
-  doc.text(`Издадено от ${brand.nameBg}`, centerX, pageHeight - 15, { align: "center" });
+  doc.text(`Издадено от ${brand.nameBg}`, centerX, pageHeight - 15, {
+    align: "center",
+  });
 
   return doc.output("blob");
 }
 
-export async function generateInvoicePdf(invoice: InvoiceDoc, meta: InvoicePdfMeta = {}): Promise<Blob> {
+export async function generateInvoicePdf(
+  invoice: InvoiceDoc,
+  meta: InvoicePdfMeta = {},
+): Promise<Blob> {
   const doc = new jsPDF();
   await ensureFonts(doc);
 
@@ -153,14 +166,23 @@ export async function generateInvoicePdf(invoice: InvoiceDoc, meta: InvoicePdfMe
   doc.setFontSize(12);
 
   let yPos = 50;
-  const invoiceNumber = meta.ownerName ? `${meta.ownerName}` : `${invoice.code ?? `#${invoice._id}`}`;
+  const invoiceNumber = meta.ownerName
+    ? `${meta.ownerName}`
+    : `${invoice.code ?? `#${invoice._id}`}`;
   doc.text(`Номер: ${invoiceNumber}`, 20, yPos);
   yPos += 10;
   const issuedAt = meta.issuedAt ?? invoice.createdAt;
   doc.text(`Дата: ${formatDate(issuedAt)}`, 20, yPos);
   yPos += 10;
   const statusKey = meta.status ?? (invoice.paid ? "paid" : "draft");
-  const statusLabel = statusKey === "paid" ? "Платена" : statusKey === "pending" ? "Чакаща" : statusKey === "cancelled" ? "Отменена" : "Чернова";
+  const statusLabel =
+    statusKey === "paid"
+      ? "Платена"
+      : statusKey === "pending"
+        ? "Чакаща"
+        : statusKey === "cancelled"
+          ? "Отменена"
+          : "Чернова";
   doc.text(`Статус: ${statusLabel}`, 20, yPos);
 
   yPos += 20;
@@ -199,12 +221,16 @@ export async function generateInvoicePdf(invoice: InvoiceDoc, meta: InvoicePdfMe
 
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFontSize(10);
-  doc.text(`Издадено от ${brand.nameBg}`, centerX, pageHeight - 15, { align: "center" });
+  doc.text(`Издадено от ${brand.nameBg}`, centerX, pageHeight - 15, {
+    align: "center",
+  });
 
   return doc.output("blob");
 }
 
-export async function generateVisitSummaryPdf(data: VisitSummaryData): Promise<Blob> {
+export async function generateVisitSummaryPdf(
+  data: VisitSummaryData,
+): Promise<Blob> {
   const doc = new jsPDF();
   await ensureFonts(doc);
 
@@ -240,7 +266,10 @@ export async function generateVisitSummaryPdf(data: VisitSummaryData): Promise<B
     doc.text(title, 20, yPos);
     yPos += 7;
     doc.setFont("NotoSans", "normal");
-    const lines: string[] = doc.splitTextToSize(value, pageWidth - 40) as string[];
+    const lines: string[] = doc.splitTextToSize(
+      value,
+      pageWidth - 40,
+    ) as string[];
     doc.text(lines, 25, yPos);
     yPos += lines.length * 7 + 5;
   };
@@ -253,7 +282,9 @@ export async function generateVisitSummaryPdf(data: VisitSummaryData): Promise<B
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFont("NotoSans", "bold");
   doc.setFontSize(10);
-  doc.text(`Издадено от ${brand.nameBg}`, centerX, pageHeight - 15, { align: "center" });
+  doc.text(`Издадено от ${brand.nameBg}`, centerX, pageHeight - 15, {
+    align: "center",
+  });
 
   return doc.output("blob");
 }

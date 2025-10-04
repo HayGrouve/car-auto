@@ -19,7 +19,7 @@ export default function LoginPage() {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password }),
     });
     setLoading(false);
     if (res.ok) {
@@ -31,12 +31,20 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-background p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4 border rounded-lg p-6 bg-card">
+    <main className="bg-background flex min-h-screen items-center justify-center p-6">
+      <form
+        onSubmit={onSubmit}
+        className="bg-card w-full max-w-sm space-y-4 rounded-lg border p-6"
+      >
         <h1 className="text-xl font-semibold">{brand.nameBg}: Вход</h1>
         {error && <div className="text-destructive text-sm">{error}</div>}
         <div className="space-y-1">
-          <Label htmlFor="login-email" className="inline-flex items-center gap-2"><Mail className="size-4" /> Имейл</Label>
+          <Label
+            htmlFor="login-email"
+            className="inline-flex items-center gap-2"
+          >
+            <Mail className="size-4" /> Имейл
+          </Label>
           <Input
             id="login-email"
             type="email"
@@ -47,7 +55,12 @@ export default function LoginPage() {
           />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="login-password" className="inline-flex items-center gap-2"><Lock className="size-4" /> Парола</Label>
+          <Label
+            htmlFor="login-password"
+            className="inline-flex items-center gap-2"
+          >
+            <Lock className="size-4" /> Парола
+          </Label>
           <Input
             id="login-password"
             type="password"
@@ -57,7 +70,11 @@ export default function LoginPage() {
             required
           />
         </div>
-        <Button type="submit" disabled={loading} className="w-full inline-flex items-center gap-2">
+        <Button
+          type="submit"
+          disabled={loading}
+          className="inline-flex w-full items-center gap-2"
+        >
           <LogIn className="size-4" />
           {loading ? "Влизане..." : "Влизане"}
         </Button>
@@ -65,5 +82,3 @@ export default function LoginPage() {
     </main>
   );
 }
-
-

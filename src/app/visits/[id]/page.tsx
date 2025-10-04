@@ -9,8 +9,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandItem,
+} from "@/components/ui/command";
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
 import { fmtDateTimeBG } from "@/lib/format";
@@ -23,10 +33,20 @@ import { usePathname, useSearchParams } from "next/navigation";
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id as Id<"visits">;
-  const visitUnknown = useQuery(api.visits.getById, useMemo(() => ({ id }), [id])) as VisitDoc | null | undefined;
+  const visitUnknown = useQuery(
+    api.visits.getById,
+    useMemo(() => ({ id }), [id]),
+  ) as VisitDoc | null | undefined;
   const update = useMutation(api.visits.update);
   const finalize = useMutation(api.visits.finalize);
-  const createVisit = useMutation(api.visits.create) as unknown as (args: { ownerId: string; animalId?: string | null; datetime?: number; soap: { s?: string; o?: string; a?: string; p?: string }; procedures?: string[]; medications?: string[] }) => Promise<{ ok: boolean; id: string }>;
+  const createVisit = useMutation(api.visits.create) as unknown as (args: {
+    ownerId: string;
+    animalId?: string | null;
+    datetime?: number;
+    soap: { s?: string; o?: string; a?: string; p?: string };
+    procedures?: string[];
+    medications?: string[];
+  }) => Promise<{ ok: boolean; id: string }>;
   const router = useRouter();
 
   const [s, setS] = useState("");
@@ -39,13 +59,27 @@ export default function VisitDetailPage() {
   const [medications, setMedications] = useState<string[]>([]);
   const [procInput, setProcInput] = useState("");
   const [medInput, setMedInput] = useState("");
-  const procedureSuggestions = useQuery(api.visits.suggestProcedures, useMemo(() => ({ limit: 8 }), [])) as string[] | undefined;
-  const medicationSuggestions = useQuery(api.visits.suggestMedications, useMemo(() => ({ limit: 8 }), [])) as string[] | undefined;
+  const procedureSuggestions = useQuery(
+    api.visits.suggestProcedures,
+    useMemo(() => ({ limit: 8 }), []),
+  ) as string[] | undefined;
+  const medicationSuggestions = useQuery(
+    api.visits.suggestMedications,
+    useMemo(() => ({ limit: 8 }), []),
+  ) as string[] | undefined;
   const [animalId, setAnimalId] = useState<string | null>(null);
   const [animalSearch, setAnimalSearch] = useState("");
   const [ownerSearch, setOwnerSearch] = useState("");
-  const owners = useQuery(api.owners.list, useMemo(() => ({ search: ownerSearch }), [ownerSearch])) as { _id: string; name: string; phone?: string }[] | undefined;
-  const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
+  const owners = useQuery(
+    api.owners.list,
+    useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
+  ) as { _id: string; name: string; phone?: string }[] | undefined;
+  const animals = useQuery(
+    api.animals.list,
+    useMemo(() => ({ search: animalSearch }), [animalSearch]),
+  ) as
+    | { _id: string; name: string; species: string; ownerId?: string | null }[]
+    | undefined;
   const [ownerId, setOwnerId] = useState<string>("");
 
   const visit: VisitDoc | null = visitUnknown ?? null;
@@ -66,8 +100,9 @@ export default function VisitDetailPage() {
       setO(visit.soap?.o ?? "");
       setA(visit.soap?.a ?? "");
       setP(visit.soap?.p ?? "");
-      const baseTs = (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
-      setDt(baseTs ? new Date(baseTs).toISOString().slice(0,16) : "");
+      const baseTs =
+        (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
+      setDt(baseTs ? new Date(baseTs).toISOString().slice(0, 16) : "");
       setAnimalId(visit.animalId ?? null);
       setOwnerId(visit.ownerId ?? "");
       setProcedures(visit.procedures ?? []);
@@ -123,15 +158,19 @@ export default function VisitDetailPage() {
       { label: "P - План", value: p },
     ]
       .filter((row) => (row.value ?? "").trim() !== "")
-      .map((row) => `<tr><td class=\"muted\">${row.label}</td><td>${(row.value ?? "").replace(/</g, "&lt;")}</td></tr>`) 
+      .map(
+        (row) =>
+          `<tr><td class=\"muted\">${row.label}</td><td>${(row.value ?? "").replace(/</g, "&lt;")}</td></tr>`,
+      )
       .join("");
     const procedureRows = (procedures ?? [])
-      .map((pr) => `<li>${String(pr).replace(/</g, "&lt;")}</li>`) 
+      .map((pr) => `<li>${String(pr).replace(/</g, "&lt;")}</li>`)
       .join("");
     const medRows = (medications ?? [])
-      .map((md) => `<li>${String(md).replace(/</g, "&lt;")}</li>`) 
+      .map((md) => `<li>${String(md).replace(/</g, "&lt;")}</li>`)
       .join("");
-    const when = (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
+    const when =
+      (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
     const html = `<!doctype html>
       <html lang=\"bg\">
         <head>
@@ -148,8 +187,8 @@ export default function VisitDetailPage() {
         </head>
         <body>
           <h1>Посещение ${(visit as VisitDoc & { code?: string }).code ?? `#${String(visit._id)}`}</h1>
-          <div class=\"muted\">Дата/час: ${new Date(when).toLocaleString('bg-BG')}</div>
-          <div class=\"muted\">Статус: ${visit.status === 'draft' ? 'Чернова' : visit.status === 'finalized' ? 'Приключено' : visit.status}</div>
+          <div class=\"muted\">Дата/час: ${new Date(when).toLocaleString("bg-BG")}</div>
+          <div class=\"muted\">Статус: ${visit.status === "draft" ? "Чернова" : visit.status === "finalized" ? "Приключено" : visit.status}</div>
           <table>
             <tbody>
               ${soapRows}
@@ -173,15 +212,21 @@ export default function VisitDetailPage() {
     w.document.close();
   }
 
-  if (visitUnknown === undefined) return <main className="p-6 max-w-3xl mx-auto">Зареждане...</main>;
-  if (!visit) return <main className="p-6 max-w-3xl mx-auto">Не е намерено посещение</main>;
+  if (visitUnknown === undefined)
+    return <main className="mx-auto max-w-3xl p-6">Зареждане...</main>;
+  if (!visit)
+    return (
+      <main className="mx-auto max-w-3xl p-6">Не е намерено посещение</main>
+    );
 
   return (
-    <main className="p-6 max-w-4xl mx-auto space-y-4">
+    <main className="mx-auto max-w-4xl space-y-4 p-6">
       <h1 className="text-2xl font-semibold">{brand.nameBg}: Посещение</h1>
       {!isFinalized && !sp.get("step") ? (
-        <div className="border rounded-md p-3 bg-muted/20 flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">Посещението е чернова. Можете да продължите с ръководен режим.</div>
+        <div className="bg-muted/20 flex items-center justify-between rounded-md border p-3">
+          <div className="text-muted-foreground text-sm">
+            Посещението е чернова. Можете да продължите с ръководен режим.
+          </div>
           <Button
             variant="secondary"
             onClick={() => {
@@ -189,35 +234,61 @@ export default function VisitDetailPage() {
               next.set("step", "1");
               router.replace(`${pathname}?${next.toString()}`);
             }}
-          >Продължи ръководството</Button>
+          >
+            Продължи ръководството
+          </Button>
         </div>
       ) : null}
       {!isFinalized ? (
         <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">Ръководен режим</div>
-          <Button variant="secondary" onClick={() => setShowWizard((v) => !v)} aria-label="Стартирай ръководство">
+          <div className="text-muted-foreground text-sm">Ръководен режим</div>
+          <Button
+            variant="secondary"
+            onClick={() => setShowWizard((v) => !v)}
+            aria-label="Стартирай ръководство"
+          >
             {showWizard ? "Скрий ръководство" : "Стартирай ръководство"}
           </Button>
         </div>
       ) : null}
-      {showWizard && !isFinalized ? <VisitWizard id={id} onClose={() => setShowWizard(false)} /> : null}
-      <form onSubmit={onSave} className="grid md:grid-cols-4 gap-2">
+      {showWizard && !isFinalized ? (
+        <VisitWizard id={id} onClose={() => setShowWizard(false)} />
+      ) : null}
+      <form onSubmit={onSave} className="grid gap-2 md:grid-cols-4">
         <div className="md:col-span-2">
           <Label>Собственик</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between" disabled={isFinalized}>
-                {ownerId ? (owners ?? []).find((o) => o._id === ownerId)?.name : "Изберете собственик"}
+              <Button
+                variant="outline"
+                className="w-full justify-between"
+                disabled={isFinalized}
+              >
+                {ownerId
+                  ? (owners ?? []).find((o) => o._id === ownerId)?.name
+                  : "Изберете собственик"}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
               <Command>
-                <CommandInput placeholder="Търси собственик..." value={ownerSearch} onValueChange={setOwnerSearch} />
+                <CommandInput
+                  placeholder="Търси собственик..."
+                  value={ownerSearch}
+                  onValueChange={setOwnerSearch}
+                />
                 <CommandList>
                   <CommandEmpty>Няма резултати</CommandEmpty>
                   {(owners ?? []).map((o) => (
-                    <CommandItem key={o._id} value={o._id} onSelect={(v) => { setOwnerId(v); setAnimalId(null); }}>
-                      {o.name}{o.phone ? ` · ${o.phone}` : ""}
+                    <CommandItem
+                      key={o._id}
+                      value={o._id}
+                      onSelect={(v) => {
+                        setOwnerId(v);
+                        setAnimalId(null);
+                      }}
+                    >
+                      {o.name}
+                      {o.phone ? ` · ${o.phone}` : ""}
                     </CommandItem>
                   ))}
                 </CommandList>
@@ -229,60 +300,117 @@ export default function VisitDetailPage() {
           <Label>Животно</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between" disabled={isFinalized}>
-                {animalId ? (animals ?? []).find((a) => a._id === animalId)?.name : "Без животно"}
+              <Button
+                variant="outline"
+                className="w-full justify-between"
+                disabled={isFinalized}
+              >
+                {animalId
+                  ? (animals ?? []).find((a) => a._id === animalId)?.name
+                  : "Без животно"}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
               <Command>
-                <CommandInput placeholder="Търси животно..." value={animalSearch} onValueChange={setAnimalSearch} />
+                <CommandInput
+                  placeholder="Търси животно..."
+                  value={animalSearch}
+                  onValueChange={setAnimalSearch}
+                />
                 <CommandList>
                   <CommandEmpty>Няма резултати</CommandEmpty>
-                  {(animals ?? []).filter((an) => !ownerId || String(an.ownerId) === String(ownerId)).map((an) => (
-                    <CommandItem key={an._id} value={an._id} onSelect={(v) => { if (isFinalized) return; setAnimalId(v); const chosen = (animals ?? []).find((x) => x._id === v); if (chosen?.ownerId) setOwnerId(String(chosen.ownerId)); }}>
-                      {an.name} ({an.species})
-                    </CommandItem>
-                  ))}
+                  {(animals ?? [])
+                    .filter(
+                      (an) =>
+                        !ownerId || String(an.ownerId) === String(ownerId),
+                    )
+                    .map((an) => (
+                      <CommandItem
+                        key={an._id}
+                        value={an._id}
+                        onSelect={(v) => {
+                          if (isFinalized) return;
+                          setAnimalId(v);
+                          const chosen = (animals ?? []).find(
+                            (x) => x._id === v,
+                          );
+                          if (chosen?.ownerId)
+                            setOwnerId(String(chosen.ownerId));
+                        }}
+                      >
+                        {an.name} ({an.species})
+                      </CommandItem>
+                    ))}
                 </CommandList>
               </Command>
             </PopoverContent>
           </Popover>
         </div>
-        <div className="md:col-span-4 grid md:grid-cols-4 gap-2">
+        <div className="grid gap-2 md:col-span-4 md:grid-cols-4">
           <div>
             <Label>Статус</Label>
-            <div className="h-10 flex items-center px-3 rounded-md border text-sm bg-muted/30">
-              {visit.status === "draft" ? "Чернова" : visit.status === "finalized" ? "Приключено" : visit.status}
+            <div className="bg-muted/30 flex h-10 items-center rounded-md border px-3 text-sm">
+              {visit.status === "draft"
+                ? "Чернова"
+                : visit.status === "finalized"
+                  ? "Приключено"
+                  : visit.status}
             </div>
           </div>
           <div>
             <Label htmlFor="datetime">Дата/час</Label>
-            <Input id="datetime" type="datetime-local" value={dt} onChange={(e) => setDt(e.target.value)} disabled={isFinalized} />
+            <Input
+              id="datetime"
+              type="datetime-local"
+              value={dt}
+              onChange={(e) => setDt(e.target.value)}
+              disabled={isFinalized}
+            />
           </div>
           <div className="md:col-span-2">
             <Label>Създадено</Label>
-            <div className="h-10 flex items-center px-3 rounded-md border text-sm bg-muted/30">
+            <div className="bg-muted/30 flex h-10 items-center rounded-md border px-3 text-sm">
               {fmtDateTimeBG(visit.createdAt)}
             </div>
           </div>
           <div>
             <Label htmlFor="s">S - Субективно</Label>
-            <Textarea id="s" value={s} onChange={(e) => setS(e.target.value)} disabled={isFinalized} />
+            <Textarea
+              id="s"
+              value={s}
+              onChange={(e) => setS(e.target.value)}
+              disabled={isFinalized}
+            />
           </div>
           <div>
             <Label htmlFor="o">O - Обективно</Label>
-            <Textarea id="o" value={o} onChange={(e) => setO(e.target.value)} disabled={isFinalized} />
+            <Textarea
+              id="o"
+              value={o}
+              onChange={(e) => setO(e.target.value)}
+              disabled={isFinalized}
+            />
           </div>
           <div>
             <Label htmlFor="a">A - Оценка</Label>
-            <Textarea id="a" value={a} onChange={(e) => setA(e.target.value)} disabled={isFinalized} />
+            <Textarea
+              id="a"
+              value={a}
+              onChange={(e) => setA(e.target.value)}
+              disabled={isFinalized}
+            />
           </div>
           <div>
             <Label htmlFor="p">P - План</Label>
-            <Textarea id="p" value={p} onChange={(e) => setP(e.target.value)} disabled={isFinalized} />
+            <Textarea
+              id="p"
+              value={p}
+              onChange={(e) => setP(e.target.value)}
+              disabled={isFinalized}
+            />
           </div>
         </div>
-        <div className="md:col-span-4 grid md:grid-cols-2 gap-4">
+        <div className="grid gap-4 md:col-span-4 md:grid-cols-2">
           <div>
             <Label>Процедури</Label>
             <div className="flex items-end gap-2">
@@ -296,7 +424,9 @@ export default function VisitDetailPage() {
                       e.preventDefault();
                       const v = procInput.trim();
                       if (!v) return;
-                      setProcedures((arr) => (arr.includes(v) ? arr : [...arr, v]));
+                      setProcedures((arr) =>
+                        arr.includes(v) ? arr : [...arr, v],
+                      );
                       setProcInput("");
                     }
                   }}
@@ -325,10 +455,17 @@ export default function VisitDetailPage() {
                   <button
                     key={i}
                     type="button"
-                    className="inline-flex items-center gap-1 rounded-full border px-2 py-1 hover:bg-accent"
-                    onClick={() => { if (isFinalized) return; setProcedures((arr) => (arr.includes(name) ? arr : [...arr, name])); }}
+                    className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+                    onClick={() => {
+                      if (isFinalized) return;
+                      setProcedures((arr) =>
+                        arr.includes(name) ? arr : [...arr, name],
+                      );
+                    }}
                     disabled={isFinalized}
-                  >{name}</button>
+                  >
+                    {name}
+                  </button>
                 ))}
               </div>
             ) : null}
@@ -336,7 +473,16 @@ export default function VisitDetailPage() {
               {procedures.map((pr, i) => (
                 <li key={i} className="flex justify-between">
                   <span>{pr}</span>
-                  <Button type="button" variant="ghost" onClick={() => setProcedures((arr) => arr.filter((_, idx) => idx !== i))} disabled={isFinalized}>Премахни</Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      setProcedures((arr) => arr.filter((_, idx) => idx !== i))
+                    }
+                    disabled={isFinalized}
+                  >
+                    Премахни
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -354,7 +500,9 @@ export default function VisitDetailPage() {
                       e.preventDefault();
                       const v = medInput.trim();
                       if (!v) return;
-                      setMedications((arr) => (arr.includes(v) ? arr : [...arr, v]));
+                      setMedications((arr) =>
+                        arr.includes(v) ? arr : [...arr, v],
+                      );
                       setMedInput("");
                     }
                   }}
@@ -369,7 +517,9 @@ export default function VisitDetailPage() {
                   if (isFinalized) return;
                   const v = medInput.trim();
                   if (!v) return;
-                  setMedications((arr) => (arr.includes(v) ? arr : [...arr, v]));
+                  setMedications((arr) =>
+                    arr.includes(v) ? arr : [...arr, v],
+                  );
                   setMedInput("");
                 }}
                 disabled={isFinalized}
@@ -383,10 +533,17 @@ export default function VisitDetailPage() {
                   <button
                     key={i}
                     type="button"
-                    className="inline-flex items-center gap-1 rounded-full border px-2 py-1 hover:bg-accent"
-                    onClick={() => { if (isFinalized) return; setMedications((arr) => (arr.includes(name) ? arr : [...arr, name])); }}
+                    className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+                    onClick={() => {
+                      if (isFinalized) return;
+                      setMedications((arr) =>
+                        arr.includes(name) ? arr : [...arr, name],
+                      );
+                    }}
                     disabled={isFinalized}
-                  >{name}</button>
+                  >
+                    {name}
+                  </button>
                 ))}
               </div>
             ) : null}
@@ -394,36 +551,69 @@ export default function VisitDetailPage() {
               {medications.map((md, i) => (
                 <li key={i} className="flex justify-between">
                   <span>{md}</span>
-                  <Button type="button" variant="ghost" onClick={() => setMedications((arr) => arr.filter((_, idx) => idx !== i))} disabled={isFinalized}>Премахни</Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      setMedications((arr) => arr.filter((_, idx) => idx !== i))
+                    }
+                    disabled={isFinalized}
+                  >
+                    Премахни
+                  </Button>
                 </li>
               ))}
             </ul>
           </div>
         </div>
-        <div className="md:col-span-4 flex gap-2">
-          <Button type="submit" disabled={isFinalized}>Запази</Button>
-          <Button type="button" variant="outline" onClick={onFinalize} disabled={visit.status !== "draft"} aria-label="Приключи посещението">
+        <div className="flex gap-2 md:col-span-4">
+          <Button type="submit" disabled={isFinalized}>
+            Запази
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onFinalize}
+            disabled={visit.status !== "draft"}
+            aria-label="Приключи посещението"
+          >
             <CalendarCheck className="mr-1 size-4" aria-hidden /> Приключи
           </Button>
-          <Button type="button" variant="secondary" onClick={onDuplicate} aria-label="Дублирай посещението">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onDuplicate}
+            aria-label="Дублирай посещението"
+          >
             <FilePlus className="mr-1 size-4" aria-hidden /> Дублирай
           </Button>
-          <Button type="button" variant="ghost" onClick={onPrint} aria-label="Печат на посещението">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onPrint}
+            aria-label="Печат на посещението"
+          >
             <Printer className="mr-1 size-4" aria-hidden /> Печат
           </Button>
           <PdfDownloadButton
+            variant="outline"
             fileName={`visit-${id}.pdf`}
             ariaLabel="Изтегли резюме на посещението"
-            variant="outline"
             generatePdf={async () => {
               if (!visit) throw new Error("Visit not loaded");
-              const datetime = (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
+              const datetime =
+                (visit as VisitDoc & { datetime?: number }).datetime ??
+                visit.createdAt;
               const animalName = (() => {
-                const animal = (animals ?? []).find((a) => a._id === visit.animalId);
+                const animal = (animals ?? []).find(
+                  (a) => a._id === visit.animalId,
+                );
                 return animal?.name ?? "";
               })();
               const ownerName = (() => {
-                const owner = (owners ?? []).find((o) => o._id === visit.ownerId);
+                const owner = (owners ?? []).find(
+                  (o) => o._id === visit.ownerId,
+                );
                 return owner?.name ?? "";
               })();
               return generateVisitSummaryPdf({
@@ -443,12 +633,14 @@ export default function VisitDetailPage() {
             </span>
           </PdfDownloadButton>
           <a
-            className="inline-flex items-center rounded-md border px-3 py-2 text-sm hover:bg-accent"
+            className="hover:bg-accent inline-flex items-center rounded-md border px-3 py-2 text-sm"
             href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(visit.animalId)}` : ""}&visitId=${encodeURIComponent(visit._id)}`}
           >
             <FilePlus className="mr-1 size-4" aria-hidden /> Нова фактура
           </a>
-          <Button type="button" variant="ghost" onClick={() => router.back()}>Назад</Button>
+          <Button type="button" variant="outline" onClick={() => router.back()}>
+            Назад
+          </Button>
         </div>
       </form>
     </main>

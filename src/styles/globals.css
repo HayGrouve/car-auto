@@ -129,22 +129,4 @@
     outline-offset: 2px;
     border-radius: var(--radius-sm);
   }
-  /* Touch target baseline for mobile */
-  button,
-  a,
-  input,
-  select,
-  textarea {
-    min-height: 44px;
-  }
-
-  .shadcn-checkbox,
-  button[data-slot="checkbox"] {
-    min-height: initial;
-    width: 16px;
-    height: 16px;
-    aspect-ratio: 1 / 1;
-    border-radius: 4px;
-    padding: 0;
-  }
 }

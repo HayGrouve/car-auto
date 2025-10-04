@@ -12,13 +12,19 @@ export async function POST(req: NextRequest) {
   const email = body?.email ?? "";
   const password = body?.password ?? "";
   if (email !== SINGLE_USER_EMAIL) {
-    return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
+    return NextResponse.json(
+      { message: "Invalid credentials" },
+      { status: 401 },
+    );
   }
   const ok = SINGLE_USER_PASSWORD_HASH
     ? await verifyPassword(password, SINGLE_USER_PASSWORD_HASH)
     : SINGLE_USER_PASSWORD !== "" && password === SINGLE_USER_PASSWORD;
   if (!ok) {
-    return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
+    return NextResponse.json(
+      { message: "Invalid credentials" },
+      { status: 401 },
+    );
   }
   const token = await createJwt({ sub: SINGLE_USER_EMAIL });
   const res = NextResponse.json({ ok: true });
@@ -31,5 +37,3 @@ export async function POST(req: NextRequest) {
   });
   return res;
 }
-
-

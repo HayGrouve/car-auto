@@ -37,35 +37,46 @@ export function VisitList({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-medium">{title}</h2>
         {actionLabel ? (
-          <Link href="/visits" className="text-xs text-muted-foreground underline underline-offset-2">
+          <Link
+            href="/visits"
+            className="text-muted-foreground text-xs underline underline-offset-2"
+          >
             {actionLabel}
           </Link>
         ) : null}
       </div>
-      <div className="border rounded-md divide-y">
+      <div className="divide-y rounded-md border">
         {visits.length === 0 ? (
-          <div className="p-3 text-sm text-muted-foreground">{emptyLabel}</div>
+          <div className="text-muted-foreground p-3 text-sm">{emptyLabel}</div>
         ) : (
           visits.map((visit) => (
             <div
               key={visit._id}
               className={cn(
-                "p-3 flex items-center justify-between text-sm",
-                visit.highlight && "bg-muted/50"
+                "flex items-center justify-between p-3 text-sm",
+                visit.highlight && "bg-muted/50",
               )}
             >
               <div className="space-y-1">
-                <Link href={`/visits/${visit._id}`} className="font-medium underline-offset-2 hover:underline">
+                <Link
+                  href={`/visits/${visit._id}`}
+                  className="font-medium underline-offset-2 hover:underline"
+                >
                   {visit.code ?? `#${visit._id}`}
                 </Link>
-                <div className="text-xs text-muted-foreground flex flex-wrap gap-2 items-center">
+                <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
                   <span>{fmtDateTimeBG(visit.datetime)}</span>
                   <span>
-                    · {visit.status === "draft" ? "Чернова" : visit.status === "finalized" ? "Приключено" : visit.status}
+                    ·{" "}
+                    {visit.status === "draft"
+                      ? "Чернова"
+                      : visit.status === "finalized"
+                        ? "Приключено"
+                        : visit.status}
                   </span>
                   {visit.ownerName ? <span>· {visit.ownerName}</span> : null}
                   {visit.badge ? (
-                    <span className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-primary text-[10px] uppercase tracking-wide">
+                    <span className="bg-primary/10 text-primary inline-flex items-center rounded px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
                       {visit.badge}
                     </span>
                   ) : null}
@@ -73,7 +84,9 @@ export function VisitList({
               </div>
               <Link
                 href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId ?? "")}${
-                  visit.animalId ? `&animalId=${encodeURIComponent(visit.animalId)}` : ""
+                  visit.animalId
+                    ? `&animalId=${encodeURIComponent(visit.animalId)}`
+                    : ""
                 }&visitId=${encodeURIComponent(visit._id)}`}
               >
                 <Button size="sm" variant="outline">
@@ -84,7 +97,9 @@ export function VisitList({
           ))
         )}
       </div>
-      {footer ? <div className="text-xs text-muted-foreground">{footer}</div> : null}
+      {footer ? (
+        <div className="text-muted-foreground text-xs">{footer}</div>
+      ) : null}
     </section>
   );
 }

@@ -38,10 +38,17 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ConvexClientProvider>
-          <a href="#main" className="sr-only focus:not-sr-only fixed top-2 left-2 z-50 bg-background border px-3 py-1 rounded">Към съдържание</a>
+          <a
+            href="#main"
+            className="bg-background sr-only fixed top-2 left-2 z-50 rounded border px-3 py-1 focus:not-sr-only"
+          >
+            Към съдържание
+          </a>
           <AppNav />
-          <div className="pt-14 min-h-screen flex flex-col">
-            <main id="main" className="flex-1">{children}</main>
+          <div className="flex min-h-screen flex-col pt-14">
+            <main id="main" className="flex-1">
+              {children}
+            </main>
             <Footer />
           </div>
           <Toaster richColors position="top-center" />

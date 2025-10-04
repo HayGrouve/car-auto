@@ -8,13 +8,15 @@
       node -r esbuild-register scripts/seedMockData.ts
 */
 
-import 'dotenv/config';
+import "dotenv/config";
 import { ConvexHttpClient } from "convex/browser";
 
 async function main() {
   const url = process.env.CONVEX_URL;
   if (!url) {
-    console.error("Missing CONVEX_URL. Set it in .env (CONVEX_URL=https://...)");
+    console.error(
+      "Missing CONVEX_URL. Set it in .env (CONVEX_URL=https://...)",
+    );
     process.exit(1);
   }
   const client = new ConvexHttpClient(url);
@@ -39,5 +41,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-
-

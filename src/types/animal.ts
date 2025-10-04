@@ -14,5 +14,3 @@ export const AnimalDocSchema = z.object({
 });
 
 export type AnimalDoc = z.infer<typeof AnimalDocSchema>;
-
-

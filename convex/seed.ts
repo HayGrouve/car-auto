@@ -24,26 +24,63 @@ export const run = action({
     const invoicesPerVisit = Math.max(0, args.invoicesPerVisit ?? 1);
 
     const ownerFirstNames = [
-      "Иван", "Мария", "Георги", "Елена", "Петър", "Николай", "Румяна", "Даниела",
+      "Иван",
+      "Мария",
+      "Георги",
+      "Елена",
+      "Петър",
+      "Николай",
+      "Румяна",
+      "Даниела",
     ];
     const ownerLastNames = [
-      "Иванов", "Георгиева", "Петров", "Николова", "Попов", "Симеонова", "Димитров", "Костова",
+      "Иванов",
+      "Георгиева",
+      "Петров",
+      "Николова",
+      "Попов",
+      "Симеонова",
+      "Димитров",
+      "Костова",
     ];
     const streets = [
-      "ул. Шипка 10", "бул. Витоша 25", "ул. Раковски 14", "бул. България 101", "ул. Славянска 7",
+      "ул. Шипка 10",
+      "бул. Витоша 25",
+      "ул. Раковски 14",
+      "бул. България 101",
+      "ул. Славянска 7",
     ];
 
-    const animalNames = ["Рекс", "Мая", "Луна", "Макс", "Сара", "Оскар", "Чара", "Коко"]; 
-    const species = ["Куче", "Котка", "Заек", "Морско свинче"]; 
+    const animalNames = [
+      "Рекс",
+      "Мая",
+      "Луна",
+      "Макс",
+      "Сара",
+      "Оскар",
+      "Чара",
+      "Коко",
+    ];
+    const species = ["Куче", "Котка", "Заек", "Морско свинче"];
     const breedsBySpecies: Record<string, string[]> = {
-      "Куче": ["Лабрадор", "Джак Ръсел", "Бигъл", "Немска овчарка"],
-      "Котка": ["Европейска", "Сиамска", "Мейн Кун"],
-      "Заек": ["Холандско джудже", "Рекс"],
+      Куче: ["Лабрадор", "Джак Ръсел", "Бигъл", "Немска овчарка"],
+      Котка: ["Европейска", "Сиамска", "Мейн Кун"],
+      Заек: ["Холандско джудже", "Рекс"],
       "Морско свинче": ["Абисинско", "Ангорско"],
     };
 
-    const procedurePool = ["Ваксинация", "Обезпаразитяване", "Почистване на зъби", "Преглед"];
-    const medsPool = ["Амоксицилин", "Ибупрофен (вет.)", "Витамини", "Антибиотик"];
+    const procedurePool = [
+      "Ваксинация",
+      "Обезпаразитяване",
+      "Почистване на зъби",
+      "Преглед",
+    ];
+    const medsPool = [
+      "Амоксицилин",
+      "Ибупрофен (вет.)",
+      "Витамини",
+      "Антибиотик",
+    ];
 
     const owners: string[] = [];
     const animals: string[] = [];
@@ -104,7 +141,9 @@ export const run = action({
           visits.push(vCreated.id);
           // Randomly finalize some visits
           if (Math.random() < 0.6) {
-            await ctx.runMutation(api.visits.finalize, { id: vCreated.id as any });
+            await ctx.runMutation(api.visits.finalize, {
+              id: vCreated.id as any,
+            });
           }
 
           // Optionally create invoices per visit
@@ -112,7 +151,14 @@ export const run = action({
             const items = [
               { description: "Преглед", quantity: 1, price: 30, total: 30 },
               ...(Math.random() < 0.5
-                ? [{ description: "Ваксина", quantity: 1, price: 25, total: 25 }]
+                ? [
+                    {
+                      description: "Ваксина",
+                      quantity: 1,
+                      price: 25,
+                      total: 25,
+                    },
+                  ]
                 : []),
             ];
             const inv = (await ctx.runMutation(api.invoices.create, {
@@ -124,7 +170,9 @@ export const run = action({
             if (inv?.ok && inv.id) {
               invoices.push(inv.id);
               if (Math.random() < 0.5) {
-                await ctx.runMutation(api.invoices.markPaid, { id: inv.id as any });
+                await ctx.runMutation(api.invoices.markPaid, {
+                  id: inv.id as any,
+                });
               }
             }
           }
@@ -143,5 +191,3 @@ export const run = action({
     } as const;
   },
 });
-
-

@@ -43,5 +43,3 @@ export function KeyboardShortcuts() {
 }
 
 export default KeyboardShortcuts;
-
-

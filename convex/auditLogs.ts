@@ -9,8 +9,15 @@ export const listByEntity = query({
   },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("auditLogs").collect();
-    const filtered = all.filter((l: any) => l.entityType === args.entityType && String(l.entityId) === String(args.entityId));
-    const sorted = filtered.sort((a: any, b: any) => (b.at ?? b.createdAt ?? 0) - (a.at ?? a.createdAt ?? 0));
+    const filtered = all.filter(
+      (l: any) =>
+        l.entityType === args.entityType &&
+        String(l.entityId) === String(args.entityId),
+    );
+    const sorted = filtered.sort(
+      (a: any, b: any) =>
+        (b.at ?? b.createdAt ?? 0) - (a.at ?? a.createdAt ?? 0),
+    );
     const limit = args.limit ?? 10;
     return sorted.slice(0, limit);
   },
@@ -28,10 +35,11 @@ export const reportBreach = mutation({
       entityType: "system",
       entityId: "global",
       action: "breach",
-      details: { severity: args.severity ?? "info", message: args.details ?? "" },
+      details: {
+        severity: args.severity ?? "info",
+        message: args.details ?? "",
+      },
     } as any);
     return { ok: true } as const;
   },
 });
-
-

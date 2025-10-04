@@ -42,12 +42,19 @@ const actions = [
   },
 ];
 
-export function QuickActionsCard({ className, onNewDraftVisit }: QuickActionsCardProps) {
+export function QuickActionsCard({
+  className,
+  onNewDraftVisit,
+}: QuickActionsCardProps) {
   return (
     <section className={cn("grid gap-2 md:grid-cols-3", className)}>
       {actions.map(({ href, label, ariaLabel }) => (
         <Link key={href} href={href} aria-label={ariaLabel}>
-          <Button size="sm" variant="secondary" className="w-full justify-start">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="w-full justify-start"
+          >
             {label}
           </Button>
         </Link>

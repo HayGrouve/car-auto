@@ -16,28 +16,91 @@ export const list = query({
     const ownerMap = new Map<string, { name: string; phone?: string }>();
     owners.forEach((owner: any) => {
       if (!owner?.deletedAt) {
-        ownerMap.set(String(owner._id), { name: owner.name, phone: owner.phone ?? undefined });
+        ownerMap.set(String(owner._id), {
+          name: owner.name,
+          phone: owner.phone ?? undefined,
+        });
       }
     });
     let filtered = all;
     if (args.ownerId) {
-      filtered = filtered.filter((a: any) => String(a.ownerId ?? "") === String(args.ownerId));
+      filtered = filtered.filter(
+        (a: any) => String(a.ownerId ?? "") === String(args.ownerId),
+      );
     }
     if (args.species) {
       const speciesLower = args.species.toLocaleLowerCase("bg");
-      filtered = filtered.filter((a: any) => String(a.species ?? "").toLocaleLowerCase("bg") === speciesLower);
+      filtered = filtered.filter(
+        (a: any) =>
+          String(a.species ?? "").toLocaleLowerCase("bg") === speciesLower,
+      );
     }
     const translitMap: Record<string, string> = {
-      А: "A", а: "a", Б: "B", б: "b", В: "V", в: "v", Г: "G", г: "g",
-      Д: "D", д: "d", Е: "E", е: "e", Ж: "zh", ж: "zh", З: "Z", з: "z",
-      И: "i", и: "i", Й: "y", й: "y", К: "k", к: "k", Л: "l", л: "l",
-      М: "m", м: "m", Н: "n", н: "n", О: "o", о: "o", П: "p", п: "p",
-      Р: "r", р: "r", С: "s", с: "s", Т: "t", т: "t", У: "u", у: "u",
-      Ф: "f", ф: "f", Х: "h", х: "h", Ц: "ts", ц: "ts", Ч: "ch", ч: "ch",
-      Ш: "sh", ш: "sh", Щ: "sht", щ: "sht", Ъ: "a", ъ: "a", Ь: "", ь: "",
-      Ю: "yu", ю: "yu", Я: "ya", я: "ya",
+      А: "A",
+      а: "a",
+      Б: "B",
+      б: "b",
+      В: "V",
+      в: "v",
+      Г: "G",
+      г: "g",
+      Д: "D",
+      д: "d",
+      Е: "E",
+      е: "e",
+      Ж: "zh",
+      ж: "zh",
+      З: "Z",
+      з: "z",
+      И: "i",
+      и: "i",
+      Й: "y",
+      й: "y",
+      К: "k",
+      к: "k",
+      Л: "l",
+      л: "l",
+      М: "m",
+      м: "m",
+      Н: "n",
+      н: "n",
+      О: "o",
+      о: "o",
+      П: "p",
+      п: "p",
+      Р: "r",
+      р: "r",
+      С: "s",
+      с: "s",
+      Т: "t",
+      т: "t",
+      У: "u",
+      у: "u",
+      Ф: "f",
+      ф: "f",
+      Х: "h",
+      х: "h",
+      Ц: "ts",
+      ц: "ts",
+      Ч: "ch",
+      ч: "ch",
+      Ш: "sh",
+      ш: "sh",
+      Щ: "sht",
+      щ: "sht",
+      Ъ: "a",
+      ъ: "a",
+      Ь: "",
+      ь: "",
+      Ю: "yu",
+      ю: "yu",
+      Я: "ya",
+      я: "ya",
     };
-    const toAscii = (s: string) => Array.from(String(s)).map((ch) => translitMap[ch] ?? ch).join("");
+    const toAscii = (s: string) =>
+      Array.from(String(s))
+        .map((ch) => translitMap[ch] ?? ch)
+        .join("");
     const normalizePair = (s: string) => {
       const base = String(s)
         .normalize("NFKD")
@@ -56,7 +119,9 @@ export const list = query({
       const start = Math.max(0, args.offset ?? 0);
       const end = (args.limit ?? rows.length) + start;
       return rows.slice(start, end).map((doc: any) => {
-        const ownerInfo = doc.ownerId ? ownerMap.get(String(doc.ownerId)) : undefined;
+        const ownerInfo = doc.ownerId
+          ? ownerMap.get(String(doc.ownerId))
+          : undefined;
         return {
           ...doc,
           ownerName: ownerInfo?.name ?? null,
@@ -65,7 +130,10 @@ export const list = query({
       });
     };
     if (!q.base && !q.ascii) {
-      const sorted = (args.sort === "createdAtAsc" ? filtered.sort(byDateAsc) : filtered.sort(byDateDesc));
+      const sorted =
+        args.sort === "createdAtAsc"
+          ? filtered.sort(byDateAsc)
+          : filtered.sort(byDateDesc);
       return sliceWithOwner(sorted);
     }
     const matches = (value: unknown) => {
@@ -77,10 +145,15 @@ export const list = query({
         (p.ascii && q.base && p.ascii.includes(q.base))
       );
     };
-    const matched = filtered
-      .filter((a: any) => [a.name, a.species, a.breed, a.microchip]
-        .filter(Boolean).some((v: string) => matches(v)));
-    const sorted = (args.sort === "createdAtAsc" ? matched.sort(byDateAsc) : matched.sort(byDateDesc));
+    const matched = filtered.filter((a: any) =>
+      [a.name, a.species, a.breed, a.microchip]
+        .filter(Boolean)
+        .some((v: string) => matches(v)),
+    );
+    const sorted =
+      args.sort === "createdAtAsc"
+        ? matched.sort(byDateAsc)
+        : matched.sort(byDateDesc);
     return sliceWithOwner(sorted);
   },
 });
@@ -114,10 +187,12 @@ export const create = mutation({
     const now = Date.now();
     const micro = args.microchip?.trim();
     if (micro) {
-      const dup = (await ctx.db
-        .query("animals")
-        .filter((q) => q.eq(q.field("microchip"), micro))
-        .collect())[0];
+      const dup = (
+        await ctx.db
+          .query("animals")
+          .filter((q) => q.eq(q.field("microchip"), micro))
+          .collect()
+      )[0];
       if (dup) return { ok: false, reason: "microchip" } as any;
     }
     const id = await ctx.db.insert("animals", {
@@ -162,7 +237,8 @@ export const update = mutation({
     if (args.sex !== undefined) patch.sex = args.sex;
     if (args.neutered !== undefined) patch.neutered = args.neutered;
     if (args.dob !== undefined) patch.dob = args.dob;
-    if (args.microchip !== undefined) patch.microchip = args.microchip?.trim() || null;
+    if (args.microchip !== undefined)
+      patch.microchip = args.microchip?.trim() || null;
     if (args.ownerId !== undefined) patch.ownerId = args.ownerId;
     await ctx.db.patch(args.id, patch);
     return { ok: true } as const;
@@ -176,5 +252,3 @@ export const listByOwner = query({
     return all.filter((a: any) => a.ownerId === args.ownerId);
   },
 });
-
-

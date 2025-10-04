@@ -7,7 +7,13 @@ import { toast } from "sonner";
 import type { InvoiceDoc } from "@/types/visit";
 import { generateInvoicePdf } from "@/lib/pdf-generator";
 
-export default function InvoicePdfButton({ inv, fileName }: { inv: InvoiceDoc; fileName: string }) {
+export default function InvoicePdfButton({
+  inv,
+  fileName,
+}: {
+  inv: InvoiceDoc;
+  fileName: string;
+}) {
   const [loading, setLoading] = useState(false);
 
   async function onClick() {

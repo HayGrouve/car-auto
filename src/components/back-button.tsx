@@ -12,5 +12,3 @@ export function BackButton({ label = "Назад" }: { label?: string }) {
     </Button>
   );
 }
-
-

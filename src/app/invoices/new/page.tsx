@@ -5,8 +5,18 @@ import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandInput, CommandList, CommandEmpty, CommandItem } from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandItem,
+} from "@/components/ui/command";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fmtNumberBG } from "@/lib/format";
 import type { Id } from "@/../convex/_generated/dataModel";
@@ -17,20 +27,49 @@ function NewInvoicePageInner() {
   const params = useSearchParams();
   const [ownerSearch, setOwnerSearch] = useState("");
   const [animalSearch, setAnimalSearch] = useState("");
-  const owners = useQuery(api.owners.list, useMemo(() => ({ search: ownerSearch }), [ownerSearch])) as { _id: string; name: string; phone: string }[] | undefined;
-  const animals = useQuery(api.animals.list, useMemo(() => ({ search: animalSearch }), [animalSearch])) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
-  const create = useMutation(api.invoices.create) as unknown as (args: { ownerId: string; animalId?: string; visitId?: string; items: { description: string; quantity: number; price: number; total: number }[] }) => Promise<{ ok: boolean; id: string }>;
-  const markPaid = useMutation(api.invoices.markPaid) as unknown as (args: { id: string }) => Promise<{ ok: boolean }>;
+  const owners = useQuery(
+    api.owners.list,
+    useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
+  ) as { _id: string; name: string; phone: string }[] | undefined;
+  const animals = useQuery(
+    api.animals.list,
+    useMemo(() => ({ search: animalSearch }), [animalSearch]),
+  ) as
+    | { _id: string; name: string; species: string; ownerId?: string | null }[]
+    | undefined;
+  const create = useMutation(api.invoices.create) as unknown as (args: {
+    ownerId: string;
+    animalId?: string;
+    visitId?: string;
+    items: {
+      description: string;
+      quantity: number;
+      price: number;
+      total: number;
+    }[];
+  }) => Promise<{ ok: boolean; id: string }>;
+  const markPaid = useMutation(api.invoices.markPaid) as unknown as (args: {
+    id: string;
+  }) => Promise<{ ok: boolean }>;
 
   const [ownerId, setOwnerId] = useState("");
   const [animalId, setAnimalId] = useState("");
-  const [items, setItems] = useState<{ description: string; quantity: string; price: string; total: number }[]>([
-    { description: "", quantity: "1", price: "0", total: 0 }
-  ]);
+  const [items, setItems] = useState<
+    { description: string; quantity: string; price: string; total: number }[]
+  >([{ description: "", quantity: "1", price: "0", total: 0 }]);
   const [visitId, setVisitId] = useState("");
-  const visit = useQuery(api.visits.getById, visitId ? ({ id: visitId as Id<"visits"> }) : "skip") as { procedures?: string[]; medications?: string[] } | undefined;
-  const procSuggestions = useQuery(api.visits.suggestProcedures, useMemo(() => ({ limit: 8 }), [])) as string[] | undefined;
-  const medSuggestions = useQuery(api.visits.suggestMedications, useMemo(() => ({ limit: 8 }), [])) as string[] | undefined;
+  const visit = useQuery(
+    api.visits.getById,
+    visitId ? { id: visitId as Id<"visits"> } : "skip",
+  ) as { procedures?: string[]; medications?: string[] } | undefined;
+  const procSuggestions = useQuery(
+    api.visits.suggestProcedures,
+    useMemo(() => ({ limit: 8 }), []),
+  ) as string[] | undefined;
+  const medSuggestions = useQuery(
+    api.visits.suggestMedications,
+    useMemo(() => ({ limit: 8 }), []),
+  ) as string[] | undefined;
   const [markPaidNow, setMarkPaidNow] = useState(false);
   const [prefilledFromVisit, setPrefilledFromVisit] = useState(false);
 
@@ -44,12 +83,16 @@ function NewInvoicePageInner() {
     if (qpVisit) setVisitId(qpVisit);
   }, [params]);
 
-  function recalcTotal(idx: number, next?: Partial<{ description: string; quantity: string; price: string }>) {
+  function recalcTotal(
+    idx: number,
+    next?: Partial<{ description: string; quantity: string; price: string }>,
+  ) {
     setItems((arr) => {
       const copy = arr.map((it) => ({ ...it }));
       const target = copy[idx];
       if (!target) return arr;
-      if (next?.description !== undefined) target.description = next.description;
+      if (next?.description !== undefined)
+        target.description = next.description;
       if (next?.quantity !== undefined) target.quantity = next.quantity;
       if (next?.price !== undefined) target.price = next.price;
       const q = parseFloat(target.quantity || "0");
@@ -63,12 +106,28 @@ function NewInvoicePageInner() {
   useEffect(() => {
     if (!visitId || !visit || prefilledFromVisit) return;
     const baseItems = [
-      ...((visit.procedures ?? []).map((name) => ({ description: name, quantity: "1", price: "0", total: 0 }))),
-      ...((visit.medications ?? []).map((name) => ({ description: name, quantity: "1", price: "0", total: 0 }))),
+      ...(visit.procedures ?? []).map((name) => ({
+        description: name,
+        quantity: "1",
+        price: "0",
+        total: 0,
+      })),
+      ...(visit.medications ?? []).map((name) => ({
+        description: name,
+        quantity: "1",
+        price: "0",
+        total: 0,
+      })),
     ];
     // Only override initial blank row to avoid clobbering user edits
     const first = items[0];
-    const isPristine = items.length === 1 && first && !first.description.trim() && (parseFloat(first.price || "0") === 0) && (parseFloat(first.quantity || "1") === 1) && first.total === 0;
+    const isPristine =
+      items.length === 1 &&
+      first &&
+      !first.description.trim() &&
+      parseFloat(first.price || "0") === 0 &&
+      parseFloat(first.quantity || "1") === 1 &&
+      first.total === 0;
     if (baseItems.length > 0 && isPristine) {
       setItems(baseItems);
       setPrefilledFromVisit(true);
@@ -91,8 +150,18 @@ function NewInvoicePageInner() {
     if (!ownerId) return;
     const payloadItems = items
       .filter((it) => it.description.trim())
-      .map((it) => ({ description: it.description.trim(), quantity: parseFloat(it.quantity || "0"), price: parseFloat(it.price || "0"), total: it.total }));
-    const res = await create({ ownerId, animalId: animalId || undefined, visitId: visitId || undefined, items: payloadItems }) as { ok: boolean; id: string; code?: string };
+      .map((it) => ({
+        description: it.description.trim(),
+        quantity: parseFloat(it.quantity || "0"),
+        price: parseFloat(it.price || "0"),
+        total: it.total,
+      }));
+    const res = (await create({
+      ownerId,
+      animalId: animalId || undefined,
+      visitId: visitId || undefined,
+      items: payloadItems,
+    })) as { ok: boolean; id: string; code?: string };
     if (res?.ok && res.id) {
       if (markPaidNow) {
         await markPaid({ id: res.id });
@@ -103,23 +172,39 @@ function NewInvoicePageInner() {
   }
 
   return (
-    <main className="p-6 max-w-3xl mx-auto space-y-4">
+    <main className="mx-auto max-w-3xl space-y-4 p-6">
       <h1 className="text-2xl font-semibold">Нова фактура</h1>
       <form onSubmit={onSubmit} className="grid gap-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
           <div>
             <Label>Собственик</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">{ownerId ? (owners ?? []).find((o) => o._id === ownerId)?.name : "Изберете собственик"}</Button>
+                <Button variant="outline" className="w-full justify-between">
+                  {ownerId
+                    ? (owners ?? []).find((o) => o._id === ownerId)?.name
+                    : "Изберете собственик"}
+                </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
-                  <CommandInput placeholder="Търси собственик..." value={ownerSearch} onValueChange={setOwnerSearch} />
+                  <CommandInput
+                    placeholder="Търси собственик..."
+                    value={ownerSearch}
+                    onValueChange={setOwnerSearch}
+                  />
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
                     {(owners ?? []).map((o) => (
-                      <CommandItem key={o._id} value={o._id} onSelect={(v) => { setOwnerId(v); }}>{o.name} · {o.phone}</CommandItem>
+                      <CommandItem
+                        key={o._id}
+                        value={o._id}
+                        onSelect={(v) => {
+                          setOwnerId(v);
+                        }}
+                      >
+                        {o.name} · {o.phone}
+                      </CommandItem>
                     ))}
                   </CommandList>
                 </Command>
@@ -130,17 +215,36 @@ function NewInvoicePageInner() {
             <Label>Животно</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">{animalId ? (animals ?? []).find((a) => a._id === animalId)?.name : "Без животно"}</Button>
+                <Button variant="outline" className="w-full justify-between">
+                  {animalId
+                    ? (animals ?? []).find((a) => a._id === animalId)?.name
+                    : "Без животно"}
+                </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
-                  <CommandInput placeholder="Търси животно..." value={animalSearch} onValueChange={setAnimalSearch} />
+                  <CommandInput
+                    placeholder="Търси животно..."
+                    value={animalSearch}
+                    onValueChange={setAnimalSearch}
+                  />
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
                     {(animals ?? [])
-                      .filter((an) => !ownerId || String(an.ownerId) === String(ownerId))
+                      .filter(
+                        (an) =>
+                          !ownerId || String(an.ownerId) === String(ownerId),
+                      )
                       .map((an) => (
-                        <CommandItem key={an._id} value={an._id} onSelect={(v) => { setAnimalId(v); }}>{an.name} ({an.species})</CommandItem>
+                        <CommandItem
+                          key={an._id}
+                          value={an._id}
+                          onSelect={(v) => {
+                            setAnimalId(v);
+                          }}
+                        >
+                          {an.name} ({an.species})
+                        </CommandItem>
                       ))}
                   </CommandList>
                 </Command>
@@ -149,27 +253,59 @@ function NewInvoicePageInner() {
           </div>
         </div>
 
-        <div className="border rounded-md divide-y">
+        <div className="divide-y rounded-md border">
           {items.map((it, idx) => (
-            <div key={idx} className="p-3 grid md:grid-cols-5 gap-2 items-end">
+            <div key={idx} className="grid items-end gap-2 p-3 md:grid-cols-5">
               <div className="md:col-span-2">
                 <Label htmlFor={`desc-${idx}`}>Описание</Label>
-                <Input id={`desc-${idx}`} value={it.description} onChange={(e) => recalcTotal(idx, { description: e.target.value })} />
+                <Input
+                  id={`desc-${idx}`}
+                  value={it.description}
+                  onChange={(e) =>
+                    recalcTotal(idx, { description: e.target.value })
+                  }
+                />
               </div>
               <div>
                 <Label htmlFor={`qty-${idx}`}>Кол-во</Label>
-                <Input id={`qty-${idx}`} inputMode="decimal" value={it.quantity} onChange={(e) => recalcTotal(idx, { quantity: e.target.value })} />
+                <Input
+                  id={`qty-${idx}`}
+                  inputMode="decimal"
+                  value={it.quantity}
+                  onChange={(e) =>
+                    recalcTotal(idx, { quantity: e.target.value })
+                  }
+                />
               </div>
               <div>
                 <Label htmlFor={`price-${idx}`}>Цена</Label>
-                <Input id={`price-${idx}`} inputMode="decimal" value={it.price} onChange={(e) => recalcTotal(idx, { price: e.target.value })} />
+                <Input
+                  id={`price-${idx}`}
+                  inputMode="decimal"
+                  value={it.price}
+                  onChange={(e) => recalcTotal(idx, { price: e.target.value })}
+                />
               </div>
-              <div className="text-right">{Number.isFinite(it.total) ? it.total.toFixed(2) : "0.00"} BGN</div>
+              <div className="text-right">
+                {Number.isFinite(it.total) ? it.total.toFixed(2) : "0.00"} BGN
+              </div>
             </div>
           ))}
-          <div className="p-3 flex flex-wrap gap-2 items-center">
-            <Button type="button" variant="secondary" onClick={() => setItems((arr) => [...arr, { description: "", quantity: "1", price: "0", total: 0 }])}>Добави ред</Button>
-            {visit && (visit.procedures?.length || visit.medications?.length) ? (
+          <div className="flex flex-wrap items-center gap-2 p-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                setItems((arr) => [
+                  ...arr,
+                  { description: "", quantity: "1", price: "0", total: 0 },
+                ])
+              }
+            >
+              Добави ред
+            </Button>
+            {visit &&
+            (visit.procedures?.length || visit.medications?.length) ? (
               <Button
                 type="button"
                 variant="outline"
@@ -177,27 +313,47 @@ function NewInvoicePageInner() {
                   setItems((arr) => {
                     const next = [...arr];
                     const add = (name: string) => {
-                      next.push({ description: name, quantity: "1", price: "0", total: 0 });
+                      next.push({
+                        description: name,
+                        quantity: "1",
+                        price: "0",
+                        total: 0,
+                      });
                     };
                     (visit.procedures ?? []).forEach(add);
                     (visit.medications ?? []).forEach(add);
                     return next;
                   });
                 }}
-              >Добави от посещение</Button>
+              >
+                Добави от посещение
+              </Button>
             ) : null}
           </div>
-          {(procSuggestions ?? []).length > 0 || (medSuggestions ?? []).length > 0 ? (
-            <div className="p-3 space-y-2">
+          {(procSuggestions ?? []).length > 0 ||
+          (medSuggestions ?? []).length > 0 ? (
+            <div className="space-y-2 p-3">
               {(procSuggestions ?? []).length > 0 ? (
                 <div className="flex flex-wrap gap-2 text-xs">
                   {(procSuggestions ?? []).map((name, i) => (
                     <button
                       key={`proc-${i}`}
                       type="button"
-                      className="inline-flex items-center gap-1 rounded-full border px-2 py-1 hover:bg-accent"
-                      onClick={() => setItems((arr) => [...arr, { description: name, quantity: "1", price: "0", total: 0 }])}
-                    >{name}</button>
+                      className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+                      onClick={() =>
+                        setItems((arr) => [
+                          ...arr,
+                          {
+                            description: name,
+                            quantity: "1",
+                            price: "0",
+                            total: 0,
+                          },
+                        ])
+                      }
+                    >
+                      {name}
+                    </button>
                   ))}
                 </div>
               ) : null}
@@ -207,9 +363,21 @@ function NewInvoicePageInner() {
                     <button
                       key={`med-${i}`}
                       type="button"
-                      className="inline-flex items-center gap-1 rounded-full border px-2 py-1 hover:bg-accent"
-                      onClick={() => setItems((arr) => [...arr, { description: name, quantity: "1", price: "0", total: 0 }])}
-                    >{name}</button>
+                      className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+                      onClick={() =>
+                        setItems((arr) => [
+                          ...arr,
+                          {
+                            description: name,
+                            quantity: "1",
+                            price: "0",
+                            total: 0,
+                          },
+                        ])
+                      }
+                    >
+                      {name}
+                    </button>
                   ))}
                 </div>
               ) : null}
@@ -218,18 +386,32 @@ function NewInvoicePageInner() {
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Общо: {fmtNumberBG(items.reduce((s, it) => s + (Number.isFinite(it.total) ? it.total : 0), 0), { style: "currency", currency: "BGN" })}
+          <div className="text-muted-foreground text-sm">
+            Общо:{" "}
+            {fmtNumberBG(
+              items.reduce(
+                (s, it) => s + (Number.isFinite(it.total) ? it.total : 0),
+                0,
+              ),
+              { style: "currency", currency: "BGN" },
+            )}
           </div>
-          <div className="flex gap-3 items-center">
-            <label className="text-sm inline-flex items-center gap-2">
-              <input type="checkbox" checked={markPaidNow} onChange={(e) => setMarkPaidNow(e.target.checked)} /> Маркирай платена
+          <div className="flex items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={markPaidNow}
+                onChange={(e) => setMarkPaidNow(e.target.checked)}
+              />{" "}
+              Маркирай платена
             </label>
             <Button type="submit">Създай</Button>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="ghost" onClick={() => router.back()}>Назад</Button>
+          <Button type="button" variant="ghost" onClick={() => router.back()}>
+            Назад
+          </Button>
         </div>
       </form>
     </main>
@@ -238,7 +420,9 @@ function NewInvoicePageInner() {
 
 export default function NewInvoicePage() {
   return (
-    <Suspense fallback={<main className="p-6 max-w-3xl mx-auto">Зареждане...</main>}>
+    <Suspense
+      fallback={<main className="mx-auto max-w-3xl p-6">Зареждане...</main>}
+    >
       <NewInvoicePageInner />
     </Suspense>
   );

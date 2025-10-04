@@ -11,7 +11,10 @@ export function fmtDateBG(value: number | Date): string {
   return new Intl.DateTimeFormat("bg-BG", { dateStyle: "medium" }).format(date);
 }
 
-export function fmtNumberBG(value: number, options?: Intl.NumberFormatOptions): string {
+export function fmtNumberBG(
+  value: number,
+  options?: Intl.NumberFormatOptions,
+): string {
   return new Intl.NumberFormat("bg-BG", options).format(value);
 }
 
@@ -23,8 +26,9 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(value: number | string | Date): string {
-  const date = typeof value === "string" || typeof value === "number" ? new Date(value) : value;
+  const date =
+    typeof value === "string" || typeof value === "number"
+      ? new Date(value)
+      : value;
   return new Intl.DateTimeFormat("bg-BG", { dateStyle: "medium" }).format(date);
 }
-
-

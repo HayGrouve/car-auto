@@ -65,38 +65,52 @@ export const overview = query({
     const ownerMap = new Map<string, { name: string; phone?: string | null }>();
     ownerDocs.forEach((owner) => {
       if (!owner?.deletedAt) {
-        ownerMap.set(String(owner._id), { name: owner.name, phone: owner.phone ?? null });
+        ownerMap.set(String(owner._id), {
+          name: owner.name,
+          phone: owner.phone ?? null,
+        });
       }
     });
 
     const animalCount = animalDocs.length;
     const ownerCount = ownerDocs.filter((o) => !o?.deletedAt).length;
 
-    const visitsSorted = [...visitDocs].sort((a, b) => ((b.datetime ?? b.createdAt) - (a.datetime ?? a.createdAt)));
+    const visitsSorted = [...visitDocs].sort(
+      (a, b) => (b.datetime ?? b.createdAt) - (a.datetime ?? a.createdAt),
+    );
     const recentVisits = visitsSorted.slice(0, 6).map((visit) => ({
       _id: String(visit._id),
       code: visit.code ?? null,
-      datetime: (visit.datetime ?? visit.createdAt) ?? Date.now(),
+      datetime: visit.datetime ?? visit.createdAt ?? Date.now(),
       status: visit.status,
       ownerId: visit.ownerId ? String(visit.ownerId) : null,
-      ownerName: visit.ownerId ? ownerMap.get(String(visit.ownerId))?.name ?? null : null,
+      ownerName: visit.ownerId
+        ? (ownerMap.get(String(visit.ownerId))?.name ?? null)
+        : null,
       animalId: visit.animalId ? String(visit.animalId) : null,
     }));
 
-    const draftVisitsCount = visitDocs.filter((v) => v.status === "draft").length;
+    const draftVisitsCount = visitDocs.filter(
+      (v) => v.status === "draft",
+    ).length;
     const todayVisits = visitDocs
       .filter((v) => {
-        const time = (v.datetime ?? v.createdAt) ?? 0;
+        const time = v.datetime ?? v.createdAt ?? 0;
         return time >= todayStart && time <= todayEnd;
       })
-      .sort((a, b) => ((a.datetime ?? a.createdAt) ?? 0) - ((b.datetime ?? b.createdAt) ?? 0))
+      .sort(
+        (a, b) =>
+          (a.datetime ?? a.createdAt ?? 0) - (b.datetime ?? b.createdAt ?? 0),
+      )
       .map((visit) => ({
         _id: String(visit._id),
         code: visit.code ?? null,
-        datetime: (visit.datetime ?? visit.createdAt) ?? Date.now(),
+        datetime: visit.datetime ?? visit.createdAt ?? Date.now(),
         status: visit.status,
         ownerId: visit.ownerId ? String(visit.ownerId) : null,
-        ownerName: visit.ownerId ? ownerMap.get(String(visit.ownerId))?.name ?? null : null,
+        ownerName: visit.ownerId
+          ? (ownerMap.get(String(visit.ownerId))?.name ?? null)
+          : null,
         animalId: visit.animalId ? String(visit.animalId) : null,
       }));
 
@@ -108,10 +122,14 @@ export const overview = query({
         name: animal.name,
         species: animal.species ?? null,
         ownerId: animal.ownerId ? String(animal.ownerId) : null,
-        ownerName: animal.ownerId ? ownerMap.get(String(animal.ownerId))?.name ?? null : null,
+        ownerName: animal.ownerId
+          ? (ownerMap.get(String(animal.ownerId))?.name ?? null)
+          : null,
       }));
 
-    const invoicesSorted = [...invoiceDocs].sort((a, b) => b.createdAt - a.createdAt);
+    const invoicesSorted = [...invoiceDocs].sort(
+      (a, b) => b.createdAt - a.createdAt,
+    );
     const recentInvoices = invoicesSorted.slice(0, 6).map((invoice) => ({
       _id: String(invoice._id),
       code: invoice.code ?? null,
@@ -121,15 +139,30 @@ export const overview = query({
     }));
 
     const unpaidInvoices = invoiceDocs.filter((inv) => !inv.paid);
-    const unpaidInvoicesTotal = unpaidInvoices.reduce((sum: number, inv) => sum + (inv.total ?? 0), 0);
+    const unpaidInvoicesTotal = unpaidInvoices.reduce(
+      (sum: number, inv) => sum + (inv.total ?? 0),
+      0,
+    );
 
-    const todayInvoices = invoiceDocs.filter((inv) => inv.createdAt >= todayStart && inv.createdAt <= todayEnd);
-    const todayPaidTotal = todayInvoices.filter((inv) => inv.paid).reduce((sum, inv) => sum + (inv.total ?? 0), 0);
-    const todayUnpaidTotal = todayInvoices.filter((inv) => !inv.paid).reduce((sum, inv) => sum + (inv.total ?? 0), 0);
+    const todayInvoices = invoiceDocs.filter(
+      (inv) => inv.createdAt >= todayStart && inv.createdAt <= todayEnd,
+    );
+    const todayPaidTotal = todayInvoices
+      .filter((inv) => inv.paid)
+      .reduce((sum, inv) => sum + (inv.total ?? 0), 0);
+    const todayUnpaidTotal = todayInvoices
+      .filter((inv) => !inv.paid)
+      .reduce((sum, inv) => sum + (inv.total ?? 0), 0);
 
-    const weekInvoices = invoiceDocs.filter((inv) => inv.createdAt >= weekStart && inv.createdAt <= todayEnd);
-    const weekPaidTotal = weekInvoices.filter((inv) => inv.paid).reduce((sum, inv) => sum + (inv.total ?? 0), 0);
-    const weekUnpaidTotal = weekInvoices.filter((inv) => !inv.paid).reduce((sum, inv) => sum + (inv.total ?? 0), 0);
+    const weekInvoices = invoiceDocs.filter(
+      (inv) => inv.createdAt >= weekStart && inv.createdAt <= todayEnd,
+    );
+    const weekPaidTotal = weekInvoices
+      .filter((inv) => inv.paid)
+      .reduce((sum, inv) => sum + (inv.total ?? 0), 0);
+    const weekUnpaidTotal = weekInvoices
+      .filter((inv) => !inv.paid)
+      .reduce((sum, inv) => sum + (inv.total ?? 0), 0);
 
     const alerts: string[] = [];
     if (unpaidInvoices.length > 0) {

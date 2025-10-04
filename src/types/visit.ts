@@ -12,7 +12,12 @@ export const VisitDocSchema = z.object({
   temperature: z.number().optional(),
   pulse: z.number().optional(),
   soap: z
-    .object({ s: z.string().optional(), o: z.string().optional(), a: z.string().optional(), p: z.string().optional() })
+    .object({
+      s: z.string().optional(),
+      o: z.string().optional(),
+      a: z.string().optional(),
+      p: z.string().optional(),
+    })
     .optional(),
   procedures: z.array(z.string()).optional(),
   medications: z.array(z.string()).optional(),
@@ -28,12 +33,17 @@ export const InvoiceDocSchema = z.object({
   animalId: z.string().nullable().optional(),
   visitId: z.string().nullable().optional(),
   code: z.string().optional(),
-  items: z.array(z.object({ description: z.string(), quantity: z.number(), price: z.number(), total: z.number() })),
+  items: z.array(
+    z.object({
+      description: z.string(),
+      quantity: z.number(),
+      price: z.number(),
+      total: z.number(),
+    }),
+  ),
   total: z.number(),
   paid: z.boolean(),
   paidAt: z.number().nullable().optional(),
   createdAt: z.number(),
 });
 export type InvoiceDoc = z.infer<typeof InvoiceDocSchema>;
-
-

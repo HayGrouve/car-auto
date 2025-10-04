@@ -25,6 +25,9 @@ export const listByAnimal = query({
     const all = await ctx.db.query("weights").collect();
     return all
       .filter((w: any) => w.animalId === args.animalId)
-      .sort((a: any, b: any) => (b.notedAt ?? b.createdAt) - (a.notedAt ?? a.createdAt));
+      .sort(
+        (a: any, b: any) =>
+          (b.notedAt ?? b.createdAt) - (a.notedAt ?? a.createdAt),
+      );
   },
 });

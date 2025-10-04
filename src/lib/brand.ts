@@ -3,5 +3,3 @@ export const brand = {
   nameBg: "Алиса",
   shortName: "Alisa",
 };
-
-

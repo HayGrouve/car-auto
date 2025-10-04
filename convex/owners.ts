@@ -15,22 +15,81 @@ export const list = query({
     let filtered = all.filter((o: any) => !o.deletedAt);
     if (args.phone) {
       const normalized = args.phone.replace(/\D/g, "");
-      filtered = filtered.filter((o: any) => String(o.phone ?? "").includes(normalized));
+      filtered = filtered.filter((o: any) =>
+        String(o.phone ?? "").includes(normalized),
+      );
     }
     if (args.gdpr !== undefined) {
-      filtered = filtered.filter((o: any) => Boolean(o.gdprConsent) === Boolean(args.gdpr));
+      filtered = filtered.filter(
+        (o: any) => Boolean(o.gdprConsent) === Boolean(args.gdpr),
+      );
     }
     const translitMap: Record<string, string> = {
-      А: "A", а: "a", Б: "B", б: "b", В: "V", в: "v", Г: "G", г: "g",
-      Д: "D", д: "d", Е: "E", е: "e", Ж: "zh", ж: "zh", З: "Z", з: "z",
-      И: "i", и: "i", Й: "y", й: "y", К: "k", к: "k", Л: "l", л: "l",
-      М: "m", м: "m", Н: "n", н: "n", О: "o", о: "o", П: "p", п: "p",
-      Р: "r", р: "r", С: "s", с: "s", Т: "t", т: "t", У: "u", у: "u",
-      Ф: "f", ф: "f", Х: "h", х: "h", Ц: "ts", ц: "ts", Ч: "ch", ч: "ch",
-      Ш: "sh", ш: "sh", Щ: "sht", щ: "sht", Ъ: "a", ъ: "a", Ь: "", ь: "",
-      Ю: "yu", ю: "yu", Я: "ya", я: "ya",
+      А: "A",
+      а: "a",
+      Б: "B",
+      б: "b",
+      В: "V",
+      в: "v",
+      Г: "G",
+      г: "g",
+      Д: "D",
+      д: "d",
+      Е: "E",
+      е: "e",
+      Ж: "zh",
+      ж: "zh",
+      З: "Z",
+      з: "z",
+      И: "i",
+      и: "i",
+      Й: "y",
+      й: "y",
+      К: "k",
+      к: "k",
+      Л: "l",
+      л: "l",
+      М: "m",
+      м: "m",
+      Н: "n",
+      н: "n",
+      О: "o",
+      о: "o",
+      П: "p",
+      п: "p",
+      Р: "r",
+      р: "r",
+      С: "s",
+      с: "s",
+      Т: "t",
+      т: "t",
+      У: "u",
+      у: "u",
+      Ф: "f",
+      ф: "f",
+      Х: "h",
+      х: "h",
+      Ц: "ts",
+      ц: "ts",
+      Ч: "ch",
+      ч: "ch",
+      Ш: "sh",
+      ш: "sh",
+      Щ: "sht",
+      щ: "sht",
+      Ъ: "a",
+      ъ: "a",
+      Ь: "",
+      ь: "",
+      Ю: "yu",
+      ю: "yu",
+      Я: "ya",
+      я: "ya",
     };
-    const toAscii = (s: string) => Array.from(String(s)).map((ch) => translitMap[ch] ?? ch).join("");
+    const toAscii = (s: string) =>
+      Array.from(String(s))
+        .map((ch) => translitMap[ch] ?? ch)
+        .join("");
     const normalizePair = (s: string) => {
       const base = String(s)
         .normalize("NFKD")
@@ -46,7 +105,10 @@ export const list = query({
     const byDateDesc = (a: any, b: any) => b.createdAt - a.createdAt;
     const byDateAsc = (a: any, b: any) => a.createdAt - b.createdAt;
     if (!q.base && !q.ascii) {
-      const sorted = (args.sort === "createdAtAsc" ? filtered.sort(byDateAsc) : filtered.sort(byDateDesc));
+      const sorted =
+        args.sort === "createdAtAsc"
+          ? filtered.sort(byDateAsc)
+          : filtered.sort(byDateDesc);
       const start = Math.max(0, args.offset ?? 0);
       const end = (args.limit ?? sorted.length) + start;
       return sorted.slice(start, end);
@@ -60,13 +122,15 @@ export const list = query({
         (p.ascii && q.base && p.ascii.includes(q.base))
       );
     };
-    const matched = filtered
-      .filter((o: any) =>
-        [o.name, o.phone, o.email]
-          .filter(Boolean)
-          .some((v: string) => matches(v))
-      );
-    const sorted = (args.sort === "createdAtAsc" ? matched.sort(byDateAsc) : matched.sort(byDateDesc));
+    const matched = filtered.filter((o: any) =>
+      [o.name, o.phone, o.email]
+        .filter(Boolean)
+        .some((v: string) => matches(v)),
+    );
+    const sorted =
+      args.sort === "createdAtAsc"
+        ? matched.sort(byDateAsc)
+        : matched.sort(byDateDesc);
     const start = Math.max(0, args.offset ?? 0);
     const end = (args.limit ?? sorted.length) + start;
     return sorted.slice(start, end);
@@ -109,18 +173,22 @@ export const create = mutation({
     const now = Date.now();
     const phoneNormalized = args.phone.replace(/\D/g, "");
     // Prevent duplicates by phone or email (if provided)
-    const dupByPhone = (await ctx.db
-      .query("owners")
-      .filter((q) => q.eq(q.field("phone"), phoneNormalized))
-      .collect())[0];
+    const dupByPhone = (
+      await ctx.db
+        .query("owners")
+        .filter((q) => q.eq(q.field("phone"), phoneNormalized))
+        .collect()
+    )[0];
     if (dupByPhone) {
       return { ok: false, reason: "phone" } as any;
     }
     if (args.email) {
-      const dupByEmail = (await ctx.db
-        .query("owners")
-        .filter((q) => q.eq(q.field("email"), args.email))
-        .collect())[0];
+      const dupByEmail = (
+        await ctx.db
+          .query("owners")
+          .filter((q) => q.eq(q.field("email"), args.email))
+          .collect()
+      )[0];
       if (dupByEmail) {
         return { ok: false, reason: "email" } as any;
       }
@@ -219,5 +287,3 @@ export const setLegalHold = mutation({
     return { ok: true } as const;
   },
 });
-
-

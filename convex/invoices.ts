@@ -3,7 +3,9 @@ import { v } from "convex/values";
 
 function generateHumanCode(prefix: string): string {
   const num = Math.floor(100000 + Math.random() * 900000); // 6 digits
-  const letters = String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26));
+  const letters =
+    String.fromCharCode(65 + Math.floor(Math.random() * 26)) +
+    String.fromCharCode(65 + Math.floor(Math.random() * 26));
   return `${prefix}${num}-${letters}`;
 }
 
@@ -15,17 +17,30 @@ export const list = query({
     to: v.optional(v.number()),
     limit: v.optional(v.number()),
     offset: v.optional(v.number()),
-    sort: v.optional(v.union(v.literal("createdAtAsc"), v.literal("createdAtDesc"), v.literal("totalAsc"), v.literal("totalDesc"))),
+    sort: v.optional(
+      v.union(
+        v.literal("createdAtAsc"),
+        v.literal("createdAtDesc"),
+        v.literal("totalAsc"),
+        v.literal("totalDesc"),
+      ),
+    ),
     includePaid: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("invoices").collect();
     let filtered = all;
     if (args.unpaidOnly) filtered = filtered.filter((i: any) => !i.paid);
-    if (args.includePaid === false) filtered = filtered.filter((i: any) => !i.paid);
-    if (args.ownerId) filtered = filtered.filter((i: any) => String(i.ownerId) === String(args.ownerId));
-    if (args.from) filtered = filtered.filter((i: any) => i.createdAt >= args.from!);
-    if (args.to) filtered = filtered.filter((i: any) => i.createdAt <= args.to!);
+    if (args.includePaid === false)
+      filtered = filtered.filter((i: any) => !i.paid);
+    if (args.ownerId)
+      filtered = filtered.filter(
+        (i: any) => String(i.ownerId) === String(args.ownerId),
+      );
+    if (args.from)
+      filtered = filtered.filter((i: any) => i.createdAt >= args.from!);
+    if (args.to)
+      filtered = filtered.filter((i: any) => i.createdAt <= args.to!);
     const sorted = filtered.sort((a: any, b: any) => {
       switch (args.sort) {
         case "createdAtAsc":
@@ -56,7 +71,7 @@ export const invoicesSummary = query({
         acc.latest = Math.max(acc.latest ?? 0, inv.createdAt ?? 0);
         return acc;
       },
-      { total: 0, latest: undefined }
+      { total: 0, latest: undefined },
     );
     return {
       unpaidCount: unpaid.length,
@@ -71,7 +86,14 @@ export const create = mutation({
     ownerId: v.id("owners"),
     animalId: v.optional(v.id("animals")),
     visitId: v.optional(v.id("visits")),
-    items: v.array(v.object({ description: v.string(), quantity: v.number(), price: v.number(), total: v.number() })),
+    items: v.array(
+      v.object({
+        description: v.string(),
+        quantity: v.number(),
+        price: v.number(),
+        total: v.number(),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -81,7 +103,10 @@ export const create = mutation({
     let code = "";
     for (let i = 0; i < 5; i++) {
       const cand = generateHumanCode("INV-");
-      if (!existing.some((d: any) => d.code === cand)) { code = cand; break; }
+      if (!existing.some((d: any) => d.code === cand)) {
+        code = cand;
+        break;
+      }
     }
     const id = await ctx.db.insert("invoices", {
       ownerId: args.ownerId,
@@ -114,9 +139,16 @@ export const totals = query({
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(dayStart);
     dayEnd.setHours(23, 59, 59, 999);
-    const rows = list.filter((i: any) => i.createdAt >= dayStart.getTime() && i.createdAt <= dayEnd.getTime());
-    const paidTotal = rows.filter((r: any) => r.paid).reduce((s: number, r: any) => s + (r.total ?? 0), 0);
-    const unpaidTotal = rows.filter((r: any) => !r.paid).reduce((s: number, r: any) => s + (r.total ?? 0), 0);
+    const rows = list.filter(
+      (i: any) =>
+        i.createdAt >= dayStart.getTime() && i.createdAt <= dayEnd.getTime(),
+    );
+    const paidTotal = rows
+      .filter((r: any) => r.paid)
+      .reduce((s: number, r: any) => s + (r.total ?? 0), 0);
+    const unpaidTotal = rows
+      .filter((r: any) => !r.paid)
+      .reduce((s: number, r: any) => s + (r.total ?? 0), 0);
     return { paidTotal, unpaidTotal, count: rows.length } as const;
   },
 });
@@ -127,5 +159,3 @@ export const getById = query({
     return await ctx.db.get(args.id);
   },
 });
-
-

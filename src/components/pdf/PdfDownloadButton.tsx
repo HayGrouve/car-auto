@@ -60,7 +60,9 @@ export default function PdfDownloadButton({
       aria-label={ariaLabel}
       onClick={onClick}
     >
-      {loading ? "Генериране..." : children ?? <FileText className="size-4" />}
+      {loading
+        ? "Генериране..."
+        : (children ?? <FileText className="size-4" />)}
     </Button>
   );
 }
