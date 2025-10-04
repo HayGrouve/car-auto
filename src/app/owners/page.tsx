@@ -5,6 +5,13 @@ import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { brand } from "@/lib/brand";
 import {
   User as UserIcon,
@@ -20,7 +27,6 @@ import { fmtDateTimeBG } from "@/lib/format";
 import { EmptyState } from "@/components/EmptyState";
 import Link from "next/link";
 import { SkeletonList } from "@/components/SkeletonList";
-
 export default function OwnersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -92,9 +98,9 @@ export default function OwnersPage() {
         {/* Left: Search/List */}
         <section id="search" className="space-y-4">
           <div className="flex items-center gap-2">
-            <input
+            <Input
               placeholder="Търсене по име, телефон, имейл"
-              className="h-10 w-full rounded-md border px-3"
+              className="h-10 w-full"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -102,18 +108,21 @@ export default function OwnersPage() {
               }}
               aria-label="Търсене на собственици"
             />
-            <select
-              className="h-10 rounded-md border px-3"
+            <Select
               value={sort}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                setSort(e.target.value as "createdAtDesc" | "createdAtAsc");
+              onValueChange={(value: "createdAtDesc" | "createdAtAsc") => {
+                setSort(value);
                 setPage(0);
               }}
-              aria-label="Подреждане"
             >
-              <option value="createdAtDesc">Най-нови</option>
-              <option value="createdAtAsc">Най-стари</option>
-            </select>
+              <SelectTrigger className="h-10 min-w-[160px]">
+                <SelectValue placeholder="Подреждане" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="createdAtDesc">Най-нови</SelectItem>
+                <SelectItem value="createdAtAsc">Най-стари</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="divide-y rounded-md border">

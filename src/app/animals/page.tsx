@@ -5,6 +5,13 @@ import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import type { AnimalDoc } from "@/types/animal";
@@ -32,7 +39,6 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonList } from "@/components/SkeletonList";
 import Link from "next/link";
-
 export default function AnimalsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -116,9 +122,9 @@ export default function AnimalsPage() {
         {/* Left: Search/List */}
         <section className="space-y-4">
           <div className="flex items-center gap-2">
-            <input
+            <Input
               placeholder="Търсене по име, вид, порода, микрочип"
-              className="h-10 w-full rounded-md border px-3"
+              className="h-10 w-full"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -126,18 +132,18 @@ export default function AnimalsPage() {
               }}
               aria-label="Търсене на животни"
             />
-            <select
-              className="h-10 rounded-md border px-3"
-              value={sort}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                setSort(e.target.value as "createdAtDesc" | "createdAtAsc");
-                setPage(0);
-              }}
-              aria-label="Подреждане"
-            >
-              <option value="createdAtDesc">Най-нови</option>
-              <option value="createdAtAsc">Най-стари</option>
-            </select>
+            <Select value={sort} onValueChange={(value: "createdAtDesc" | "createdAtAsc") => {
+              setSort(value);
+              setPage(0);
+            }}>
+              <SelectTrigger className="h-10 min-w-[160px]">
+                <SelectValue placeholder="Подреждане" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="createdAtDesc">Най-нови</SelectItem>
+                <SelectItem value="createdAtAsc">Най-стари</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="divide-y rounded-md border">

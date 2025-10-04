@@ -28,6 +28,13 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { EmptyState } from "@/components/EmptyState";
 import { VisitStatusBadge } from "@/components/StatusBadge";
 import { SkeletonList } from "../../components/SkeletonList";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function VisitsPageInner() {
   const [status, setStatus] = useState<string>("");
@@ -278,17 +285,21 @@ function VisitsPageInner() {
           </div>
           <div>
             <Label>Подредба</Label>
-            <select
-              className="h-9 w-full rounded-md border px-3"
+            <Select
               value={sort}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                setSort(e.target.value as "datetimeDesc" | "datetimeAsc");
+              onValueChange={(value: "datetimeDesc" | "datetimeAsc") => {
+                setSort(value);
                 setPage(0);
               }}
             >
-              <option value="datetimeDesc">Най-нови първо</option>
-              <option value="datetimeAsc">Най-стари първо</option>
-            </select>
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue placeholder="Подредба" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="datetimeDesc">Най-нови първо</SelectItem>
+                <SelectItem value="datetimeAsc">Най-стари първо</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-2 md:col-span-4">

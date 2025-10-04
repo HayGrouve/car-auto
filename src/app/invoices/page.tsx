@@ -5,6 +5,14 @@ import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { brand } from "@/lib/brand";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
 import { toast } from "sonner";
@@ -86,18 +94,19 @@ export default function InvoicesPage() {
       <div className="grid items-end gap-2 md:grid-cols-5">
         <div>
           <Label>Собственик</Label>
-          <select
-            className="h-9 w-full rounded-md border px-3"
-            value={ownerId}
-            onChange={(e) => setOwnerId(e.target.value)}
-          >
-            <option value="">Всички</option>
-            {(owners ?? []).map((o) => (
-              <option key={o._id} value={o._id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
+          <Select value={ownerId} onValueChange={(value) => setOwnerId(value)}>
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue placeholder="Всички" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Всички</SelectItem>
+              {(owners ?? []).map((o) => (
+                <SelectItem key={o._id} value={o._id}>
+                  {o.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label htmlFor="from">От дата</Label>
@@ -124,11 +133,10 @@ export default function InvoicesPage() {
           />
         </div>
         <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={unpaidOnly}
-            onChange={(e) => {
-              setUnpaidOnly(e.target.checked);
+            onCheckedChange={(checked) => {
+              setUnpaidOnly(Boolean(checked));
               setPage(0);
             }}
           />
@@ -136,17 +144,21 @@ export default function InvoicesPage() {
         </label>
         <div>
           <Label>Подредба</Label>
-          <select
-            className="h-9 w-full rounded-md border px-3"
+          <Select
             value={sort}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-              setSort(e.target.value as "createdAtDesc" | "createdAtAsc");
+            onValueChange={(value: "createdAtDesc" | "createdAtAsc") => {
+              setSort(value);
               setPage(0);
             }}
           >
-            <option value="createdAtDesc">Най-нови първо</option>
-            <option value="createdAtAsc">Най-стари първо</option>
-          </select>
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue placeholder="Подредба" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="createdAtDesc">Най-нови първо</SelectItem>
+              <SelectItem value="createdAtAsc">Най-стари първо</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

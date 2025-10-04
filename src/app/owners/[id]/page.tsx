@@ -417,10 +417,9 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
             {fmtNumberBG(totals.paid, { style: "currency", currency: "BGN" })}
           </span>
           <label className="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={unpaidOnly}
-              onChange={(e) => setUnpaidOnly(e.target.checked)}
+              onCheckedChange={(checked) => setUnpaidOnly(Boolean(checked))}
             />
             Само неплатени
           </label>
