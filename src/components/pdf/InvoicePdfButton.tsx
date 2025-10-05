@@ -6,14 +6,24 @@ import { FileText } from "lucide-react";
 import { toast } from "sonner";
 import type { InvoiceDoc } from "@/types/visit";
 import { generateInvoicePdf } from "@/lib/pdf-generator";
+import { cn } from "@/lib/utils";
+
+type InvoicePdfButtonProps = Omit<
+  React.ComponentProps<typeof Button>,
+  "onClick" | "children"
+> & {
+  inv: InvoiceDoc;
+  fileName: string;
+};
 
 export default function InvoicePdfButton({
   inv,
   fileName,
-}: {
-  inv: InvoiceDoc;
-  fileName: string;
-}) {
+  className,
+  variant = "outline",
+  size = "sm",
+  ...buttonProps
+}: InvoicePdfButtonProps) {
   const [loading, setLoading] = useState(false);
 
   async function onClick() {
@@ -38,7 +48,14 @@ export default function InvoicePdfButton({
   }
 
   return (
-    <Button onClick={onClick} disabled={loading} variant="outline">
+    <Button
+      {...buttonProps}
+      onClick={onClick}
+      disabled={loading || buttonProps.disabled}
+      variant={variant}
+      size={size}
+      className={cn("justify-center", className)}
+    >
       <FileText className="mr-2 size-4" />
       {loading ? "Генериране..." : "Свали фактура"}
     </Button>

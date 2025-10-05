@@ -26,8 +26,10 @@ import { SkeletonList } from "@/components/SkeletonList";
 // const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
 import { InvoiceStatusBadge } from "@/components/StatusBadge";
 
+const ALL_OWNERS_VALUE = "__all";
+
 export default function InvoicesPage() {
-  const [ownerId, setOwnerId] = useState("");
+  const [ownerId, setOwnerId] = useState<string>(ALL_OWNERS_VALUE);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [unpaidOnly, setUnpaidOnly] = useState(true);
@@ -45,7 +47,8 @@ export default function InvoicesPage() {
     useMemo(
       () => ({
         unpaidOnly,
-        ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
+        ownerId:
+          ownerId !== ALL_OWNERS_VALUE ? (ownerId as Id<"owners">) : undefined,
         from: from ? Date.parse(from) : undefined,
         to: to ? Date.parse(to) : undefined,
         limit: pageSize,
@@ -94,12 +97,18 @@ export default function InvoicesPage() {
       <div className="grid items-end gap-2 md:grid-cols-5">
         <div>
           <Label>Собственик</Label>
-          <Select value={ownerId} onValueChange={(value) => setOwnerId(value)}>
+          <Select
+            value={ownerId}
+            onValueChange={(value) => {
+              setOwnerId(value);
+              setPage(0);
+            }}
+          >
             <SelectTrigger className="h-9 w-full">
               <SelectValue placeholder="Всички" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Всички</SelectItem>
+              <SelectItem value={ALL_OWNERS_VALUE}>Всички</SelectItem>
               {(owners ?? []).map((o) => (
                 <SelectItem key={o._id} value={o._id}>
                   {o.name}
@@ -204,9 +213,9 @@ export default function InvoicesPage() {
           (invoices ?? []).map((inv) => (
             <div
               key={inv._id}
-              className="hover:bg-accent grid items-center gap-2 p-3 text-sm md:grid-cols-6"
+              className="hover:bg-accent grid gap-3 p-3 text-sm md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,1.6fr)]"
             >
-              <div className="md:col-span-3">
+              <div>
                 <a
                   href={`/invoices/${inv._id}`}
                   className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
@@ -241,42 +250,44 @@ export default function InvoicesPage() {
                   ))}
                 </ul>
               </div>
-              <div className="text-right font-medium md:col-span-2">
+              <div className="text-right font-medium">
                 Общо:{" "}
                 {fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}
               </div>
-              <div className="text-right md:col-span-1">
-                {/** Hide Mark Paid for already paid invoices in case filter allows paid */}
-                {inv.paid ? null : (
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-end">
+                <div className="flex flex-1 justify-end gap-2 md:flex-none">
+                  {inv.paid ? null : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={paidLoading === inv._id}
+                      aria-label="Маркирай фактура като платена"
+                      onClick={async () => {
+                        setPaidLoading(inv._id);
+                        await markPaid({ id: inv._id });
+                        setPaidLoading(null);
+                        toast.success("Фактура маркирана като платена");
+                      }}
+                    >
+                      <CheckCircle className="mr-1 size-4" aria-hidden /> Маркирай
+                      платена
+                    </Button>
+                  )}
+                  <InvoicePdfButton
+                    inv={inv}
+                    fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
+                    size="sm"
+                  />
                   <Button
+                    size="sm"
                     variant="outline"
-                    disabled={paidLoading === inv._id}
-                    aria-label="Маркирай фактура като платена"
-                    onClick={async () => {
-                      setPaidLoading(inv._id);
-                      await markPaid({ id: inv._id });
-                      setPaidLoading(null);
-                      toast.success("Фактура маркирана като платена");
-                    }}
-                  >
-                    <CheckCircle className="mr-1 size-4" aria-hidden /> Маркирай
-                    платена
-                  </Button>
-                )}
-                <InvoicePdfButton
-                  inv={inv}
-                  fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
-                />
-                <Button
-                  variant="outline"
-                  className="ml-2"
-                  aria-label={`Печат за фактура ${inv.code ?? String(inv._id)}`}
-                  onClick={() => {
-                    const w = window.open("", "_blank", "noopener,noreferrer");
-                    if (!w) return;
-                    const rows = inv.items
-                      .map(
-                        (it) => `
+                    aria-label={`Печат за фактура ${inv.code ?? String(inv._id)}`}
+                    onClick={() => {
+                      const w = window.open("", "_blank", "noopener,noreferrer");
+                      if (!w) return;
+                      const rows = inv.items
+                        .map(
+                          (it) => `
                         <tr>
                           <td>${it.description}</td>
                           <td style="text-align:right;">${it.quantity}</td>
@@ -284,55 +295,56 @@ export default function InvoicesPage() {
                           <td style="text-align:right;">${fmtNumberBG(it.total, { style: "currency", currency: "BGN" })}</td>
                         </tr>
                       `,
-                      )
-                      .join("");
-                    const html = `<!doctype html>
-                      <html lang=\"bg\">
-                        <head>
-                          <meta charset=\"utf-8\" />
-                          <title>Фактура ${inv.code ?? `#${String(inv._id)}`}</title>
-                          <style>
-                            body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px;color:#111}
-                            h1{font-size:20px;margin:0 0 12px}
-                            table{border-collapse:collapse;width:100%;margin-top:12px}
-                            th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
-                            tfoot td{font-weight:600}
-                            .muted{color:#666}
-                          </style>
-                        </head>
-                        <body>
-                          <h1>Фактура ${inv.code ?? `#${String(inv._id)}`}</h1>
-                          <div class=\"muted\">Дата: ${new Date(inv.createdAt).toLocaleString("bg-BG")}</div>
-                          <div class=\"muted\">Статус: ${inv.paid ? "Платена" : "Неплатена"}${inv.paid && inv.paidAt ? " · " + new Date(inv.paidAt).toLocaleString("bg-BG") : ""}</div>
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Описание</th>
-                                <th style=\"text-align:right;\">Кол-во</th>
-                                <th style=\"text-align:right;\">Цена</th>
-                                <th style=\"text-align:right;\">Сума</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              ${rows}
-                            </tbody>
-                            <tfoot>
-                              <tr>
-                                <td colspan=\"3\" style=\"text-align:right;\">Общо</td>
-                                <td style=\"text-align:right;\">${fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}</td>
-                              </tr>
-                            </tfoot>
-                          </table>
-                          <script>window.onload = () => window.print()</script>
-                        </body>
-                      </html>`;
-                    w.document.open();
-                    w.document.write(html);
-                    w.document.close();
-                  }}
-                >
-                  <Printer className="mr-1 size-4" aria-hidden /> Печат
-                </Button>
+                        )
+                        .join("");
+                      const html = `<!doctype html>
+                        <html lang=\"bg\">
+                          <head>
+                            <meta charset=\"utf-8\" />
+                            <title>Фактура ${inv.code ?? `#${String(inv._id)}`}</title>
+                            <style>
+                              body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px;color:#111}
+                              h1{font-size:20px;margin:0 0 12px}
+                              table{border-collapse:collapse;width:100%;margin-top:12px}
+                              th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
+                              tfoot td{font-weight:600}
+                              .muted{color:#666}
+                            </style>
+                          </head>
+                          <body>
+                            <h1>Фактура ${inv.code ?? `#${String(inv._id)}`}</h1>
+                            <div class=\"muted\">Дата: ${new Date(inv.createdAt).toLocaleString("bg-BG")}</div>
+                            <div class=\"muted\">Статус: ${inv.paid ? "Платена" : "Неплатена"}${inv.paid && inv.paidAt ? " · " + new Date(inv.paidAt).toLocaleString("bg-BG") : ""}</div>
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th>Описание</th>
+                                  <th style=\"text-align:right;\">Кол-во</th>
+                                  <th style=\"text-align:right;\">Цена</th>
+                                  <th style=\"text-align:right;\">Сума</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                ${rows}
+                              </tbody>
+                              <tfoot>
+                                <tr>
+                                  <td colspan=\"3\" style=\"text-align:right;\">Общо</td>
+                                  <td style=\"text-align:right;\">${fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}</td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                            <script>window.onload = () => window.print()</script>
+                          </body>
+                        </html>`;
+                      w.document.open();
+                      w.document.write(html);
+                      w.document.close();
+                    }}
+                  >
+                    <Printer className="mr-1 size-4" aria-hidden /> Печат
+                  </Button>
+                </div>
               </div>
             </div>
           ))
