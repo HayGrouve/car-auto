@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { brand } from "@/lib/brand";
 import {
   User as UserIcon,
   ShieldCheck,

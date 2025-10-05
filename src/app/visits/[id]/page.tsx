@@ -22,7 +22,6 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { toast } from "sonner";
-import { brand } from "@/lib/brand";
 import { fmtDateTimeBG } from "@/lib/format";
 import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
 import { generateVisitSummaryPdf } from "@/lib/pdf-generator";

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Mail, Lock, LogIn } from "lucide-react";
-import { brand } from "@/lib/brand";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");

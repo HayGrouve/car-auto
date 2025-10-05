@@ -12,7 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import type { AnimalDoc } from "@/types/animal";
 import {

@@ -19,7 +19,6 @@ import {
   CommandEmpty,
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import { brand } from "@/lib/brand";
 import { toast } from "sonner";
 import { CalendarCheck, CheckCircle, FilePlus } from "lucide-react";
 import type { VisitDoc } from "@/types/visit";

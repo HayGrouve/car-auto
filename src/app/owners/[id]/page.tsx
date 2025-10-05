@@ -10,18 +10,31 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { brand } from "@/lib/brand";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import Link from "next/link";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
 import { InvoiceStatusBadge } from "@/components/StatusBadge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  MoreHorizontal,
+  FileJson,
+  FileText,
+  Printer,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 
 export default function OwnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -42,6 +55,7 @@ export default function OwnerDetailPage() {
     useMemo(() => ({ ownerId: id, unpaidOnly: true }), [id]),
   ) as { total: number }[] | undefined;
   const router = useRouter();
+  const [showDelete, setShowDelete] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -90,7 +104,103 @@ export default function OwnerDetailPage() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">Собственик: {owner.name}</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Собственик: {owner.name}</h1>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline" size="icon">
+              <MoreHorizontal className="h-4 w-4" />
+              <span className="sr-only">Още действия</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem
+              className="gap-2"
+              onSelect={() => {
+                const data = JSON.stringify(owner, null, 2);
+                const blob = new Blob([data], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `owner-${owner._id}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <FileJson className="h-4 w-4" /> Експорт JSON
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2"
+              onSelect={() => {
+                const header = [
+                  "id",
+                  "name",
+                  "phone",
+                  "email",
+                  "address",
+                  "gdprConsent",
+                  "createdAt",
+                ].join(",");
+                const row = [
+                  owner._id,
+                  owner.name ?? "",
+                  owner.phone ?? "",
+                  owner.email ?? "",
+                  owner.address ?? "",
+                  String(!!owner.gdprConsent),
+                  new Date(owner.createdAt).toISOString(),
+                ]
+                  .map((v: unknown) => `"${String(v).replace(/"/g, '""')}"`)
+                  .join(",");
+                const csv = header + "\n" + row + "\n";
+                const blob = new Blob([csv], {
+                  type: "text/csv;charset=utf-8;",
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `owner-${owner._id}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <FileText className="h-4 w-4" /> Експорт CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2"
+              onSelect={() => {
+                const w = window.open("", "_blank", "noopener,noreferrer");
+                if (!w) return;
+                const html = `<!doctype html><html lang="bg"><head><meta charset="utf-8" /><title>Собственик ${owner.name}</title><style>body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px} h1{font-size:20px;margin:0 0 12px} table{border-collapse:collapse;width:100%} td{border:1px solid #ddd;padding:8px;vertical-align:top} .muted{color:#666}</style></head><body><h1>Данни за собственик</h1><table><tbody>
+                <tr><td class="muted">ID</td><td>${owner._id}</td></tr>
+                <tr><td class="muted">Име</td><td>${owner.name ?? ""}</td></tr>
+                <tr><td class="muted">Телефон</td><td>${owner.phone ?? ""}</td></tr>
+                <tr><td class="muted">Имейл</td><td>${owner.email ?? ""}</td></tr>
+                <tr><td class="muted">Адрес</td><td>${owner.address ?? ""}</td></tr>
+                <tr><td class="muted">Съгласие (GDPR)</td><td>${owner.gdprConsent ? "Да" : "Не"}</td></tr>
+                <tr><td class="muted">Създаден</td><td>${new Date(owner.createdAt).toLocaleString()}</td></tr>
+              </tbody></table><script>window.onload = () => window.print()</script></body></html>`;
+                w.document.open();
+                w.document.write(html);
+                w.document.close();
+              }}
+            >
+              <Printer className="h-4 w-4" /> Печат (PDF)
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="gap-2" onSelect={() => router.back()}>
+              <Undo2 className="h-4 w-4" /> Назад
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive gap-2"
+              onSelect={() => setShowDelete(true)}
+            >
+              <Trash2 className="h-4 w-4" /> Изтрий (GDPR)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <div className="flex items-center justify-between">
         <div className="text-muted-foreground text-sm">
           Неплатени общо:{" "}
@@ -150,149 +260,72 @@ export default function OwnerDetailPage() {
             }
           />
         </div>
-        <label className="flex items-center gap-2">
-          <Checkbox
-            checked={form.gdpr}
-            onCheckedChange={(checked) =>
-              setForm((f) => ({ ...f, gdpr: Boolean(checked) }))
-            }
-          />
-          <span className="text-sm">Съгласие (GDPR)</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <Checkbox
-            checked={form.legalHold}
-            onCheckedChange={async (checked) => {
-              const next = Boolean(checked);
-              setForm((f) => ({ ...f, legalHold: next }));
-              const res = (await setLegalHold({ id, legalHold: next })) as {
-                ok: boolean;
-              };
-              if (res.ok)
-                toast.success(
-                  next ? "Правен запор активиран" : "Правен запор изключен",
-                );
-            }}
-          />
-          <span className="text-sm">Правен запор (Legal Hold)</span>
-        </label>
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
+          <label className="flex items-center gap-2">
+            <Checkbox
+              checked={form.gdpr}
+              onCheckedChange={(checked) =>
+                setForm((f) => ({ ...f, gdpr: Boolean(checked) }))
+              }
+            />
+            <span className="text-sm">Съгласие (GDPR)</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <Checkbox
+              checked={form.legalHold}
+              onCheckedChange={async (checked) => {
+                const next = Boolean(checked);
+                setForm((f) => ({ ...f, legalHold: next }));
+                const res = (await setLegalHold({ id, legalHold: next })) as {
+                  ok: boolean;
+                };
+                if (res.ok)
+                  toast.success(
+                    next ? "Правен запор активиран" : "Правен запор изключен",
+                  );
+              }}
+            />
+            <span className="text-sm">Правен запор (Legal Hold)</span>
+          </label>
+        </div>
         <div className="flex gap-2">
           <Button type="submit">Запази</Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              const data = JSON.stringify(owner, null, 2);
-              const blob = new Blob([data], { type: "application/json" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `owner-${owner._id}.json`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }}
-          >
-            Експорт JSON
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              const header = [
-                "id",
-                "name",
-                "phone",
-                "email",
-                "address",
-                "gdprConsent",
-                "createdAt",
-              ].join(",");
-              const row = [
-                owner._id,
-                owner.name ?? "",
-                owner.phone ?? "",
-                owner.email ?? "",
-                owner.address ?? "",
-                String(!!owner.gdprConsent),
-                new Date(owner.createdAt).toISOString(),
-              ]
-                .map((v: unknown) => `"${String(v).replace(/"/g, '""')}"`)
-                .join(",");
-              const csv = header + "\n" + row + "\n";
-              const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `owner-${owner._id}.csv`;
-              a.click();
-              URL.revokeObjectURL(url);
-            }}
-          >
-            Експорт CSV
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              const w = window.open("", "_blank", "noopener,noreferrer");
-              if (!w) return;
-              const html = `<!doctype html><html lang=\"bg\"><head><meta charset=\"utf-8\" /><title>Собственик ${owner.name}</title><style>body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px} h1{font-size:20px;margin:0 0 12px} table{border-collapse:collapse;width:100%} td{border:1px solid #ddd;padding:8px;vertical-align:top} .muted{color:#666}</style></head><body><h1>Данни за собственик</h1><table><tbody>
-              <tr><td class=\"muted\">ID</td><td>${owner._id}</td></tr>
-              <tr><td class=\"muted\">Име</td><td>${owner.name ?? ""}</td></tr>
-              <tr><td class=\"muted\">Телефон</td><td>${owner.phone ?? ""}</td></tr>
-              <tr><td class=\"muted\">Имейл</td><td>${owner.email ?? ""}</td></tr>
-              <tr><td class=\"muted\">Адрес</td><td>${owner.address ?? ""}</td></tr>
-              <tr><td class=\"muted\">Съгласие (GDPR)</td><td>${owner.gdprConsent ? "Да" : "Не"}</td></tr>
-              <tr><td class=\"muted\">Създаден</td><td>${new Date(owner.createdAt).toLocaleString()}</td></tr>
-            </tbody></table><script>window.onload = () => window.print()</script></body></html>`;
-              w.document.open();
-              w.document.write(html);
-              w.document.close();
-            }}
-          >
-            Печат (PDF)
-          </Button>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button type="button" variant="destructive">
-                Изтрий (GDPR)
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Потвърдете изтриване</DialogTitle>
-              </DialogHeader>
-              <p className="text-muted-foreground text-sm">
-                Това действие ще скрие собственика от списъците (soft delete).
-                Данните няма да са видими в UI. Ако е активиран правен запор,
-                изтриването е блокирано.
-              </p>
-              <DialogFooter>
-                <Button variant="outline">Отказ</Button>
-                <Button
-                  variant="destructive"
-                  onClick={async () => {
-                    const r = (await softDelete({ id })) as
-                      | { ok: boolean }
-                      | { ok: false; reason?: string };
-                    if ("ok" in r && r.ok) {
-                      toast.success("Изтрито");
-                      router.push("/owners");
-                    } else {
-                      toast.error("Не може да се изтрие поради правен запор");
-                    }
-                  }}
-                >
-                  Потвърди
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Button type="button" variant="outline" onClick={() => router.back()}>
-            Назад
-          </Button>
         </div>
       </form>
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Потвърдете изтриване</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">
+            Това действие ще скрие собственика от списъците (soft delete).
+            Данните няма да са видими в UI. Ако е активиран правен запор,
+            изтриването е блокирано.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDelete(false)}>
+              Отказ
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                const r = (await softDelete({ id })) as
+                  | { ok: boolean }
+                  | { ok: false; reason?: string };
+                if ("ok" in r && r.ok) {
+                  toast.success("Изтрито");
+                  router.push("/owners");
+                } else {
+                  toast.error("Не може да се изтрие поради правен запор");
+                }
+                setShowDelete(false);
+              }}
+            >
+              Потвърди
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <section className="space-y-2">
         <h2 className="text-lg font-medium">Животни</h2>
         <div className="divide-y rounded-md border">
@@ -329,6 +362,40 @@ export default function OwnerDetailPage() {
       </section>
       <OwnerInvoices ownerId={id} />
       <OwnerAuditLog ownerId={id} />
+      <Dialog open={showDelete} onOpenChange={setShowDelete}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Потвърдете изтриване</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-sm">
+            Това действие ще скрие собственика от списъците (soft delete).
+            Данните няма да са видими в UI. Ако е активиран правен запор,
+            изтриването е блокирано.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDelete(false)}>
+              Отказ
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                const r = (await softDelete({ id })) as
+                  | { ok: boolean }
+                  | { ok: false; reason?: string };
+                if ("ok" in r && r.ok) {
+                  toast.success("Изтрито");
+                  router.push("/owners");
+                } else {
+                  toast.error("Не може да се изтрие поради правен запор");
+                }
+                setShowDelete(false);
+              }}
+            >
+              Потвърди
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
