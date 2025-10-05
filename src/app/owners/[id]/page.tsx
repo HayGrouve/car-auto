@@ -288,7 +288,7 @@ export default function OwnerDetailPage() {
             <span className="text-sm">Правен запор (Legal Hold)</span>
           </label>
         </div>
-        <div className="flex gap-2">
+        <div className="flex justify-end">
           <Button type="submit">Запази</Button>
         </div>
       </form>

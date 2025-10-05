@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { fmtDateBG } from "@/lib/format";
+import { fmtDateBG, fmtDateTimeBG } from "@/lib/format";
 import { differenceInYears } from "date-fns";
 import { SectionCard } from "@/components/ui/section-card";
 import {
@@ -25,6 +25,14 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { brand } from "@/lib/brand";
+import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
+import { generateVaccinationCertificatePdf } from "@/lib/pdf-generator";
+import {
+  VisitList,
+  type VisitListItem,
+} from "@/components/dashboard/VisitList";
+import { SkeletonList } from "@/components/SkeletonList";
 
 export default function AnimalDetailPage() {
   const params = useParams<{ id: string }>();
@@ -34,10 +42,33 @@ export default function AnimalDetailPage() {
     useMemo(() => ({ id }), [id]),
   ) as unknown;
   const update = useMutation(api.animals.update);
+  const createVisit = useMutation(api.visits.create);
+  const addWeight = useMutation(api.weights.add);
   const owners = useQuery(
     api.owners.list,
     useMemo(() => ({ search: "" }), []),
   ) as { _id: string; name: string; phone?: string }[] | undefined;
+  const weights = useQuery(
+    api.weights.listByAnimal,
+    useMemo(() => ({ animalId: id }), [id]),
+  ) as
+    | { _id: string; kg: number; notedAt?: number; createdAt: number }[]
+    | undefined;
+  const visits = useQuery(
+    api.visits.list,
+    useMemo(() => ({ animalId: id, limit: 5, sort: "datetimeDesc" }), [id]),
+  ) as
+    | {
+        _id: string;
+        code?: string | null;
+        datetime?: number | null;
+        status: string;
+        ownerId?: string | null;
+        procedures?: string[];
+        medications?: string[];
+        createdAt?: number;
+      }[]
+    | undefined;
   const router = useRouter();
 
   const [form, setForm] = useState({
@@ -50,6 +81,7 @@ export default function AnimalDetailPage() {
     dob: "",
   });
   const [ownerOpen, setOwnerOpen] = useState(false);
+  const [kg, setKg] = useState<string>("");
 
   const parsedAnimal = useMemo(
     () => AnimalDocSchema.safeParse(animalUnknown),
@@ -94,6 +126,38 @@ export default function AnimalDetailPage() {
     }
   }
 
+  async function onStartVisit() {
+    if (!form.ownerId) {
+      toast.error("Изберете собственик преди да започнете посещение");
+      return;
+    }
+    const res = await createVisit({
+      ownerId: form.ownerId as Id<"owners">,
+      animalId: id,
+      datetime: Date.now(),
+      soap: {},
+      procedures: [],
+      medications: [],
+    });
+    if (res?.ok && "id" in res && res.id) {
+      toast.success("Стартирано посещение");
+      router.push(`/visits/${res.id}?step=1`);
+    }
+  }
+
+  async function onAddWeight() {
+    const value = parseFloat(kg);
+    if (Number.isNaN(value) || value <= 0) {
+      toast.error("Невалидно тегло");
+      return;
+    }
+    const res = await addWeight({ animalId: id, kg: value });
+    if (res?.ok) {
+      toast.success("Добавено тегло");
+      setKg("");
+    }
+  }
+
   const summaryAge = form.dob
     ? differenceInYears(new Date(), new Date(form.dob))
     : null;
@@ -101,6 +165,10 @@ export default function AnimalDetailPage() {
   const owner = form.ownerId
     ? (owners ?? []).find((o) => o._id === form.ownerId)
     : undefined;
+  const weightsLoading = weights === undefined;
+  const visitsLoading = visits === undefined;
+  const latestWeight = (weights ?? [])[0];
+  const lastVisit = (visits ?? [])[0];
 
   if (!parsedAnimal.success)
     return <main className="mx-auto max-w-3xl p-6">Зареждане...</main>;
@@ -149,6 +217,24 @@ export default function AnimalDetailPage() {
               Микрочип
             </dt>
             <dd className="text-sm font-medium">{form.microchip || "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-xs uppercase">
+              Последно тегло
+            </dt>
+            <dd className="text-sm font-medium">
+              {latestWeight
+                ? `${latestWeight.kg.toFixed(2)} кг · ${fmtDateTimeBG(latestWeight.notedAt ?? latestWeight.createdAt)}`
+                : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-xs uppercase">
+              Последно посещение
+            </dt>
+            <dd className="text-sm font-medium">
+              {lastVisit?.datetime ? fmtDateTimeBG(lastVisit.datetime) : "—"}
+            </dd>
           </div>
         </dl>
       </SectionCard>
@@ -204,6 +290,21 @@ export default function AnimalDetailPage() {
           />
         </div>
         <div>
+          <Label htmlFor="kg">Тегло (кг)</Label>
+          <div className="flex items-end gap-2">
+            <Input
+              id="kg"
+              inputMode="decimal"
+              value={kg}
+              onChange={(e) => setKg(e.target.value)}
+              placeholder="напр. 12.4"
+            />
+            <Button type="button" variant="secondary" onClick={onAddWeight}>
+              Добави
+            </Button>
+          </div>
+        </div>
+        <div>
           <Label htmlFor="microchip">Микрочип</Label>
           <Input
             id="microchip"
@@ -225,15 +326,97 @@ export default function AnimalDetailPage() {
             <span className="text-sm">Кастриран/а</span>
           </label>
         </div>
-        <Button type="submit" className="w-full">
-          Запази
-        </Button>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => router.back()}>
-            Назад
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="secondary" onClick={onStartVisit}>
+            Започни посещение
           </Button>
+          <Button type="submit">Запази</Button>
         </div>
       </form>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-medium">Тегло</h2>
+        <div className="divide-y rounded-md border">
+          {weightsLoading || (weights ?? []).length === 0 ? (
+            <div className="text-muted-foreground p-3 text-sm">
+              {weightsLoading ? "Зареждане..." : "Няма записани тегла"}
+            </div>
+          ) : (
+            (weights ?? []).map((w) => (
+              <div key={w._id} className="flex justify-between p-3 text-sm">
+                <span>{w.kg.toFixed(2)} кг</span>
+                <span className="text-muted-foreground">
+                  {fmtDateTimeBG(w.notedAt ?? w.createdAt)}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="text-lg font-medium">Документи</h2>
+        <div className="flex gap-2">
+          <PdfDownloadButton
+            ariaLabel="Сертификат за ваксинация"
+            variant="outline"
+            fileName={`vaccination-${id}.pdf`}
+            generatePdf={async () => {
+              const parsedAnimal = AnimalDocSchema.safeParse(animalUnknown);
+              if (!parsedAnimal.success) throw new Error("Invalid animal data");
+              const animal = parsedAnimal.data;
+              const ownerRecord = (owners ?? []).find(
+                (o) => o._id === form.ownerId,
+              );
+              return generateVaccinationCertificatePdf(animal, {
+                name: ownerRecord?.name ?? brand.nameBg,
+                phone: ownerRecord?.phone,
+                email: undefined,
+              });
+            }}
+          >
+            <span className="flex items-center gap-2">
+              <svg
+                className="size-4"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                />
+              </svg>
+              Сертификат
+            </span>
+          </PdfDownloadButton>
+        </div>
+      </section>
+
+      {visitsLoading ? (
+        <SkeletonList rows={3} />
+      ) : (
+        <VisitList
+          title="Последни посещения"
+          visits={
+            (visits ?? []).map((visit) => ({
+              _id: visit._id,
+              code: visit.code ?? null,
+              datetime: visit.datetime ?? visit.createdAt ?? Date.now(),
+              status: visit.status,
+              ownerName: owner?.name ?? null,
+              ownerId: owner?._id ?? null,
+              animalId: String(id),
+            })) as VisitListItem[]
+          }
+          emptyLabel="Няма посещения"
+          actionLabel="Всички посещения"
+          className="bg-card"
+        />
+      )}
     </main>
   );
 }
