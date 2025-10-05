@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 
 type QuickActionsCardProps = {
   className?: string;
-  onNewDraftVisit?: () => void;
 };
 
 const actions = [
@@ -30,24 +29,11 @@ const actions = [
     label: "Нова фактура",
     ariaLabel: "Нова фактура",
   },
-  {
-    href: "/visits?status=draft",
-    label: "Чернови",
-    ariaLabel: "Чернови посещения",
-  },
-  {
-    href: "/payments",
-    label: "Плащания",
-    ariaLabel: "Всички плащания",
-  },
 ];
 
-export function QuickActionsCard({
-  className,
-  onNewDraftVisit,
-}: QuickActionsCardProps) {
+export function QuickActionsCard({ className }: QuickActionsCardProps) {
   return (
-    <section className={cn("grid gap-2 md:grid-cols-3", className)}>
+    <section className={cn("grid gap-2 md:grid-cols-4", className)}>
       {actions.map(({ href, label, ariaLabel }) => (
         <Link key={href} href={href} aria-label={ariaLabel}>
           <Button
@@ -59,14 +45,6 @@ export function QuickActionsCard({
           </Button>
         </Link>
       ))}
-      <Button
-        size="sm"
-        variant="default"
-        className="w-full justify-start"
-        onClick={onNewDraftVisit}
-      >
-        Бърза чернова за посещение
-      </Button>
     </section>
   );
 }
