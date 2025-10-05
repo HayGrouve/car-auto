@@ -53,7 +53,7 @@ export function VisitList({
             <div
               key={visit._id}
               className={cn(
-                "flex items-center justify-between p-3 text-sm",
+                "flex items-center justify-between gap-3 p-3 text-sm min-h-[72px]",
                 visit.highlight && "bg-muted/50",
               )}
             >

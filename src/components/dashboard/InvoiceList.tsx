@@ -47,7 +47,7 @@ export function InvoiceList({
           invoices.map((invoice) => (
             <div
               key={invoice._id}
-              className="flex items-center justify-between p-3 text-sm"
+              className="flex items-center justify-between gap-3 p-3 text-sm min-h-[72px]"
             >
               <div className="space-y-0.5">
                 <Link

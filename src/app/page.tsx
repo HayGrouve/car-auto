@@ -252,7 +252,7 @@ export default function HomePage() {
               overview.patientBook.map((animal) => (
                 <div
                   key={animal._id}
-                  className="flex items-center justify-between p-3 text-sm"
+                  className="flex items-center justify-between gap-3 p-3 text-sm min-h-[72px]"
                 >
                   <div>
                     <Link
