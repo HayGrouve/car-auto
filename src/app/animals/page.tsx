@@ -79,11 +79,15 @@ export default function AnimalsPage() {
     const species = (fd.get("species") ?? "") as string;
     const breed = (fd.get("breed") ?? undefined) as string | undefined;
     const microchip = (fd.get("microchip") ?? undefined) as string | undefined;
+    const birthdateRaw = fd.get("birthdate") as string | null;
+    const parsedDob = birthdateRaw ? Date.parse(birthdateRaw) : undefined;
+    const dob = parsedDob && !Number.isNaN(parsedDob) ? parsedDob : undefined;
     const res = (await createAnimal({
       name,
       species,
       breed,
       microchip,
+      dob,
       ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
     })) as { ok: true; id: string } | { ok: false; reason: "microchip" };
     if (!res?.ok) {
@@ -99,7 +103,7 @@ export default function AnimalsPage() {
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">{brand.nameBg}: Животни</h1>
+        <h1 className="text-2xl font-semibold">Животни: {animals?.length}</h1>
         <Button
           className="md:hidden"
           variant="outline"
@@ -132,10 +136,13 @@ export default function AnimalsPage() {
               }}
               aria-label="Търсене на животни"
             />
-            <Select value={sort} onValueChange={(value: "createdAtDesc" | "createdAtAsc") => {
-              setSort(value);
-              setPage(0);
-            }}>
+            <Select
+              value={sort}
+              onValueChange={(value: "createdAtDesc" | "createdAtAsc") => {
+                setSort(value);
+                setPage(0);
+              }}
+            >
               <SelectTrigger className="h-10 min-w-[160px]">
                 <SelectValue placeholder="Подреждане" />
               </SelectTrigger>
@@ -278,6 +285,10 @@ export default function AnimalsPage() {
               <div>
                 <Label htmlFor="microchip">Микрочип</Label>
                 <Input id="microchip" name="microchip" />
+              </div>
+              <div>
+                <Label htmlFor="birthdate">Дата на раждане</Label>
+                <Input id="birthdate" name="birthdate" type="date" />
               </div>
               <div>
                 <Label>Собственик</Label>

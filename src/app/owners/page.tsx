@@ -75,7 +75,9 @@ export default function OwnersPage() {
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">{brand.nameBg}: Собственици</h1>
+        <h1 className="text-2xl font-semibold">
+          Собственици: {owners?.length}
+        </h1>
         <Button
           className="md:hidden"
           variant="outline"

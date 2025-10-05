@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -11,7 +12,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { brand } from "@/lib/brand";
-import { fmtDateTimeBG } from "@/lib/format";
+import { fmtDateBG, fmtDateTimeBG } from "@/lib/format";
+import { differenceInYears } from "date-fns";
+import { SectionCard } from "@/components/ui/section-card";
 import {
   Popover,
   PopoverContent,
@@ -26,6 +29,11 @@ import {
 } from "@/components/ui/command";
 import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
 import { generateVaccinationCertificatePdf } from "@/lib/pdf-generator";
+import {
+  VisitList,
+  type VisitListItem,
+} from "@/components/dashboard/VisitList";
+import { SkeletonList } from "@/components/SkeletonList";
 
 export default function AnimalDetailPage() {
   const params = useParams<{ id: string }>();
@@ -56,13 +64,20 @@ export default function AnimalDetailPage() {
     microchip: "",
     neutered: false,
     ownerId: "",
+    dob: "",
   });
   const [ownerOpen, setOwnerOpen] = useState(false);
 
+  const parsedAnimal = useMemo(
+    () => AnimalDocSchema.safeParse(animalUnknown),
+    [animalUnknown],
+  );
+
   useEffect(() => {
-    const parsed = AnimalDocSchema.safeParse(animalUnknown);
-    if (parsed.success) {
-      const a = parsed.data as { ownerId?: string | null } & typeof parsed.data;
+    if (parsedAnimal.success) {
+      const a = parsedAnimal.data as {
+        ownerId?: string | null;
+      } & typeof parsedAnimal.data;
       setForm({
         name: a.name ?? "",
         species: a.species ?? "",
@@ -70,9 +85,10 @@ export default function AnimalDetailPage() {
         microchip: a.microchip ?? "",
         neutered: Boolean(a.neutered),
         ownerId: a.ownerId ?? "",
+        dob: a.dob ? new Date(a.dob).toISOString().slice(0, 10) : "",
       });
     }
-  }, [animalUnknown]);
+  }, [parsedAnimal]);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
@@ -83,6 +99,10 @@ export default function AnimalDetailPage() {
       breed: form.breed || null,
       microchip: form.microchip || null,
       neutered: form.neutered,
+      dob:
+        form.dob && !Number.isNaN(Date.parse(form.dob))
+          ? Date.parse(form.dob)
+          : null,
       ownerId: (form.ownerId || null) as Id<"owners"> | null,
     })) as { ok: boolean };
     if (res?.ok) {
@@ -112,35 +132,88 @@ export default function AnimalDetailPage() {
   }
 
   // Weights
-  const weights = useQuery(
-    api.weights.listByAnimal,
-    useMemo(() => ({ animalId: id }), [id]),
+  const visits = useQuery(
+    api.visits.list,
+    useMemo(() => ({ animalId: id, limit: 5, sort: "datetimeDesc" }), [id]),
   ) as
-    | { _id: string; kg: number; notedAt?: number; createdAt: number }[]
+    | {
+        _id: string;
+        code?: string | null;
+        datetime?: number | null;
+        status: string;
+        ownerId?: string | null;
+        procedures?: string[];
+        medications?: string[];
+      }[]
     | undefined;
-  const addWeight = useMutation(api.weights.add);
-  const [kg, setKg] = useState<string>("");
-  async function onAddWeight(e: React.FormEvent) {
-    e.preventDefault();
-    const value = parseFloat(kg);
-    if (Number.isNaN(value) || value <= 0) {
-      toast.error("Невалидно тегло");
-      return;
-    }
-    const r = await addWeight({ animalId: id, kg: value });
-    if (r?.ok) {
-      toast.success("Добавено тегло");
-      setKg("");
-    }
-  }
+  const visitsLoading = visits === undefined;
+  const lastVisit = (visits ?? [])[0];
+  const summaryAge = form.dob
+    ? differenceInYears(new Date(), new Date(form.dob))
+    : null;
 
-  const hasAnimal = AnimalDocSchema.safeParse(animalUnknown).success;
-  if (!hasAnimal)
+  const owner = form.ownerId
+    ? (owners ?? []).find((o) => o._id === form.ownerId)
+    : undefined;
+
+  if (!parsedAnimal.success)
     return <main className="mx-auto max-w-3xl p-6">Зареждане...</main>;
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">{brand.nameBg}: Животно</h1>
+      <h1 className="text-2xl font-semibold">Животно: {form.name}</h1>
+      <SectionCard
+        title="Резюме"
+        actions={
+          owner ? (
+            <a
+              href={`/owners/${owner._id}`}
+              className="text-primary underline underline-offset-2"
+            >
+              Към собственик
+            </a>
+          ) : null
+        }
+      >
+        <dl className="grid gap-3 md:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground text-xs uppercase">Име</dt>
+            <dd className="text-sm font-medium">{form.name || "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-xs uppercase">
+              Вид / Порода
+            </dt>
+            <dd className="text-sm font-medium">
+              {[form.species, form.breed].filter(Boolean).join(" · ") || "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-xs uppercase">Възраст</dt>
+            <dd className="text-sm font-medium">
+              {summaryAge !== null
+                ? `${summaryAge} г.`
+                : form.dob
+                  ? fmtDateBG(new Date(form.dob))
+                  : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-xs uppercase">
+              Последно посещение
+            </dt>
+            <dd className="text-sm font-medium">
+              {lastVisit?.datetime ? fmtDateTimeBG(lastVisit.datetime) : "—"}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground text-xs uppercase">
+              Микрочип
+            </dt>
+            <dd className="text-sm font-medium">{form.microchip || "—"}</dd>
+          </div>
+        </dl>
+      </SectionCard>
       <form onSubmit={onSave} className="grid gap-3">
         <div>
           <Label htmlFor="name">Име</Label>
@@ -211,6 +284,15 @@ export default function AnimalDetailPage() {
             }
           />
         </div>
+        <div>
+          <Label htmlFor="dob">Дата на раждане</Label>
+          <Input
+            id="dob"
+            type="date"
+            value={form.dob}
+            onChange={(e) => setForm((f) => ({ ...f, dob: e.target.value }))}
+          />
+        </div>
         <label className="flex items-center gap-2">
           <Checkbox
             checked={form.neutered}
@@ -230,47 +312,6 @@ export default function AnimalDetailPage() {
           </Button>
         </div>
       </form>
-
-      <section className="space-y-2">
-        <h2 className="text-lg font-medium">Тегло</h2>
-        <div>
-          <a
-            href={`/visits?animalId=${id}`}
-            className="text-primary underline underline-offset-2"
-          >
-            Ново посещение за това животно
-          </a>
-        </div>
-        <form onSubmit={onAddWeight} className="flex items-end gap-2">
-          <div className="flex-1">
-            <Label htmlFor="kg">Килограми</Label>
-            <Input
-              id="kg"
-              inputMode="decimal"
-              value={kg}
-              onChange={(e) => setKg(e.target.value)}
-              placeholder="напр. 12.4"
-            />
-          </div>
-          <Button type="submit">Добави</Button>
-        </form>
-        <div className="divide-y rounded-md border">
-          {(weights ?? []).length === 0 ? (
-            <div className="text-muted-foreground p-3 text-sm">
-              Няма записани тегла
-            </div>
-          ) : (
-            (weights ?? []).map((w) => (
-              <div key={w._id} className="flex justify-between p-3 text-sm">
-                <span>{w.kg.toFixed(2)} кг</span>
-                <span className="text-muted-foreground">
-                  {fmtDateTimeBG(w.notedAt ?? w.createdAt)}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
 
       <section className="space-y-2">
         <h2 className="text-lg font-medium">Документи</h2>
@@ -311,6 +352,27 @@ export default function AnimalDetailPage() {
           </PdfDownloadButton>
         </div>
       </section>
+      {visitsLoading ? (
+        <SkeletonList rows={3} />
+      ) : (
+        <VisitList
+          title="Последни посещения"
+          visits={
+            (visits ?? []).map((visit) => ({
+              _id: visit._id,
+              code: visit.code ?? null,
+              datetime: visit.datetime ?? visit.createdAt ?? Date.now(),
+              status: visit.status,
+              ownerName: owner?.name ?? null,
+              ownerId: owner?._id ?? null,
+              animalId: String(id),
+            })) as VisitListItem[]
+          }
+          emptyLabel="Няма посещения"
+          actionLabel="Всички посещения"
+          className="bg-card"
+        />
+      )}
     </main>
   );
 }

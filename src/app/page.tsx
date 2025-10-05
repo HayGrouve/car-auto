@@ -81,7 +81,7 @@ export default function HomePage() {
     return (
       <main className="mx-auto max-w-5xl space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">{brand.nameBg}: Табло</h1>
+          <h1 className="text-2xl font-semibold">Табло на {brand.nameBg}</h1>
           <div className="w-72">
             <SkeletonList rows={1} />
           </div>
@@ -178,7 +178,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      <AlertList alerts={overview.alerts} title="Известия" />
+      <AlertList alerts={overview.alerts} title="Статус" />
 
       <QuickActionsCard className="lg:grid-cols-4" />
 
@@ -252,7 +252,7 @@ export default function HomePage() {
               overview.patientBook.map((animal) => (
                 <div
                   key={animal._id}
-                  className="flex items-center justify-between gap-3 p-3 text-sm min-h-[72px]"
+                  className="flex min-h-[72px] items-center justify-between gap-3 p-3 text-sm"
                 >
                   <div>
                     <Link

@@ -221,7 +221,7 @@ export default function VisitDetailPage() {
 
   return (
     <main className="mx-auto max-w-4xl space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">{brand.nameBg}: Посещение</h1>
+      <h1 className="text-2xl font-semibold">Посещение: {visit.code}</h1>
       {!isFinalized && !sp.get("step") ? (
         <div className="bg-muted/20 flex items-center justify-between rounded-md border p-3">
           <div className="text-muted-foreground text-sm">

@@ -90,7 +90,7 @@ export default function OwnerDetailPage() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">{brand.nameBg}: Собственик</h1>
+      <h1 className="text-2xl font-semibold">Собственик: {owner.name}</h1>
       <div className="flex items-center justify-between">
         <div className="text-muted-foreground text-sm">
           Неплатени общо:{" "}
@@ -327,8 +327,8 @@ export default function OwnerDetailPage() {
           )}
         </div>
       </section>
-      <OwnerAuditLog ownerId={id} />
       <OwnerInvoices ownerId={id} />
+      <OwnerAuditLog ownerId={id} />
     </main>
   );
 }

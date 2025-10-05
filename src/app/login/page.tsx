@@ -36,7 +36,7 @@ export default function LoginPage() {
         onSubmit={onSubmit}
         className="bg-card w-full max-w-sm space-y-4 rounded-lg border p-6"
       >
-        <h1 className="text-xl font-semibold">{brand.nameBg}: Вход</h1>
+        <h1 className="text-xl font-semibold">Вход</h1>
         {error && <div className="text-destructive text-sm">{error}</div>}
         <div className="space-y-1">
           <Label

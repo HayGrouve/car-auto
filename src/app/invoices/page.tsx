@@ -75,7 +75,7 @@ export default function InvoicesPage() {
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{brand.nameBg}: Фактури</h1>
+        <h1 className="text-2xl font-semibold">Фактури: {invoices?.length}</h1>
         <div className="text-muted-foreground text-sm">
           <span className="mr-4">
             Неплатено:{" "}
@@ -269,8 +269,8 @@ export default function InvoicesPage() {
                         toast.success("Фактура маркирана като платена");
                       }}
                     >
-                      <CheckCircle className="mr-1 size-4" aria-hidden /> Маркирай
-                      платена
+                      <CheckCircle className="mr-1 size-4" aria-hidden />{" "}
+                      Маркирай платена
                     </Button>
                   )}
                   <InvoicePdfButton
@@ -283,7 +283,11 @@ export default function InvoicesPage() {
                     variant="outline"
                     aria-label={`Печат за фактура ${inv.code ?? String(inv._id)}`}
                     onClick={() => {
-                      const w = window.open("", "_blank", "noopener,noreferrer");
+                      const w = window.open(
+                        "",
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
                       if (!w) return;
                       const rows = inv.items
                         .map(

@@ -123,7 +123,7 @@ function VisitsPageInner() {
     <main className="mx-auto max-w-5xl space-y-6 p-6">
       <div className="flex items-center gap-2">
         <CalendarCheck className="text-primary size-5" />
-        <h1 className="text-2xl font-semibold">{brand.nameBg}: Посещения</h1>
+        <h1 className="text-2xl font-semibold">Посещения: {visits?.length}</h1>
       </div>
 
       <form onSubmit={onCreate} className="grid gap-2 md:grid-cols-4">
