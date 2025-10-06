@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   Phone as PhoneIcon,
   Mail as MailIcon,
-  Eye,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { OwnerDoc } from "@/types/owner";
@@ -157,7 +156,7 @@ export default function OwnersPage() {
                         className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
                         aria-label={`Преглед на ${o.name}`}
                       >
-                        <Eye className="size-4" aria-hidden /> {o.name}
+                        {o.name}
                       </Link>
                       <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
                         <span className="inline-flex items-center gap-1">

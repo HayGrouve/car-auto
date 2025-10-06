@@ -17,7 +17,6 @@ import type { AnimalDoc } from "@/types/animal";
 import {
   PawPrint,
   Hash,
-  Eye,
   User as UserIcon,
   Phone as PhoneIcon,
 } from "lucide-react";
@@ -179,8 +178,7 @@ export default function AnimalsPage() {
                           className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
                           aria-label={`Преглед на ${a.name}`}
                         >
-                          <Eye className="size-4" aria-hidden /> {a.name} (
-                          {a.species})
+                          {a.name} ({a.species})
                         </Link>
                         <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
                           <span>{a.breed ?? ""}</span>
