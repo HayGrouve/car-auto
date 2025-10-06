@@ -245,6 +245,16 @@ export const update = mutation({
   },
 });
 
+export const remove = mutation({
+  args: {
+    id: v.id("animals"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+    return { ok: true } as const;
+  },
+});
+
 export const listByOwner = query({
   args: { ownerId: v.id("owners") },
   handler: async (ctx, args) => {

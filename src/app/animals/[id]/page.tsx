@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
@@ -10,9 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { fmtDateBG, fmtDateTimeBG } from "@/lib/format";
+import { fmtDateTimeBG } from "@/lib/format";
 import { differenceInYears } from "date-fns";
-import { SectionCard } from "@/components/ui/section-card";
 import {
   Popover,
   PopoverContent,
@@ -25,14 +24,32 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { brand } from "@/lib/brand";
 import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
 import { generateVaccinationCertificatePdf } from "@/lib/pdf-generator";
-import {
-  VisitList,
-  type VisitListItem,
-} from "@/components/dashboard/VisitList";
 import { SkeletonList } from "@/components/SkeletonList";
+import { AnimalSummaryCard } from "./components/AnimalSummaryCard";
+import { AnimalControlsCard } from "./components/AnimalControlsCard";
+import { Save } from "lucide-react";
+import { SectionCard } from "@/components/ui/section-card";
+import Link from "next/link";
 
 export default function AnimalDetailPage() {
   const params = useParams<{ id: string }>();
@@ -44,6 +61,7 @@ export default function AnimalDetailPage() {
   const update = useMutation(api.animals.update);
   const createVisit = useMutation(api.visits.create);
   const addWeight = useMutation(api.weights.add);
+  const removeAnimal = useMutation(api.animals.remove);
   const owners = useQuery(
     api.owners.list,
     useMemo(() => ({ search: "" }), []),
@@ -80,8 +98,16 @@ export default function AnimalDetailPage() {
     ownerId: "",
     dob: "",
   });
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [ownerOpen, setOwnerOpen] = useState(false);
+  const [ownerSheetOpen, setOwnerSheetOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [kg, setKg] = useState<string>("");
+  const [isAddingWeight, setIsAddingWeight] = useState(false);
+  const [showAllWeights, setShowAllWeights] = useState(false);
+  const [showIncompleteVisits, setShowIncompleteVisits] = useState(false);
 
   const parsedAnimal = useMemo(
     () => AnimalDocSchema.safeParse(animalUnknown),
@@ -107,6 +133,13 @@ export default function AnimalDetailPage() {
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.name.trim()) {
+      toast.error("Името е задължително");
+      return;
+    }
+
+    setIsSaving(true);
+
     const res = (await update({
       id,
       name: form.name,
@@ -120,6 +153,9 @@ export default function AnimalDetailPage() {
           : null,
       ownerId: (form.ownerId || null) as Id<"owners"> | null,
     })) as { ok: boolean };
+
+    setIsSaving(false);
+
     if (res?.ok) {
       toast.success("Записът е обновен");
       router.push("/animals");
@@ -146,16 +182,19 @@ export default function AnimalDetailPage() {
   }
 
   async function onAddWeight() {
+    if (isAddingWeight) return;
     const value = parseFloat(kg);
     if (Number.isNaN(value) || value <= 0) {
       toast.error("Невалидно тегло");
       return;
     }
+    setIsAddingWeight(true);
     const res = await addWeight({ animalId: id, kg: value });
     if (res?.ok) {
       toast.success("Добавено тегло");
       setKg("");
     }
+    setIsAddingWeight(false);
   }
 
   const summaryAge = form.dob
@@ -169,254 +208,546 @@ export default function AnimalDetailPage() {
   const visitsLoading = visits === undefined;
   const latestWeight = (weights ?? [])[0];
   const lastVisit = (visits ?? [])[0];
+  const filteredVisits = useMemo(() => {
+    const allVisits = visits ?? [];
+    return showIncompleteVisits
+      ? allVisits.filter((visit) => visit.status === "draft")
+      : allVisits;
+  }, [visits, showIncompleteVisits]);
 
   if (!parsedAnimal.success)
     return <main className="mx-auto max-w-3xl p-6">Зареждане...</main>;
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">Животно: {form.name}</h1>
-      <SectionCard
-        title="Резюме"
-        actions={
-          owner ? (
-            <a
-              href={`/owners/${owner._id}`}
-              className="text-primary underline underline-offset-2"
-            >
-              Към собственик
-            </a>
-          ) : null
-        }
-      >
-        <dl className="grid gap-3 md:grid-cols-2">
-          <div>
-            <dt className="text-muted-foreground text-xs uppercase">Име</dt>
-            <dd className="text-sm font-medium">{form.name || "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground text-xs uppercase">
-              Вид / Порода
-            </dt>
-            <dd className="text-sm font-medium">
-              {[form.species, form.breed].filter(Boolean).join(" · ") || "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground text-xs uppercase">Възраст</dt>
-            <dd className="text-sm font-medium">
-              {summaryAge !== null
-                ? `${summaryAge} г.`
-                : form.dob
-                  ? fmtDateBG(new Date(form.dob))
-                  : "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground text-xs uppercase">
-              Микрочип
-            </dt>
-            <dd className="text-sm font-medium">{form.microchip || "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground text-xs uppercase">
-              Последно тегло
-            </dt>
-            <dd className="text-sm font-medium">
-              {latestWeight
-                ? `${latestWeight.kg.toFixed(2)} кг · ${fmtDateTimeBG(latestWeight.notedAt ?? latestWeight.createdAt)}`
-                : "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground text-xs uppercase">
-              Последно посещение
-            </dt>
-            <dd className="text-sm font-medium">
-              {lastVisit?.datetime ? fmtDateTimeBG(lastVisit.datetime) : "—"}
-            </dd>
-          </div>
-        </dl>
-      </SectionCard>
-      <form onSubmit={onSave} className="grid gap-3">
-        <div>
-          <Label htmlFor="name">Име</Label>
-          <Input
-            id="name"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          />
-        </div>
-        <div>
-          <Label>Собственик</Label>
-          <Popover open={ownerOpen} onOpenChange={setOwnerOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                {form.ownerId
-                  ? (owners ?? []).find((o) => o._id === form.ownerId)?.name
-                  : "Без собственик"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-              <Command>
-                <CommandInput placeholder="Търси собственик..." />
-                <CommandList>
-                  <CommandEmpty>Няма резултати</CommandEmpty>
-                  {(owners ?? []).map((o) => (
-                    <CommandItem
-                      key={o._id}
-                      value={o._id}
-                      onSelect={(v) => {
-                        setForm((f) => ({ ...f, ownerId: v }));
-                        setOwnerOpen(false);
-                      }}
-                    >
-                      {o.name}
-                      {o.phone ? ` · ${o.phone}` : ""}
-                    </CommandItem>
-                  ))}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div>
-          <Label htmlFor="dob">Дата на раждане</Label>
-          <Input
-            id="dob"
-            type="date"
-            value={form.dob}
-            onChange={(e) => setForm((f) => ({ ...f, dob: e.target.value }))}
-          />
-        </div>
-        <div>
-          <Label htmlFor="kg">Тегло (кг)</Label>
-          <div className="flex items-end gap-2">
-            <Input
-              id="kg"
-              inputMode="decimal"
-              value={kg}
-              onChange={(e) => setKg(e.target.value)}
-              placeholder="напр. 12.4"
-            />
-            <Button type="button" variant="secondary" onClick={onAddWeight}>
-              Добави
-            </Button>
-          </div>
-        </div>
-        <div>
-          <Label htmlFor="microchip">Микрочип</Label>
-          <Input
-            id="microchip"
-            value={form.microchip}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, microchip: e.target.value }))
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor="neutered">Стерилизиран</Label>
-          <label className="flex items-center gap-2">
-            <Checkbox
-              checked={form.neutered}
-              onCheckedChange={(checked) =>
-                setForm((f) => ({ ...f, neutered: Boolean(checked) }))
-              }
-            />
-            <span className="text-sm">Кастриран/а</span>
-          </label>
-        </div>
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" onClick={onStartVisit}>
-            Започни посещение
-          </Button>
-          <Button type="submit">Запази</Button>
-        </div>
-      </form>
-
-      <section className="space-y-2">
-        <h2 className="text-lg font-medium">Тегло</h2>
-        <div className="divide-y rounded-md border">
-          {weightsLoading || (weights ?? []).length === 0 ? (
-            <div className="text-muted-foreground p-3 text-sm">
-              {weightsLoading ? "Зареждане..." : "Няма записани тегла"}
-            </div>
-          ) : (
-            (weights ?? []).map((w) => (
-              <div key={w._id} className="flex justify-between p-3 text-sm">
-                <span>{w.kg.toFixed(2)} кг</span>
-                <span className="text-muted-foreground">
-                  {fmtDateTimeBG(w.notedAt ?? w.createdAt)}
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="space-y-2">
-        <h2 className="text-lg font-medium">Документи</h2>
-        <div className="flex gap-2">
-          <PdfDownloadButton
-            ariaLabel="Сертификат за ваксинация"
-            variant="outline"
-            fileName={`vaccination-${id}.pdf`}
-            generatePdf={async () => {
+    <main className="mx-auto max-w-[900px] space-y-8 px-4 pt-6 pb-24 sm:px-6 sm:pb-28 lg:px-8 lg:pt-8 lg:pb-10">
+      <header className="border-border/60 bg-muted/40 space-y-6 rounded-2xl border p-4 shadow-sm md:p-6 lg:p-8">
+        <h1 className="text-2xl font-semibold">Животно: {form.name}</h1>
+        <AnimalSummaryCard
+          animal={parsedAnimal.data}
+          owner={owner}
+          summaryAge={summaryAge}
+          latestWeight={latestWeight}
+          lastVisit={lastVisit}
+          visits={visits ?? []}
+          isLoading={visitsLoading || weightsLoading}
+        />
+        <div
+          id="animal-summary-sentinel"
+          className="hidden lg:block"
+          aria-hidden="true"
+        />
+        <AnimalControlsCard
+          hasOwner={Boolean(owner)}
+          hasDraftVisit={false}
+          onStartVisit={onStartVisit}
+          onExport={async () => {
+            try {
               const parsedAnimal = AnimalDocSchema.safeParse(animalUnknown);
               if (!parsedAnimal.success) throw new Error("Invalid animal data");
               const animal = parsedAnimal.data;
               const ownerRecord = (owners ?? []).find(
                 (o) => o._id === form.ownerId,
               );
-              return generateVaccinationCertificatePdf(animal, {
+              const blob = await generateVaccinationCertificatePdf(animal, {
                 name: ownerRecord?.name ?? brand.nameBg,
                 phone: ownerRecord?.phone,
                 email: undefined,
               });
-            }}
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement("a");
+              link.href = url;
+              link.download = `vaccination-${id}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+              URL.revokeObjectURL(url);
+              toast.success("PDF файлът е свален успешно");
+            } catch (error) {
+              console.error(error);
+              toast.error("Неуспешно генериране на PDF");
+            }
+          }}
+          exportLabel="Ваксинационен сертификат"
+          onPrint={() => window.print()}
+          onConfirmDelete={() => setConfirmDeleteOpen(true)}
+          onBack={() => router.push("/animals")}
+          disablePrimary={!owner}
+          stickySentinelSelector="#animal-summary-sentinel"
+          isDeleting={isDeleting}
+        />
+      </header>
+      <div className="space-y-6">
+        <SectionCard
+          title="Основни данни"
+          subtitle={form.name || "Без име"}
+          description="Обновете основната информация за животното."
+          responsiveCollapsible
+          footerActions={[
+            {
+              label: isSaving ? "Запазване..." : "Запази",
+              icon: <Save className="size-4" aria-hidden="true" />,
+              onClick: () => formRef.current?.requestSubmit(),
+            },
+          ]}
+        >
+          <form
+            ref={formRef}
+            onSubmit={onSave}
+            className="grid gap-4 md:grid-cols-2"
           >
-            <span className="flex items-center gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="name">Име *</Label>
+              <Input
+                id="name"
+                value={form.name}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="species">Вид</Label>
+              <Input
+                id="species"
+                value={form.species}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, species: e.target.value }))
+                }
+                placeholder="напр. Куче"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="breed">Порода</Label>
+              <Input
+                id="breed"
+                value={form.breed}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, breed: e.target.value }))
+                }
+                placeholder="напр. Лабрадор"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Собственик</Label>
+              <div className="flex items-start gap-2">
+                <Dialog open={ownerSheetOpen} onOpenChange={setOwnerSheetOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between md:hidden"
+                    >
+                      {form.ownerId
+                        ? (owners ?? []).find((o) => o._id === form.ownerId)
+                            ?.name
+                        : "Без собственик"}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent side="bottom" className="p-0">
+                    <DialogHeader className="border-b px-4 py-3">
+                      <DialogTitle>Изберете собственик</DialogTitle>
+                    </DialogHeader>
+                    <Command className="p-0">
+                      <div className="px-4 py-3">
+                        <CommandInput
+                          placeholder="Търси собственик..."
+                          autoFocus
+                        />
+                      </div>
+                      <CommandList className="max-h-[60vh] overflow-y-auto">
+                        <CommandEmpty className="text-muted-foreground px-4 py-6 text-center text-sm">
+                          Няма резултати
+                        </CommandEmpty>
+                        {(owners ?? []).map((o) => (
+                          <CommandItem
+                            key={o._id}
+                            value={o._id}
+                            onSelect={(v) => {
+                              setForm((f) => ({ ...f, ownerId: v }));
+                              setOwnerSheetOpen(false);
+                            }}
+                            className="flex flex-col items-start gap-0.5 px-4 py-3 text-base"
+                          >
+                            <span className="font-medium">{o.name}</span>
+                            {o.phone ? (
+                              <span className="text-muted-foreground text-sm">
+                                {o.phone}
+                              </span>
+                            ) : null}
+                          </CommandItem>
+                        ))}
+                      </CommandList>
+                    </Command>
+                  </DialogContent>
+                </Dialog>
+
+                <Popover open={ownerOpen} onOpenChange={setOwnerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="hidden w-full justify-between md:flex"
+                    >
+                      {form.ownerId
+                        ? (owners ?? []).find((o) => o._id === form.ownerId)
+                            ?.name
+                        : "Без собственик"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Търси собственик..."
+                        autoFocus
+                      />
+                      <CommandList>
+                        <CommandEmpty>Няма резултати</CommandEmpty>
+                        {(owners ?? []).map((o) => (
+                          <CommandItem
+                            key={o._id}
+                            value={o._id}
+                            onSelect={(v) => {
+                              setForm((f) => ({ ...f, ownerId: v }));
+                              setOwnerOpen(false);
+                            }}
+                          >
+                            {o.name}
+                            {o.phone ? ` · ${o.phone}` : ""}
+                          </CommandItem>
+                        ))}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {!form.ownerId && (
+                <p className="text-muted-foreground text-xs">
+                  Ако собственикът липсва, можете да оставите полето празно или
+                  да добавите нов запис от секция „Собственици“.
+                </p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dob">Дата на раждане</Label>
+              <Input
+                id="dob"
+                type="date"
+                value={form.dob}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, dob: e.target.value }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="microchip">Микрочип</Label>
+              <Input
+                id="microchip"
+                value={form.microchip}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, microchip: e.target.value }))
+                }
+                placeholder="напр. 985112003178000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="neutered">Стерилизиран</Label>
+              <label className="flex items-center gap-2">
+                <Checkbox
+                  id="neutered"
+                  checked={form.neutered}
+                  onCheckedChange={(checked) =>
+                    setForm((f) => ({ ...f, neutered: Boolean(checked) }))
+                  }
+                />
+                <span className="text-sm">Кастриран/а</span>
+              </label>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="kg">Добави тегло (кг)</Label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <Input
+                  id="kg"
+                  inputMode="decimal"
+                  value={kg}
+                  onChange={(e) => setKg(e.target.value)}
+                  placeholder="напр. 12.4"
+                  className="sm:max-w-xs"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={onAddWeight}
+                  className="sm:self-start"
+                >
+                  Добави тегло
+                </Button>
+              </div>
+            </div>
+            <button type="submit" className="sr-only" aria-hidden="true">
+              Запази
+            </button>
+          </form>
+        </SectionCard>
+
+        <SectionCard
+          title="Тегло"
+          subtitle={
+            latestWeight
+              ? `${latestWeight.kg.toFixed(2)} кг`
+              : "Няма записани тегла"
+          }
+          description={
+            latestWeight
+              ? `Последно измерване: ${fmtDateTimeBG(
+                  latestWeight.notedAt ?? latestWeight.createdAt,
+                )}`
+              : "Добавете първо тегло, за да проследявате тенденции."
+          }
+          footerActions={
+            (weights ?? []).length > 5
+              ? [
+                  {
+                    label: showAllWeights ? "Покажи по-малко" : "Покажи всички",
+                    variant: "ghost",
+                    onClick: () => setShowAllWeights((v) => !v),
+                  },
+                ]
+              : undefined
+          }
+          collapsible
+          responsiveCollapsible
+        >
+          <form
+            onSubmit={async (event) => {
+              event.preventDefault();
+              try {
+                await onAddWeight();
+              } catch (error) {
+                console.error(error);
+                toast.error("Грешка при добавяне на тегло");
+              }
+            }}
+            className="space-y-3 sm:flex sm:flex-wrap sm:items-end sm:gap-3"
+          >
+            <div className="sm:max-w-xs sm:flex-1">
+              <Label htmlFor="kg">Добави тегло (кг)</Label>
+              <Input
+                id="kg"
+                inputMode="decimal"
+                value={kg}
+                onChange={(e) => setKg(e.target.value)}
+                placeholder="напр. 12.4"
+                required
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="secondary"
+              disabled={isAddingWeight}
+              className="sm:self-start"
+            >
+              {isAddingWeight ? "Добавяне..." : "Добави тегло"}
+            </Button>
+          </form>
+          <div className="divide-y rounded-md border">
+            {weightsLoading ? (
+              <div className="text-muted-foreground p-3 text-sm">
+                Зареждане...
+              </div>
+            ) : (weights ?? []).length === 0 ? (
+              <div className="text-muted-foreground p-3 text-sm">
+                Няма записани тегла
+              </div>
+            ) : (
+              (showAllWeights
+                ? (weights ?? [])
+                : (weights ?? []).slice(0, 5)
+              ).map((w) => (
+                <div key={w._id} className="flex justify-between p-3 text-sm">
+                  <span>{w.kg.toFixed(2)} кг</span>
+                  <span className="text-muted-foreground">
+                    {fmtDateTimeBG(w.notedAt ?? w.createdAt)}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Последни посещения"
+          description="Проследете състоянието на посещенията и преминете директно към детайли."
+          headerActions={[
+            {
+              label: showIncompleteVisits
+                ? "Всички посещения"
+                : "Само незавършени",
+              variant: "ghost",
+              onClick: () => setShowIncompleteVisits((value) => !value),
+            },
+          ]}
+          footer={
+            <Link
+              href="/visits"
+              className="text-primary hover:text-primary/80 inline-flex items-center gap-1"
+            >
+              Виж всички посещения
               <svg
-                className="size-4"
                 xmlns="http://www.w3.org/2000/svg"
-                fill="none"
                 viewBox="0 0 24 24"
-                strokeWidth={1.5}
+                fill="none"
                 stroke="currentColor"
+                strokeWidth="1.5"
+                className="size-4"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                  d="M9 5l7 7-7 7"
                 />
               </svg>
-              Сертификат
-            </span>
-          </PdfDownloadButton>
-        </div>
-      </section>
-
-      {visitsLoading ? (
-        <SkeletonList rows={3} />
-      ) : (
-        <VisitList
-          title="Последни посещения"
-          visits={
-            (visits ?? []).map((visit) => ({
-              _id: visit._id,
-              code: visit.code ?? null,
-              datetime: visit.datetime ?? visit.createdAt ?? Date.now(),
-              status: visit.status,
-              ownerName: owner?.name ?? null,
-              ownerId: owner?._id ?? null,
-              animalId: String(id),
-            })) as VisitListItem[]
+            </Link>
           }
-          emptyLabel="Няма посещения"
-          actionLabel="Всички посещения"
-          className="bg-card"
-        />
-      )}
+          layout="list"
+          responsiveCollapsible
+          defaultExpanded={false}
+        >
+          {visitsLoading ? (
+            <SkeletonList rows={3} />
+          ) : filteredVisits.length === 0 ? (
+            <div className="text-muted-foreground py-3 text-sm">
+              {showIncompleteVisits
+                ? "Няма незавършени посещения"
+                : "Няма посещения"}
+            </div>
+          ) : (
+            filteredVisits.slice(0, 5).map((visit) => (
+              <div
+                key={visit._id}
+                className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="space-y-1">
+                  <Link
+                    href={`/visits/${visit._id}`}
+                    className="font-medium underline-offset-2 hover:underline"
+                  >
+                    {visit.code ?? `#${visit._id}`}
+                  </Link>
+                  <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+                    <span>{fmtDateTimeBG(visit.datetime ?? Date.now())}</span>
+                    <span>
+                      · {visit.status === "draft" ? "Чернова" : visit.status}
+                    </span>
+                    {owner?.name ? <span>· {owner.name}</span> : null}
+                  </div>
+                </div>
+                <Link
+                  href={`/visits/${visit._id}`}
+                  className="text-primary text-xs font-medium underline underline-offset-2"
+                >
+                  Детайли
+                </Link>
+              </div>
+            ))
+          )}
+        </SectionCard>
+        <SectionCard
+          title="Документи"
+          description="Генерирайте и изтеглете наличните документи за животното."
+          layout="grid"
+          gridCols={1}
+        >
+          <div className="flex flex-wrap gap-2">
+            <PdfDownloadButton
+              ariaLabel="Сертификат за ваксинация"
+              variant="outline"
+              fileName={`vaccination-${id}.pdf`}
+              generatePdf={async () => {
+                const parsedAnimal = AnimalDocSchema.safeParse(animalUnknown);
+                if (!parsedAnimal.success)
+                  throw new Error("Invalid animal data");
+                const animal = parsedAnimal.data;
+                const ownerRecord = (owners ?? []).find(
+                  (o) => o._id === form.ownerId,
+                );
+                return generateVaccinationCertificatePdf(animal, {
+                  name: ownerRecord?.name ?? brand.nameBg,
+                  phone: ownerRecord?.phone,
+                  email: undefined,
+                });
+              }}
+            >
+              <span className="flex items-center gap-2">
+                <svg
+                  className="size-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+                  />
+                </svg>
+                Сертификат
+              </span>
+            </PdfDownloadButton>
+          </div>
+        </SectionCard>
+
+        <section className="hidden lg:block">
+          {/* Допълнителни секции (напр. бележки, процедури) ще бъдат добавени тук */}
+        </section>
+      </div>
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Изтрий животното?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Това действие ще премахне записа за &bdquo;
+              {form.name || "Без име"}
+              &ldquo; и свързаните посещения могат да бъдат недостъпни. Сигурни
+              ли сте?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Отказ</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+              onClick={async () => {
+                try {
+                  setIsDeleting(true);
+                  const result = (await removeAnimal({
+                    id,
+                  })) as { ok: boolean; reason?: string };
+                  if (!result?.ok) {
+                    toast.error(
+                      result?.reason === "not_found"
+                        ? "Записът не беше намерен"
+                        : "Неуспешно изтриване",
+                    );
+                    return;
+                  }
+                  toast.success("Животното е изтрито");
+                  setConfirmDeleteOpen(false);
+                  router.push("/animals");
+                } catch (error) {
+                  console.error(error);
+                  toast.error("Неуспешно изтриване на животното");
+                } finally {
+                  setIsDeleting(false);
+                }
+              }}
+            >
+              {isDeleting ? "Изтриване..." : "Изтрий"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
