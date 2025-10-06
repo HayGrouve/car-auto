@@ -37,6 +37,10 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonList } from "@/components/SkeletonList";
 import Link from "next/link";
+import {
+  useBreadcrumbRegistration,
+  type BreadcrumbItem,
+} from "@/components/breadcrumbs";
 export default function AnimalsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -97,6 +101,15 @@ export default function AnimalsPage() {
     setOwnerId("");
     setOwnerSearch("");
   }
+
+  useBreadcrumbRegistration([
+    { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+    {
+      label: "Животни",
+      href: "/animals",
+      current: true,
+    } satisfies BreadcrumbItem,
+  ]);
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">

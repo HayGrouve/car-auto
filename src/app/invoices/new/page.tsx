@@ -21,6 +21,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { fmtNumberBG } from "@/lib/format";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { toast } from "sonner";
+import {
+  useBreadcrumbRegistration,
+  type BreadcrumbItem,
+} from "@/components/breadcrumbs";
 
 function NewInvoicePageInner() {
   const router = useRouter();
@@ -72,6 +76,16 @@ function NewInvoicePageInner() {
   ) as string[] | undefined;
   const [markPaidNow, setMarkPaidNow] = useState(false);
   const [prefilledFromVisit, setPrefilledFromVisit] = useState(false);
+
+  useBreadcrumbRegistration([
+    { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+    { label: "Фактури", href: "/invoices" } satisfies BreadcrumbItem,
+    {
+      label: "Нова фактура",
+      href: "/invoices/new",
+      current: true,
+    } satisfies BreadcrumbItem,
+  ]);
 
   // Prefill from query params
   useEffect(() => {

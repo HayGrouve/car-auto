@@ -25,6 +25,10 @@ import { fmtDateTimeBG } from "@/lib/format";
 import { EmptyState } from "@/components/EmptyState";
 import Link from "next/link";
 import { SkeletonList } from "@/components/SkeletonList";
+import {
+  useBreadcrumbRegistration,
+  type BreadcrumbItem,
+} from "@/components/breadcrumbs";
 export default function OwnersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -69,6 +73,15 @@ export default function OwnersPage() {
     form.reset();
     toast.success("Собственикът е добавен успешно");
   }
+
+  useBreadcrumbRegistration([
+    { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+    {
+      label: "Собственици",
+      href: "/owners",
+      current: true,
+    } satisfies BreadcrumbItem,
+  ]);
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">

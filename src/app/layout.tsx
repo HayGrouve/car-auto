@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { AppNav } from "@/components/app-nav";
 import { Footer } from "@/components/ui/Footer";
 import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
+import { BreadcrumbProvider, Breadcrumbs } from "@/components/breadcrumbs";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,13 +45,18 @@ export default function RootLayout({
           >
             Към съдържание
           </a>
-          <AppNav />
-          <div className="flex min-h-screen flex-col pt-14">
-            <main id="main" className="flex-1">
-              {children}
-            </main>
-            <Footer />
-          </div>
+          <BreadcrumbProvider>
+            <AppNav />
+            <div className="flex min-h-screen flex-col pt-14">
+              <main id="main" className="flex-1">
+                <div className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6 lg:px-8">
+                  <Breadcrumbs />
+                  {children}
+                </div>
+              </main>
+              <Footer />
+            </div>
+          </BreadcrumbProvider>
           <Toaster richColors position="top-center" />
           <KeyboardShortcuts />
         </ConvexClientProvider>

@@ -50,6 +50,10 @@ import { AnimalControlsCard } from "./components/AnimalControlsCard";
 import { Save } from "lucide-react";
 import { SectionCard } from "@/components/ui/section-card";
 import Link from "next/link";
+import {
+  useBreadcrumbRegistration,
+  type BreadcrumbItem,
+} from "@/components/breadcrumbs";
 
 export default function AnimalDetailPage() {
   const params = useParams<{ id: string }>();
@@ -112,6 +116,21 @@ export default function AnimalDetailPage() {
   const parsedAnimal = useMemo(
     () => AnimalDocSchema.safeParse(animalUnknown),
     [animalUnknown],
+  );
+
+  useBreadcrumbRegistration(
+    [
+      { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+      { label: "Животни", href: "/animals" } satisfies BreadcrumbItem,
+      parsedAnimal.success && parsedAnimal.data.name
+        ? ({
+            id: String(id),
+            label: parsedAnimal.data.name,
+            href: `/animals/${id}`,
+            current: true,
+          } satisfies BreadcrumbItem)
+        : ({ label: "Животно", current: true } satisfies BreadcrumbItem),
+    ].filter(Boolean) as BreadcrumbItem[],
   );
 
   useEffect(() => {

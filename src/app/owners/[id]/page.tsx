@@ -35,6 +35,10 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
+import {
+  useBreadcrumbRegistration,
+  type BreadcrumbItem,
+} from "@/components/breadcrumbs";
 
 export default function OwnerDetailPage() {
   const params = useParams<{ id: string }>();
@@ -68,6 +72,36 @@ export default function OwnerDetailPage() {
   const [hydrated, setHydrated] = useState(false);
   const parsed = OwnerDocSchema.safeParse(ownerUnknown);
   const owner = parsed.success ? parsed.data : null;
+
+  useBreadcrumbRegistration(
+    [
+      { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+      { label: "Собственици", href: "/owners" } satisfies BreadcrumbItem,
+      owner?.name
+        ? ({
+            id: String(id),
+            label: owner.name,
+            href: `/owners/${id}`,
+            current: true,
+          } satisfies BreadcrumbItem)
+        : ({ label: "Собственик", current: true } satisfies BreadcrumbItem),
+    ].filter(Boolean) as BreadcrumbItem[],
+  );
+
+  useBreadcrumbRegistration(
+    [
+      { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+      { label: "Собственици", href: "/owners" } satisfies BreadcrumbItem,
+      owner?.name
+        ? ({
+            id: String(id),
+            label: owner.name,
+            href: `/owners/${id}`,
+            current: true,
+          } satisfies BreadcrumbItem)
+        : ({ label: "Собственик", current: true } satisfies BreadcrumbItem),
+    ].filter(Boolean) as BreadcrumbItem[],
+  );
 
   useEffect(() => {
     if (!hydrated && owner) {

@@ -34,6 +34,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  useBreadcrumbRegistration,
+  type BreadcrumbItem,
+} from "@/components/breadcrumbs";
 
 function VisitsPageInner() {
   const [status, setStatus] = useState<string>("");
@@ -46,6 +50,16 @@ function VisitsPageInner() {
     "datetimeDesc",
   );
   const pageSize = 20;
+
+  useBreadcrumbRegistration([
+    { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+    {
+      label: "Посещения",
+      href: "/visits",
+      current: true,
+    } satisfies BreadcrumbItem,
+  ]);
+
   const visits = useQuery(
     api.visits.list,
     useMemo(

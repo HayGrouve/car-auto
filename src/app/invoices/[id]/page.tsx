@@ -10,6 +10,10 @@ import InvoicePdfButton from "@/components/pdf/InvoicePdfButton";
 // import dynamic from "next/dynamic";
 // const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
 import type { InvoiceDoc } from "@/types/visit";
+import {
+  useBreadcrumbRegistration,
+  type BreadcrumbItem,
+} from "@/components/breadcrumbs";
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
@@ -23,6 +27,21 @@ export default function InvoiceDetailPage() {
   }) => Promise<{ ok: boolean }>;
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+
+  useBreadcrumbRegistration(
+    [
+      { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+      { label: "Фактури", href: "/invoices" } satisfies BreadcrumbItem,
+      inv?.code
+        ? ({
+            id: String(id),
+            label: inv.code,
+            href: `/invoices/${id}`,
+            current: true,
+          } satisfies BreadcrumbItem)
+        : ({ label: "Фактура", current: true } satisfies BreadcrumbItem),
+    ].filter(Boolean) as BreadcrumbItem[],
+  );
 
   if (!inv) return <main className="mx-auto max-w-3xl p-6">Зареждане...</main>;
 

@@ -28,6 +28,10 @@ import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
 import { CalendarCheck, Printer, FilePlus } from "lucide-react";
 import VisitWizard from "./VisitWizard";
 import { usePathname, useSearchParams } from "next/navigation";
+import {
+  useBreadcrumbRegistration,
+  type BreadcrumbItem,
+} from "@/components/breadcrumbs";
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
@@ -87,6 +91,20 @@ export default function VisitDetailPage() {
   const [showWizard, setShowWizard] = useState(false);
   const pathname = usePathname();
   const sp = useSearchParams();
+  useBreadcrumbRegistration(
+    [
+      { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+      { label: "Посещения", href: "/visits" } satisfies BreadcrumbItem,
+      visit?.code
+        ? ({
+            id: String(id),
+            label: visit.code,
+            href: `/visits/${id}`,
+            current: true,
+          } satisfies BreadcrumbItem)
+        : ({ label: "Посещение", current: true } satisfies BreadcrumbItem),
+    ].filter(Boolean) as BreadcrumbItem[],
+  );
   const isFinalized = !!visit && visit.status !== "draft";
   useEffect(() => {
     const hasStep = sp.get("step");

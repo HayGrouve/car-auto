@@ -24,6 +24,10 @@ import { SkeletonList } from "@/components/SkeletonList";
 // import dynamic from "next/dynamic";
 // const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
 import { InvoiceStatusBadge } from "@/components/StatusBadge";
+import {
+  useBreadcrumbRegistration,
+  type BreadcrumbItem,
+} from "@/components/breadcrumbs";
 
 const ALL_OWNERS_VALUE = "__all";
 
@@ -68,6 +72,15 @@ export default function InvoicesPage() {
   const markPaid = useMutation(api.invoices.markPaid) as unknown as (args: {
     id: string;
   }) => Promise<{ ok: boolean }>;
+
+  useBreadcrumbRegistration([
+    { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+    {
+      label: "Фактури",
+      href: "/invoices",
+      current: true,
+    } satisfies BreadcrumbItem,
+  ]);
 
   const [paidLoading, setPaidLoading] = useState<string | null>(null);
 

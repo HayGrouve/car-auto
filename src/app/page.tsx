@@ -20,6 +20,10 @@ import {
 } from "@/components/dashboard/InvoiceList";
 import { AlertList } from "@/components/dashboard/AlertList";
 import { Button } from "@/components/ui/button";
+import {
+  useBreadcrumbRegistration,
+  type BreadcrumbItem,
+} from "@/components/breadcrumbs";
 
 const ICON_CLASS = "size-5 text-muted-foreground";
 
@@ -76,6 +80,9 @@ export default function HomePage() {
   const overview = useQuery(api.dashboard.overview, {}) as
     | DashboardOverview
     | undefined;
+  useBreadcrumbRegistration([
+    { label: "Начало", href: "/" } satisfies BreadcrumbItem,
+  ]);
 
   if (!overview) {
     return (
