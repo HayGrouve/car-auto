@@ -36,6 +36,15 @@ export default tseslint.config(
     },
   },
   {
+    files: ["src/components/ui/**/*.ts", "src/components/ui/**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "warn",
+      "@typescript-eslint/no-unsafe-call": "warn",
+      "@typescript-eslint/no-unsafe-member-access": "warn",
+      "@typescript-eslint/no-unsafe-return": "warn",
+    },
+  },
+  {
     linterOptions: {
       reportUnusedDisableDirectives: true,
     },

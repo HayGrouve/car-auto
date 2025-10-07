@@ -25,13 +25,14 @@ import { toast } from "sonner";
 import { fmtDateTimeBG } from "@/lib/format";
 import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
 import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
-import { CalendarCheck, Printer, FilePlus } from "lucide-react";
 import VisitWizard from "./VisitWizard";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
+import { VisitHero } from "@/components/visits/VisitHero";
+import { CalendarCheck, Printer, FilePlus } from "lucide-react";
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
@@ -86,11 +87,11 @@ export default function VisitDetailPage() {
   const [ownerId, setOwnerId] = useState<string>("");
 
   const visit: VisitDoc | null = visitUnknown ?? null;
+  const pathname = usePathname();
+  const sp = useSearchParams();
 
   // Wizard visibility & URL step handling must be declared before any early returns
   const [showWizard, setShowWizard] = useState(false);
-  const pathname = usePathname();
-  const sp = useSearchParams();
   useBreadcrumbRegistration(
     [
       { label: "Начало", href: "/" } satisfies BreadcrumbItem,
@@ -146,7 +147,7 @@ export default function VisitDetailPage() {
     const res = await finalize({ id });
     if (res?.ok) {
       toast.success("Приключено");
-      router.push("/visits");
+      void router.push("/visits");
     }
   }
 
@@ -162,7 +163,7 @@ export default function VisitDetailPage() {
     });
     if (res?.ok && res.id) {
       toast.success("Дублирано посещение");
-      router.push(`/visits/${res.id}`);
+      void router.push(`/visits/${res.id}`);
     }
   }
 
@@ -236,9 +237,49 @@ export default function VisitDetailPage() {
       <main className="mx-auto max-w-3xl p-6">Не е намерено посещение</main>
     );
 
+  const ownerInfo = ownerId
+    ? (owners ?? []).find((o) => o._id === ownerId)
+    : null;
+  const animalInfo = animalId
+    ? (animals ?? []).find((a) => a._id === animalId)
+    : null;
+
   return (
-    <main className="mx-auto max-w-4xl space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">Посещение: {visit.code}</h1>
+    <main className="mx-auto max-w-5xl space-y-6 p-6">
+      <VisitHero
+        code={visit.code}
+        status={visit.status === "draft" ? "Чернова" : visit.status}
+        datetime={visit.datetime ?? visit.createdAt}
+        attending={visit.doctor ?? undefined}
+        onFinalize={!isFinalized ? onFinalize : undefined}
+        onPrint={() => onPrint()}
+        onInvoice={() => {
+          void router.push(`/invoices/new?visitId=${visit._id}`);
+        }}
+        isFinalized={isFinalized}
+        owner={{
+          name: ownerInfo?.name,
+          phone: ownerInfo?.phone,
+        }}
+        animal={{
+          name: animalInfo?.name ?? visit.animalName ?? undefined,
+          species: animalInfo?.species ?? visit.animalSpecies ?? undefined,
+          alerts: visit.alerts ?? [],
+        }}
+        billing={{
+          invoiceCode: visit.invoiceCode ?? null,
+          outstanding: visit.outstandingAmount ?? null,
+        }}
+        extraActions={[
+          {
+            label: "Дубл. посещение",
+            onSelect: () => {
+              void onDuplicate();
+            },
+            icon: <FilePlus className="h-4 w-4" aria-hidden="true" />,
+          },
+        ]}
+      />
       {!isFinalized && !sp.get("step") ? (
         <div className="bg-muted/20 flex items-center justify-between rounded-md border p-3">
           <div className="text-muted-foreground text-sm">
@@ -249,7 +290,7 @@ export default function VisitDetailPage() {
             onClick={() => {
               const next = new URLSearchParams(sp.toString());
               next.set("step", "1");
-              router.replace(`${pathname}?${next.toString()}`);
+              void router.replace(`${pathname}?${next.toString()}`);
             }}
           >
             Продължи ръководството
@@ -299,8 +340,8 @@ export default function VisitDetailPage() {
                     <CommandItem
                       key={o._id}
                       value={o._id}
-                      onSelect={(v) => {
-                        setOwnerId(v);
+                      onSelect={(value) => {
+                        setOwnerId(value);
                         setAnimalId(null);
                       }}
                     >
@@ -345,11 +386,11 @@ export default function VisitDetailPage() {
                       <CommandItem
                         key={an._id}
                         value={an._id}
-                        onSelect={(v) => {
+                        onSelect={(value) => {
                           if (isFinalized) return;
-                          setAnimalId(v);
+                          setAnimalId(value);
                           const chosen = (animals ?? []).find(
-                            (x) => x._id === v,
+                            (x) => x._id === value,
                           );
                           if (chosen?.ownerId)
                             setOwnerId(String(chosen.ownerId));

@@ -7,6 +7,12 @@ export const VisitDocSchema = z.object({
   status: z.string(),
   code: z.string().optional(),
   datetime: z.number().optional(),
+  doctor: z.string().optional().nullable(),
+  animalName: z.string().optional().nullable(),
+  animalSpecies: z.string().optional().nullable(),
+  alerts: z.array(z.string()).optional(),
+  invoiceCode: z.string().optional().nullable(),
+  outstandingAmount: z.string().optional().nullable(),
   // Guided wizard measurements (optional for drafts)
   weight: z.number().optional(),
   temperature: z.number().optional(),
