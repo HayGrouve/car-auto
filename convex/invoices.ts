@@ -119,6 +119,21 @@ export const create = mutation({
       paidAt: null,
       createdAt: now,
     } as any);
+    // If tied to a visit, reflect invoice info back to visit for UI convenience
+    if (args.visitId) {
+      try {
+        await ctx.db.patch(
+          args.visitId as any,
+          {
+            invoiceCode: code,
+            outstandingAmount: `${total.toFixed(2)} BGN`,
+            updatedAt: now,
+          } as any,
+        );
+      } catch (_) {
+        // ignore if schema doesn't allow; optional enhancement only
+      }
+    }
     return { ok: true, id, code } as const;
   },
 });
@@ -126,7 +141,22 @@ export const create = mutation({
 export const markPaid = mutation({
   args: { id: v.id("invoices") },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, { paid: true, paidAt: Date.now() } as any);
+    const now = Date.now();
+    const invoice = await ctx.db.get(args.id);
+    await ctx.db.patch(args.id, { paid: true, paidAt: now } as any);
+    if (invoice?.visitId) {
+      try {
+        await ctx.db.patch(
+          invoice.visitId as any,
+          {
+            outstandingAmount: null,
+            updatedAt: now,
+          } as any,
+        );
+      } catch (_) {
+        // optional back-prop; ignore failures
+      }
+    }
     return { ok: true } as const;
   },
 });

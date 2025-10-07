@@ -228,13 +228,12 @@ export default function VisitWizard({
       setActiveStep("review");
       return;
     }
+    // Draft mode: respect user interaction; only adopt URL if it explicitly specifies a valid step.
     const param = searchParams.get("step");
     if (isWizardStepId(param) && param !== activeStep) {
       setActiveStep(param);
-    } else if (!param && activeStep !== "measurements") {
-      setActiveStep("measurements");
     }
-  }, [activeStep, isFinalized, searchParams]);
+  }, [isFinalized, searchParams, activeStep]);
 
   useEffect(() => {
     if (!isFinalized) return;

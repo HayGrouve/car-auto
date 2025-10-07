@@ -75,6 +75,7 @@ function NewInvoicePageInner() {
     useMemo(() => ({ limit: 8 }), []),
   ) as string[] | undefined;
   const [markPaidNow, setMarkPaidNow] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [prefilledFromVisit, setPrefilledFromVisit] = useState(false);
 
   useBreadcrumbRegistration([
@@ -161,7 +162,10 @@ function NewInvoicePageInner() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!ownerId) return;
+    if (!ownerId) {
+      toast.error("Моля, изберете собственик");
+      return;
+    }
     const payloadItems = items
       .filter((it) => it.description.trim())
       .map((it) => ({
@@ -170,18 +174,32 @@ function NewInvoicePageInner() {
         price: parseFloat(it.price || "0"),
         total: it.total,
       }));
-    const res = (await create({
-      ownerId,
-      animalId: animalId || undefined,
-      visitId: visitId || undefined,
-      items: payloadItems,
-    })) as { ok: boolean; id: string; code?: string };
-    if (res?.ok && res.id) {
-      if (markPaidNow) {
-        await markPaid({ id: res.id });
+    if (payloadItems.length === 0) {
+      toast.error("Добавете поне един ред към фактурата");
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const res = (await create({
+        ownerId,
+        animalId: animalId || undefined,
+        visitId: visitId || undefined,
+        items: payloadItems,
+      })) as { ok: boolean; id: string; code?: string };
+      if (res?.ok && res.id) {
+        if (markPaidNow) {
+          await markPaid({ id: res.id });
+        }
+        toast.success(`Създадена фактура ${res.code ?? res.id}`);
+        router.push(`/invoices/${res.id}`);
+      } else {
+        toast.error("Неуспешно създаване на фактура");
       }
-      toast.success(`Създадена фактура ${res.code ?? res.id}`);
-      router.push(`/invoices/${res.id}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Възникна грешка при създаването");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -419,7 +437,13 @@ function NewInvoicePageInner() {
               />{" "}
               Маркирай платена
             </label>
-            <Button type="submit">Създай</Button>
+            <Button
+              type="submit"
+              disabled={!ownerId || submitting}
+              aria-disabled={!ownerId || submitting}
+            >
+              {submitting ? "Създаване..." : "Създай"}
+            </Button>
           </div>
         </div>
         <div className="flex gap-2">

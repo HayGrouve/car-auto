@@ -239,62 +239,58 @@ export default function AnimalDetailPage() {
 
   return (
     <main className="mx-auto max-w-[900px] space-y-8 px-4 pt-6 pb-24 sm:px-6 sm:pb-28 lg:px-8 lg:pt-8 lg:pb-10">
-      <header className="border-border/60 bg-muted/40 space-y-6 rounded-2xl border p-4 shadow-sm md:p-6 lg:p-8">
-        <h1 className="text-2xl font-semibold">Животно: {form.name}</h1>
-        <AnimalSummaryCard
-          animal={parsedAnimal.data}
-          owner={owner}
-          summaryAge={summaryAge}
-          latestWeight={latestWeight}
-          lastVisit={lastVisit}
-          visits={visits ?? []}
-          isLoading={visitsLoading || weightsLoading}
-        />
-        <div
-          id="animal-summary-sentinel"
-          className="hidden lg:block"
-          aria-hidden="true"
-        />
-        <AnimalControlsCard
-          hasOwner={Boolean(owner)}
-          hasDraftVisit={false}
-          onStartVisit={onStartVisit}
-          onExport={async () => {
-            try {
-              const parsedAnimal = AnimalDocSchema.safeParse(animalUnknown);
-              if (!parsedAnimal.success) throw new Error("Invalid animal data");
-              const animal = parsedAnimal.data;
-              const ownerRecord = (owners ?? []).find(
-                (o) => o._id === form.ownerId,
-              );
-              const blob = await generateVaccinationCertificatePdf(animal, {
-                name: ownerRecord?.name ?? brand.nameBg,
-                phone: ownerRecord?.phone,
-                email: undefined,
-              });
-              const url = URL.createObjectURL(blob);
-              const link = document.createElement("a");
-              link.href = url;
-              link.download = `vaccination-${id}.pdf`;
-              document.body.appendChild(link);
-              link.click();
-              link.remove();
-              URL.revokeObjectURL(url);
-              toast.success("PDF файлът е свален успешно");
-            } catch (error) {
-              console.error(error);
-              toast.error("Неуспешно генериране на PDF");
-            }
-          }}
-          exportLabel="Ваксинационен сертификат"
-          onPrint={() => window.print()}
-          onConfirmDelete={() => setConfirmDeleteOpen(true)}
-          onBack={() => router.push("/animals")}
-          disablePrimary={!owner}
-          stickySentinelSelector="#animal-summary-sentinel"
-          isDeleting={isDeleting}
-        />
-      </header>
+      <AnimalSummaryCard
+        animal={parsedAnimal.data}
+        owner={owner}
+        summaryAge={summaryAge}
+        latestWeight={latestWeight}
+        lastVisit={lastVisit}
+        visits={visits ?? []}
+        isLoading={visitsLoading || weightsLoading}
+      />
+      <div
+        id="animal-summary-sentinel"
+        className="hidden lg:block"
+        aria-hidden="true"
+      />
+      <AnimalControlsCard
+        hasOwner={Boolean(owner)}
+        hasDraftVisit={false}
+        onStartVisit={onStartVisit}
+        onExport={async () => {
+          try {
+            const parsedAnimal = AnimalDocSchema.safeParse(animalUnknown);
+            if (!parsedAnimal.success) throw new Error("Invalid animal data");
+            const animal = parsedAnimal.data;
+            const ownerRecord = (owners ?? []).find(
+              (o) => o._id === form.ownerId,
+            );
+            const blob = await generateVaccinationCertificatePdf(animal, {
+              name: ownerRecord?.name ?? brand.nameBg,
+              phone: ownerRecord?.phone,
+              email: undefined,
+            });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `vaccination-${id}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+            toast.success("PDF файлът е свален успешно");
+          } catch (error) {
+            console.error(error);
+            toast.error("Неуспешно генериране на PDF");
+          }
+        }}
+        exportLabel="Ваксинационен сертификат"
+        onPrint={() => window.print()}
+        onConfirmDelete={() => setConfirmDeleteOpen(true)}
+        onBack={() => router.push("/animals")}
+        disablePrimary={!owner}
+        isDeleting={isDeleting}
+      />
       <div className="space-y-6">
         <SectionCard
           title="Основни данни"

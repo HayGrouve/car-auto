@@ -5,28 +5,16 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { type VisitDoc } from "@/types/visit";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+// removed inline edit inputs in favor of wizard-only editing
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-  CommandItem,
-} from "@/components/ui/command";
+// removed popover/command inputs tied to inline form
 import { toast } from "sonner";
 import { fmtDateTimeBG } from "@/lib/format";
 import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
 import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
 import VisitWizard from "./VisitWizard";
-import { usePathname, useSearchParams } from "next/navigation";
+// pathname/searchParams no longer used in wizard default flow
+// import { usePathname, useSearchParams } from "next/navigation";
 import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
@@ -37,8 +25,9 @@ import {
   VisitActionsMenuMobile,
   buildDuplicateAction,
 } from "@/components/visits/VisitActionsMenu";
-import { CalendarCheck, FilePlus, Printer } from "lucide-react";
-import { VisitSecondaryPanels } from "@/components/visits/VisitSecondaryPanels";
+// icons only used in other sections
+// import { CalendarCheck, FilePlus, Printer } from "lucide-react";
+// import { VisitSecondaryPanels } from "@/components/visits/VisitSecondaryPanels";
 import { SectionCard } from "@/components/ui/section-card";
 
 export default function VisitDetailPage() {
@@ -68,37 +57,26 @@ export default function VisitDetailPage() {
   const [hydrated, setHydrated] = useState(false);
   const [procedures, setProcedures] = useState<string[]>([]);
   const [medications, setMedications] = useState<string[]>([]);
-  const [procInput, setProcInput] = useState("");
-  const [medInput, setMedInput] = useState("");
-  const procedureSuggestions = useQuery(
-    api.visits.suggestProcedures,
-    useMemo(() => ({ limit: 8 }), []),
-  ) as string[] | undefined;
-  const medicationSuggestions = useQuery(
-    api.visits.suggestMedications,
-    useMemo(() => ({ limit: 8 }), []),
-  ) as string[] | undefined;
+  // removed inline editing helpers (wizard-only editing)
   const [animalId, setAnimalId] = useState<string | null>(null);
-  const [animalSearch, setAnimalSearch] = useState("");
-  const [ownerSearch, setOwnerSearch] = useState("");
   const owners = useQuery(
     api.owners.list,
-    useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
+    useMemo(() => ({ search: "" }), []),
   ) as { _id: string; name: string; phone?: string }[] | undefined;
   const animals = useQuery(
     api.animals.list,
-    useMemo(() => ({ search: animalSearch }), [animalSearch]),
+    useMemo(() => ({ search: "" }), []),
   ) as
     | { _id: string; name: string; species: string; ownerId?: string | null }[]
     | undefined;
   const [ownerId, setOwnerId] = useState<string>("");
 
   const visit: VisitDoc | null = visitUnknown ?? null;
-  const pathname = usePathname();
-  const sp = useSearchParams();
+  // const pathname = usePathname();
+  // const sp = useSearchParams();
 
-  // Wizard visibility & URL step handling must be declared before any early returns
-  const [showWizard, setShowWizard] = useState(false);
+  // Wizard visibility
+  const [showWizard, setShowWizard] = useState(true);
   useBreadcrumbRegistration(
     [
       { label: "Начало", href: "/" } satisfies BreadcrumbItem,
@@ -114,10 +92,6 @@ export default function VisitDetailPage() {
     ].filter(Boolean) as BreadcrumbItem[],
   );
   const isFinalized = !!visit && visit.status !== "draft";
-  useEffect(() => {
-    const hasStep = sp.get("step");
-    setShowWizard(Boolean(hasStep) && !isFinalized);
-  }, [sp, isFinalized]);
 
   useEffect(() => {
     if (!hydrated && visit) {
@@ -305,7 +279,7 @@ export default function VisitDetailPage() {
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6 pb-28 lg:pb-10">
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <section className="grid gap-6">
         <VisitHero
           visit={visit}
           actionsMenuDesktop={
@@ -313,7 +287,14 @@ export default function VisitDetailPage() {
               onFinalize={!isFinalized ? onFinalize : undefined}
               onPrint={() => onPrint()}
               onInvoice={() => {
-                void router.push(`/invoices/new?visitId=${visit._id}`);
+                const url = `/invoices/new?visitId=${encodeURIComponent(
+                  visit._id,
+                )}&ownerId=${encodeURIComponent(visit.ownerId)}${
+                  visit.animalId
+                    ? `&animalId=${encodeURIComponent(String(visit.animalId))}`
+                    : ""
+                }`;
+                void router.push(url);
               }}
               extraActions={[
                 buildDuplicateAction(() => {
@@ -327,7 +308,14 @@ export default function VisitDetailPage() {
               onFinalize={!isFinalized ? onFinalize : undefined}
               onPrint={() => onPrint()}
               onInvoice={() => {
-                void router.push(`/invoices/new?visitId=${visit._id}`);
+                const url = `/invoices/new?visitId=${encodeURIComponent(
+                  visit._id,
+                )}&ownerId=${encodeURIComponent(visit.ownerId)}${
+                  visit.animalId
+                    ? `&animalId=${encodeURIComponent(String(visit.animalId))}`
+                    : ""
+                }`;
+                void router.push(url);
               }}
               extraActions={[
                 buildDuplicateAction(() => {
@@ -350,68 +338,6 @@ export default function VisitDetailPage() {
             outstanding: visit.outstandingAmount ?? null,
           }}
         />
-        <aside className="hidden flex-col gap-4 lg:flex">
-          {quickFacts.length ? (
-            <SectionCard
-              title="Накратко"
-              tone="muted"
-              className="shadow-none"
-              responsiveCollapsible
-            >
-              <dl className="grid gap-3 text-sm">
-                {quickFacts.map((fact) => (
-                  <div key={fact.label} className="flex justify-between gap-4">
-                    <dt className="text-muted-foreground font-medium">
-                      {fact.label}
-                    </dt>
-                    <dd className="text-right font-semibold">{fact.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </SectionCard>
-          ) : null}
-          {showSecondary ? (
-            <SectionCard
-              title="Материали"
-              description="Документи и история"
-              responsiveCollapsible
-              className="shadow-none"
-            >
-              <VisitSecondaryPanels
-                visit={{ ...visit, documents, history: visitHistory }}
-                footerActions={
-                  <div className="grid gap-2">
-                    <PdfDownloadButton
-                      variant="outline"
-                      fileName={`visit-${id}.pdf`}
-                      ariaLabel="Изтегли резюме на посещението"
-                      onStart={() => toast.info("Генериране на PDF...")}
-                      onComplete={() =>
-                        toast.success("PDF файлът е свален успешно")
-                      }
-                      generatePdf={generateVisitPdf}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Printer className="size-4" aria-hidden /> PDF резюме
-                      </span>
-                    </PdfDownloadButton>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="justify-start"
-                      onClick={() => {
-                        void router.push(`/invoices/new?visitId=${visit._id}`);
-                      }}
-                    >
-                      <FilePlus className="mr-2 h-4 w-4" aria-hidden /> Нова
-                      фактура
-                    </Button>
-                  </div>
-                }
-              />
-            </SectionCard>
-          ) : null}
-        </aside>
       </section>
       {quickFacts.length ? (
         <section className="bg-muted/40 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 lg:hidden">
@@ -440,492 +366,229 @@ export default function VisitDetailPage() {
           ) : null}
         </section>
       ) : null}
-      {showSecondary ? (
+      {quickFacts.length ? (
         <section className="lg:hidden">
-          <SectionCard
-            title="Материали"
-            description="Документи и история"
-            responsiveCollapsible
-            className="shadow-none"
-          >
-            <VisitSecondaryPanels
-              visit={{ ...visit, documents, history: visitHistory }}
-              footerActions={
-                <div className="grid gap-2">
-                  <PdfDownloadButton
-                    variant="outline"
-                    fileName={`visit-${id}.pdf`}
-                    ariaLabel="Изтегли резюме на посещението"
-                    onStart={() => toast.info("Генериране на PDF...")}
-                    onComplete={() =>
-                      toast.success("PDF файлът е свален успешно")
-                    }
-                    generatePdf={generateVisitPdf}
-                  >
-                    <span className="flex items-center gap-2">
-                      <Printer className="size-4" aria-hidden /> PDF резюме
-                    </span>
-                  </PdfDownloadButton>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="justify-start"
-                    onClick={() => {
-                      void router.push(`/invoices/new?visitId=${visit._id}`);
-                    }}
-                  >
-                    <FilePlus className="mr-2 h-4 w-4" aria-hidden /> Нова
-                    фактура
-                  </Button>
-                </div>
-              }
-            />
-          </SectionCard>
-        </section>
-      ) : null}
-      <section className="space-y-6">
-        {!isFinalized && !sp.get("step") ? (
-          <SectionCard
-            tone="accent"
-            className="border-dashed shadow-none"
-            title="Посещението е чернова"
-            description="Можете да направлявате процеса стъпка по стъпка чрез ръководството."
-            actions={
+          <div className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-2 text-xs">
+            {quickFacts.map((fact) => (
+              <div
+                key={fact.label}
+                className="bg-muted flex w-max items-center gap-2 rounded-full border px-3 py-2 shadow-sm"
+              >
+                <span className="text-foreground font-semibold">
+                  {fact.value}
+                </span>
+                <span className="text-muted-foreground uppercase">
+                  {fact.label}
+                </span>
+              </div>
+            ))}
+            {ownerInfo?.phone ? (
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
+                className="w-max rounded-full border px-3 py-2"
                 onClick={() => {
-                  const next = new URLSearchParams(sp.toString());
-                  next.set("step", "1");
-                  void router.replace(`${pathname}?${next.toString()}`);
+                  window.location.href = `tel:${ownerInfo.phone}`;
                 }}
               >
-                Продължи ръководството
+                Обади се
               </Button>
-            }
-          />
-        ) : null}
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+      <section className="space-y-6 pb-20 lg:pb-0">
+        {!isFinalized ? (
+          <SectionCard
+            title="Ръководен режим"
+            description="Структурирани стъпки за обработка на посещението."
+            headerActions={[
+              {
+                label: showWizard ? "Скрий ръководство" : "Покажи ръководство",
+                onClick: () => setShowWizard((v) => !v),
+                variant: "outline",
+              },
+            ]}
+          >
+            {showWizard ? (
+              <VisitWizard id={id} onClose={() => setShowWizard(false)} />
+            ) : null}
+          </SectionCard>
+        ) : (
+          <SectionCard
+            title="Резюме"
+            description="Обобщение на приключеното посещение"
+            headerActions={[
+              {
+                label: "Печат",
+                onClick: () => onPrint(),
+                variant: "outline",
+              },
+              {
+                label: "PDF",
+                onClick: () => {
+                  void generateVisitPdf();
+                },
+                variant: "outline",
+              },
+              {
+                label: visit.invoiceCode ? "Фактура" : "Нова фактура",
+                href: visit.invoiceCode
+                  ? `/invoices/${encodeURIComponent(visit.invoiceCode)}`
+                  : `/invoices/new?visitId=${encodeURIComponent(
+                      visit._id,
+                    )}&ownerId=${encodeURIComponent(visit.ownerId)}${
+                      visit.animalId
+                        ? `&animalId=${encodeURIComponent(String(visit.animalId))}`
+                        : ""
+                    }`,
+                variant: "ghost",
+              },
+            ]}
+          >
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-3">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  SOAP
+                </p>
+                <div className="space-y-2 text-sm">
+                  {(s ?? "").trim() ? (
+                    <div>
+                      <span className="text-muted-foreground mr-2 font-medium">
+                        S:
+                      </span>
+                      <span>{s}</span>
+                    </div>
+                  ) : null}
+                  {(o ?? "").trim() ? (
+                    <div>
+                      <span className="text-muted-foreground mr-2 font-medium">
+                        O:
+                      </span>
+                      <span>{o}</span>
+                    </div>
+                  ) : null}
+                  {(a ?? "").trim() ? (
+                    <div>
+                      <span className="text-muted-foreground mr-2 font-medium">
+                        A:
+                      </span>
+                      <span>{a}</span>
+                    </div>
+                  ) : null}
+                  {(p ?? "").trim() ? (
+                    <div>
+                      <span className="text-muted-foreground mr-2 font-medium">
+                        P:
+                      </span>
+                      <span>{p}</span>
+                    </div>
+                  ) : null}
+                  {!(
+                    (s ?? "").trim() ||
+                    (o ?? "").trim() ||
+                    (a ?? "").trim() ||
+                    (p ?? "").trim()
+                  ) ? (
+                    <div className="text-muted-foreground">(няма данни)</div>
+                  ) : null}
+                </div>
+              </div>
 
-        <SectionCard
-          title="Ръководен режим"
-          description="Структурирани стъпки за обработка на посещението."
-          headerActions={
-            !isFinalized
-              ? [
-                  {
-                    label: showWizard
-                      ? "Скрий ръководство"
-                      : "Стартирай ръководство",
-                    onClick: () => setShowWizard((current) => !current),
-                    variant: "outline",
-                  },
-                ]
-              : undefined
-          }
-        >
-          {isFinalized ? (
-            <p className="text-muted-foreground text-sm">
-              Посещението е приключено и ръководният режим е недостъпен.
-            </p>
-          ) : showWizard ? (
-            <VisitWizard id={id} onClose={() => setShowWizard(false)} />
-          ) : (
-            <div className="text-muted-foreground flex flex-col gap-2 text-sm">
-              <p>
-                Използвайте ръководния режим, за да преминете през всички стъпки
-                на посещението в правилния ред.
-              </p>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="self-start"
-                onClick={() => setShowWizard(true)}
-              >
-                Стартирай ръководство
-              </Button>
-            </div>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Основни данни"
-          description="Редактирайте SOAP полета, процедури и животно към посещението."
-        >
-          <form onSubmit={onSave} className="grid gap-2 md:grid-cols-4">
-            <div className="md:col-span-2">
-              <Label>Собственик</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between"
-                    disabled={isFinalized}
-                  >
-                    {ownerId
-                      ? (owners ?? []).find((o) => o._id === ownerId)?.name
-                      : "Изберете собственик"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput
-                      placeholder="Търси собственик..."
-                      value={ownerSearch}
-                      onValueChange={setOwnerSearch}
-                    />
-                    <CommandList>
-                      <CommandEmpty>Няма резултати</CommandEmpty>
-                      {(owners ?? []).map((o) => (
-                        <CommandItem
-                          key={o._id}
-                          value={o._id}
-                          onSelect={(value) => {
-                            setOwnerId(value);
-                            setAnimalId(null);
-                          }}
-                        >
-                          {o.name}
-                          {o.phone ? ` · ${o.phone}` : ""}
-                        </CommandItem>
-                      ))}
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="md:col-span-2">
-              <Label>Животно</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between"
-                    disabled={isFinalized}
-                  >
-                    {animalId
-                      ? (animals ?? []).find((a) => a._id === animalId)?.name
-                      : "Без животно"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput
-                      placeholder="Търси животно..."
-                      value={animalSearch}
-                      onValueChange={setAnimalSearch}
-                    />
-                    <CommandList>
-                      <CommandEmpty>Няма резултати</CommandEmpty>
-                      {(animals ?? [])
-                        .filter(
-                          (an) =>
-                            !ownerId || String(an.ownerId) === String(ownerId),
-                        )
-                        .map((an) => (
-                          <CommandItem
-                            key={an._id}
-                            value={an._id}
-                            onSelect={(value) => {
-                              if (isFinalized) return;
-                              setAnimalId(value);
-                              const chosen = (animals ?? []).find(
-                                (x) => x._id === value,
-                              );
-                              if (chosen?.ownerId)
-                                setOwnerId(String(chosen.ownerId));
-                            }}
-                          >
-                            {an.name} ({an.species})
-                          </CommandItem>
-                        ))}
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid gap-2 md:col-span-4 md:grid-cols-4">
-              <div>
-                <Label>Статус</Label>
-                <div className="bg-muted/30 flex h-10 items-center rounded-md border px-3 text-sm">
-                  {visit.status === "draft"
-                    ? "Чернова"
-                    : visit.status === "finalized"
-                      ? "Приключено"
-                      : visit.status}
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="datetime">Дата/час</Label>
-                <Input
-                  id="datetime"
-                  type="datetime-local"
-                  value={dt}
-                  onChange={(e) => setDt(e.target.value)}
-                  disabled={isFinalized}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Label>Създадено</Label>
-                <div className="bg-muted/30 flex h-10 items-center rounded-md border px-3 text-sm">
-                  {fmtDateTimeBG(visit.createdAt)}
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="s">S - Субективно</Label>
-                <Textarea
-                  id="s"
-                  value={s}
-                  onChange={(e) => setS(e.target.value)}
-                  disabled={isFinalized}
-                />
-              </div>
-              <div>
-                <Label htmlFor="o">O - Обективно</Label>
-                <Textarea
-                  id="o"
-                  value={o}
-                  onChange={(e) => setO(e.target.value)}
-                  disabled={isFinalized}
-                />
-              </div>
-              <div>
-                <Label htmlFor="a">A - Оценка</Label>
-                <Textarea
-                  id="a"
-                  value={a}
-                  onChange={(e) => setA(e.target.value)}
-                  disabled={isFinalized}
-                />
-              </div>
-              <div>
-                <Label htmlFor="p">P - План</Label>
-                <Textarea
-                  id="p"
-                  value={p}
-                  onChange={(e) => setP(e.target.value)}
-                  disabled={isFinalized}
-                />
-              </div>
-            </div>
-            <div className="grid gap-4 md:col-span-4 md:grid-cols-2">
-              <div>
-                <Label>Процедури</Label>
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <Input
-                      value={procInput}
-                      onChange={(e) => setProcInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (isFinalized) return;
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const v = procInput.trim();
-                          if (!v) return;
-                          setProcedures((arr) =>
-                            arr.includes(v) ? arr : [...arr, v],
-                          );
-                          setProcInput("");
-                        }
-                      }}
-                      placeholder="напр. Ваксинация"
-                      disabled={isFinalized}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => {
-                      if (isFinalized) return;
-                      const v = procInput.trim();
-                      if (!v) return;
-                      setProcedures((arr) =>
-                        arr.includes(v) ? arr : [...arr, v],
-                      );
-                      setProcInput("");
-                    }}
-                    disabled={isFinalized}
-                  >
-                    Добави
-                  </Button>
-                </div>
-                {(procedureSuggestions ?? []).length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                    {(procedureSuggestions ?? []).map((name, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
-                        onClick={() => {
-                          if (isFinalized) return;
-                          setProcedures((arr) =>
-                            arr.includes(name) ? arr : [...arr, name],
-                          );
-                        }}
-                        disabled={isFinalized}
-                      >
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-                <ul className="mt-2 space-y-1 text-sm">
-                  {procedures.map((pr, i) => (
-                    <li key={i} className="flex justify-between">
-                      <span>{pr}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() =>
-                          setProcedures((arr) =>
-                            arr.filter((_, idx) => idx !== i),
-                          )
-                        }
-                        disabled={isFinalized}
-                      >
-                        Премахни
-                      </Button>
-                    </li>
-                  ))}
+              <div className="space-y-3">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Процедури
+                </p>
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  {(visit.procedures ?? []).length ? (
+                    (visit.procedures ?? []).map((pr, idx) => (
+                      <li key={idx}>{pr}</li>
+                    ))
+                  ) : (
+                    <li className="text-muted-foreground list-none">(няма)</li>
+                  )}
                 </ul>
               </div>
-              <div>
-                <Label>Медикаменти</Label>
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <Input
-                      value={medInput}
-                      onChange={(e) => setMedInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (isFinalized) return;
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          const v = medInput.trim();
-                          if (!v) return;
-                          setMedications((arr) =>
-                            arr.includes(v) ? arr : [...arr, v],
-                          );
-                          setMedInput("");
-                        }
-                      }}
-                      placeholder="напр. Амоксицилин"
-                      disabled={isFinalized}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => {
-                      if (isFinalized) return;
-                      const v = medInput.trim();
-                      if (!v) return;
-                      setMedications((arr) =>
-                        arr.includes(v) ? arr : [...arr, v],
-                      );
-                      setMedInput("");
-                    }}
-                    disabled={isFinalized}
-                  >
-                    Добави
-                  </Button>
-                </div>
-                {(medicationSuggestions ?? []).length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                    {(medicationSuggestions ?? []).map((name, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
-                        onClick={() => {
-                          if (isFinalized) return;
-                          setMedications((arr) =>
-                            arr.includes(name) ? arr : [...arr, name],
-                          );
-                        }}
-                        disabled={isFinalized}
-                      >
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-                <ul className="mt-2 space-y-1 text-sm">
-                  {medications.map((md, i) => (
-                    <li key={i} className="flex justify-between">
-                      <span>{md}</span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() =>
-                          setMedications((arr) =>
-                            arr.filter((_, idx) => idx !== i),
-                          )
-                        }
-                        disabled={isFinalized}
-                      >
-                        Премахни
-                      </Button>
-                    </li>
-                  ))}
+
+              <div className="space-y-3">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Медикаменти
+                </p>
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  {(visit.medications ?? []).length ? (
+                    (visit.medications ?? []).map((md, idx) => (
+                      <li key={idx}>{md}</li>
+                    ))
+                  ) : (
+                    <li className="text-muted-foreground list-none">(няма)</li>
+                  )}
                 </ul>
               </div>
+
+              <div className="space-y-3">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Фактуриране
+                </p>
+                <div className="text-sm">
+                  {visit.invoiceCode ? (
+                    <div>Фактура {visit.invoiceCode}</div>
+                  ) : (
+                    <div className="text-muted-foreground">
+                      Няма издадена фактура
+                    </div>
+                  )}
+                  {visit.outstandingAmount ? (
+                    <div>Дължима сума: {visit.outstandingAmount}</div>
+                  ) : null}
+                </div>
+              </div>
             </div>
-            <div className="flex gap-2 md:col-span-4">
-              <Button type="submit" disabled={isFinalized}>
-                Запази
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onFinalize}
-                disabled={visit.status !== "draft"}
-                aria-label="Приключи посещението"
-              >
-                <CalendarCheck className="mr-1 size-4" aria-hidden /> Приключи
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onDuplicate}
-                aria-label="Дублирай посещението"
-              >
-                <FilePlus className="mr-1 size-4" aria-hidden /> Дублирай
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onPrint}
-                aria-label="Печат на посещението"
-              >
-                <Printer className="mr-1 size-4" aria-hidden /> Печат
-              </Button>
-              <PdfDownloadButton
-                variant="outline"
-                fileName={`visit-${id}.pdf`}
-                ariaLabel="Изтегли резюме на посещението"
-                generatePdf={generateVisitPdf}
-              >
-                <span className="flex items-center gap-2">
-                  <FilePlus className="size-4" />
-                  PDF Резюме
-                </span>
-              </PdfDownloadButton>
-              <a
-                className="hover:bg-accent inline-flex items-center rounded-md border px-3 py-2 text-sm"
-                href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(visit.animalId)}` : ""}&visitId=${encodeURIComponent(visit._id)}`}
-              >
-                <FilePlus className="mr-1 size-4" aria-hidden /> Нова фактура
-              </a>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.back()}
-              >
-                Назад
-              </Button>
-            </div>
-          </form>
-        </SectionCard>
+          </SectionCard>
+        )}
+
+        {/* Removed editable "Основни данни" block – edits now happen in the Visit Wizard exclusively */}
       </section>
+      <div className="lg:hidden" aria-hidden>
+        <div className="bg-background/95 supports-[backdrop-filter]:bg-background/70 fixed inset-x-0 bottom-0 z-20 border-t p-3 shadow-lg shadow-black/5 backdrop-blur">
+          <div className="flex items-center gap-2">
+            <Button
+              className="flex-1"
+              size="sm"
+              onClick={() => onFinalize()}
+              disabled={visit.status !== "draft"}
+            >
+              {visit.status !== "draft" ? "Приключено" : "Приключи"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={onPrint}
+            >
+              Печат
+            </Button>
+            <PdfDownloadButton
+              variant="outline"
+              className="flex-1"
+              fileName={`visit-${id}.pdf`}
+              ariaLabel="Изтегли резюме на посещението"
+              generatePdf={generateVisitPdf}
+            >
+              PDF
+            </PdfDownloadButton>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() =>
+                void router.push(`/invoices/new?visitId=${visit._id}`)
+              }
+            >
+              Фактура
+            </Button>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

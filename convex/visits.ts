@@ -288,6 +288,8 @@ export const update = mutation({
     procedures: v.optional(v.array(v.string())),
     medications: v.optional(v.array(v.string())),
     ownerId: v.optional(v.union(v.id("owners"), v.null())),
+    invoiceCode: v.optional(v.union(v.string(), v.null())),
+    outstandingAmount: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const patch: any = { updatedAt: Date.now() };
@@ -301,6 +303,9 @@ export const update = mutation({
     if (args.procedures !== undefined) patch.procedures = args.procedures;
     if (args.medications !== undefined) patch.medications = args.medications;
     if (args.ownerId !== undefined) patch.ownerId = args.ownerId;
+    if (args.invoiceCode !== undefined) patch.invoiceCode = args.invoiceCode;
+    if (args.outstandingAmount !== undefined)
+      patch.outstandingAmount = args.outstandingAmount;
     await ctx.db.patch(args.id, patch);
     return { ok: true } as const;
   },

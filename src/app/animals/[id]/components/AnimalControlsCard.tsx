@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import Link from "next/link";
 import {
   FileDown,
@@ -30,7 +30,6 @@ interface AnimalControlsCardProps {
   primaryLabel?: string;
   exportLabel?: string;
   hint?: string;
-  sticky?: boolean;
   onCreateVisitDraft?: () => void;
   onResumeVisit?: () => void;
   onStartVisit?: () => void;
@@ -43,7 +42,6 @@ interface AnimalControlsCardProps {
   isDeleting?: boolean;
   disablePrimary?: boolean;
   disableSecondary?: boolean;
-  stickySentinelSelector?: string;
   className?: string;
 }
 
@@ -55,7 +53,6 @@ export function AnimalControlsCard({
   primaryLabel,
   exportLabel = "Експортиране PDF",
   hint,
-  sticky,
   onCreateVisitDraft,
   onResumeVisit,
   onStartVisit,
@@ -68,57 +65,8 @@ export function AnimalControlsCard({
   isDeleting = false,
   disablePrimary = false,
   disableSecondary = false,
-  stickySentinelSelector,
   className,
 }: AnimalControlsCardProps) {
-  const cardRef = useRef<HTMLDivElement | null>(null);
-  const [isStickyInternal, setIsStickyInternal] = useState(false);
-  const [announcement, setAnnouncement] = useState<string | null>(null);
-
-  const isSticky = sticky ?? isStickyInternal;
-
-  useEffect(() => {
-    if (sticky !== undefined) return;
-    const sentinel = stickySentinelSelector
-      ? document.querySelector(stickySentinelSelector)
-      : null;
-    if (!sentinel || !("IntersectionObserver" in window)) return;
-
-    let frame: number | null = null;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (!entry) return;
-
-        const update = () => {
-          setIsStickyInternal((prev) => {
-            const next = entry.intersectionRatio === 0;
-            if (prev !== next) {
-              setAnnouncement(
-                next
-                  ? "Контролите са фиксирани."
-                  : "Контролите вече не са фиксирани.",
-              );
-            }
-            return next;
-          });
-        };
-
-        if (frame) cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(update);
-      },
-      { threshold: [0, 1] },
-    );
-
-    observer.observe(sentinel);
-
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, [sticky, stickySentinelSelector]);
-
   const primaryText =
     primaryLabel ??
     (hasDraftVisit ? "Продължи посещение" : "Започни посещение");
@@ -175,21 +123,13 @@ export function AnimalControlsCard({
   return (
     <>
       <SectionCard
-        ref={cardRef}
         className={cn(
-          "hidden lg:flex",
-          isSticky
-            ? "flex flex-col gap-4 shadow-md lg:sticky lg:top-6 lg:h-fit lg:shadow-lg"
-            : "flex flex-col gap-4 shadow-md",
+          "flex hidden flex-col gap-4 shadow-md lg:flex",
           className,
         )}
         title="Контроли"
       >
         <div className="space-y-4">
-          <div aria-live="polite" className="sr-only">
-            {announcement}
-          </div>
-
           {!hasOwner ? (
             <Alert variant="destructive">
               <AlertDescription>
@@ -289,9 +229,8 @@ export function AnimalControlsCard({
         </div>
       </SectionCard>
 
-      <div className="lg:hidden" aria-live="polite">
-        {announcement && <span className="sr-only">{announcement}</span>}
-        <div className="bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-0 border-t px-4 py-3 shadow-lg backdrop-blur">
+      <div className="lg:hidden">
+        <div className="bg-background border px-4 py-3 shadow-sm">
           <div className="flex items-center gap-3">
             <Button
               className="flex-1"
