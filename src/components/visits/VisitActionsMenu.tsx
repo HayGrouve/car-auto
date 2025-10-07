@@ -22,7 +22,6 @@ export type VisitActionsMenuProps = {
   onFinalize?: () => void;
   onPrint?: () => void;
   onInvoice?: () => void;
-  isFinalized?: boolean;
   extraActions?: VisitAction[];
   className?: string;
 };

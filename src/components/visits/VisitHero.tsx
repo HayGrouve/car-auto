@@ -5,12 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarCheck, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { type VisitDoc } from "@/types/visit";
 
 type VisitHeroProps = {
-  code?: string | null;
-  status?: string;
-  datetime?: number | null;
-  attending?: string | null;
+  visit: VisitDoc;
   owner?: {
     name?: string | null;
     phone?: string | null;
@@ -30,19 +28,16 @@ type VisitHeroProps = {
 };
 
 export function VisitHero({
-  code,
-  status,
-  datetime,
-  attending,
+  visit,
   owner,
   animal,
   billing,
   actionsMenuDesktop,
   actionsMenuMobile,
 }: VisitHeroProps) {
-  const formattedDate = datetime
-    ? new Date(datetime).toLocaleString("bg-BG")
-    : null;
+  const formattedDate = visit.datetime
+    ? new Date(visit.datetime).toLocaleString("bg-BG")
+    : new Date(visit.createdAt).toLocaleString("bg-BG");
 
   return (
     <section className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -50,23 +45,19 @@ export function VisitHero({
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-3 text-2xl font-semibold">
-              {code ? `Посещение ${code}` : "Посещение"}
-              {status ? (
-                <Badge
-                  variant={status === "Приключено" ? "secondary" : "default"}
-                >
-                  {status}
-                </Badge>
-              ) : null}
+              {visit.code ? `Посещение ${visit.code}` : "Посещение"}
+              <Badge
+                variant={visit.status !== "draft" ? "secondary" : "default"}
+              >
+                {visit.status === "draft" ? "Чернова" : visit.status}
+              </Badge>
             </CardTitle>
             <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-sm">
-              {formattedDate ? (
-                <span className="inline-flex items-center gap-1">
-                  <CalendarCheck className="h-4 w-4" aria-hidden="true" />
-                  {formattedDate}
-                </span>
-              ) : null}
-              {attending ? <span>Лекар: {attending}</span> : null}
+              <span className="inline-flex items-center gap-1">
+                <CalendarCheck className="h-4 w-4" aria-hidden="true" />
+                {formattedDate}
+              </span>
+              {visit.doctor ? <span>Лекар: {visit.doctor}</span> : null}
             </div>
           </div>
           {actionsMenuDesktop ? (
@@ -83,16 +74,18 @@ export function VisitHero({
             <InfoBlock title="Пациент" fallback="Няма данни">
               <div className="space-y-1">
                 <p className="font-medium">
-                  {animal?.name ?? "Неизвестно животно"}
+                  {animal?.name ?? visit.animalName ?? "Неизвестно животно"}
                 </p>
                 <p className="text-muted-foreground text-sm">
-                  {animal?.species ?? "без вид"}
+                  {animal?.species ?? visit.animalSpecies ?? "без вид"}
                 </p>
-                {animal?.alerts?.length ? (
+                {(animal?.alerts ?? visit.alerts ?? []).length ? (
                   <ul className="text-destructive space-y-1 text-xs">
-                    {animal.alerts.map((alert, idx) => (
-                      <li key={idx}>• {alert}</li>
-                    ))}
+                    {(animal?.alerts ?? visit.alerts ?? []).map(
+                      (alert, idx) => (
+                        <li key={idx}>• {alert}</li>
+                      ),
+                    )}
                   </ul>
                 ) : null}
               </div>

@@ -29,6 +29,27 @@ export const VisitDocSchema = z.object({
   medications: z.array(z.string()).optional(),
   createdAt: z.number(),
   updatedAt: z.number().optional(),
+  documents: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        name: z.string(),
+        type: z.string().optional(),
+        url: z.string().optional(),
+        uploadedAt: z.number().optional(),
+      }),
+    )
+    .optional(),
+  history: z
+    .array(
+      z.object({
+        timestamp: z.number(),
+        actor: z.string().optional(),
+        action: z.string(),
+        notes: z.string().optional(),
+      }),
+    )
+    .optional(),
 });
 
 export type VisitDoc = z.infer<typeof VisitDocSchema>;

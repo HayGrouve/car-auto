@@ -38,6 +38,8 @@ import {
   buildDuplicateAction,
 } from "@/components/visits/VisitActionsMenu";
 import { CalendarCheck, FilePlus, Printer } from "lucide-react";
+import { VisitSecondaryPanels } from "@/components/visits/VisitSecondaryPanels";
+import { SectionCard } from "@/components/ui/section-card";
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
@@ -248,14 +250,13 @@ export default function VisitDetailPage() {
   const animalInfo = animalId
     ? (animals ?? []).find((a) => a._id === animalId)
     : null;
+  const documents = visit.documents ?? [];
+  const visitHistory = visit.history ?? [];
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6">
       <VisitHero
-        code={visit.code}
-        status={visit.status === "draft" ? "Чернова" : visit.status}
-        datetime={visit.datetime ?? visit.createdAt}
-        attending={visit.doctor ?? undefined}
+        visit={visit}
         actionsMenuDesktop={
           <VisitActionsMenuDesktop
             onFinalize={!isFinalized ? onFinalize : undefined}
@@ -263,7 +264,6 @@ export default function VisitDetailPage() {
             onInvoice={() => {
               void router.push(`/invoices/new?visitId=${visit._id}`);
             }}
-            isFinalized={isFinalized}
             extraActions={[
               buildDuplicateAction(() => {
                 void onDuplicate();
@@ -278,7 +278,6 @@ export default function VisitDetailPage() {
             onInvoice={() => {
               void router.push(`/invoices/new?visitId=${visit._id}`);
             }}
-            isFinalized={isFinalized}
             extraActions={[
               buildDuplicateAction(() => {
                 void onDuplicate();
@@ -300,6 +299,71 @@ export default function VisitDetailPage() {
           outstanding: visit.outstandingAmount ?? null,
         }}
       />
+      {documents.length || visitHistory.length ? (
+        <SectionCard
+          title="Допълнителни материали"
+          description="Документи, резюмета и история на действията"
+          responsiveCollapsible
+          className="shadow-none"
+        >
+          <VisitSecondaryPanels
+            visit={{ ...visit, documents, history: visitHistory }}
+            footerActions={
+              <>
+                <PdfDownloadButton
+                  variant="outline"
+                  fileName={`visit-${id}.pdf`}
+                  ariaLabel="Изтегли резюме на посещението"
+                  onStart={() => toast.info("Генериране на PDF...")}
+                  onComplete={() =>
+                    toast.success("PDF файлът е свален успешно")
+                  }
+                  generatePdf={async () => {
+                    const datetime =
+                      (visit as VisitDoc & { datetime?: number }).datetime ??
+                      visit.createdAt;
+                    const animalName = (() => {
+                      const animal = (animals ?? []).find(
+                        (a) => a._id === visit.animalId,
+                      );
+                      return animal?.name ?? "";
+                    })();
+                    const ownerName = (() => {
+                      const owner = (owners ?? []).find(
+                        (o) => o._id === visit.ownerId,
+                      );
+                      return owner?.name ?? "";
+                    })();
+                    return generateVisitSummaryPdf({
+                      date: datetime,
+                      animalName,
+                      ownerName,
+                      subjective: s,
+                      objective: o,
+                      assessment: a,
+                      plan: p,
+                    });
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <Printer className="size-4" aria-hidden /> PDF резюме
+                  </span>
+                </PdfDownloadButton>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() => {
+                    void router.push(`/invoices/new?visitId=${visit._id}`);
+                  }}
+                >
+                  <FilePlus className="mr-2 h-4 w-4" aria-hidden /> Нова фактура
+                </Button>
+              </>
+            }
+          />
+        </SectionCard>
+      ) : null}
       {!isFinalized && !sp.get("step") ? (
         <div className="bg-muted/20 flex items-center justify-between rounded-md border p-3">
           <div className="text-muted-foreground text-sm">
