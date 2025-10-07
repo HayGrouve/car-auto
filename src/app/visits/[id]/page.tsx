@@ -252,539 +252,680 @@ export default function VisitDetailPage() {
     : null;
   const documents = visit.documents ?? [];
   const visitHistory = visit.history ?? [];
+  const showSecondary = documents.length > 0 || visitHistory.length > 0;
+  const visitTimestamp =
+    (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
+  const quickFacts = [
+    {
+      label: "Статус",
+      value:
+        visit.status === "draft"
+          ? "Чернова"
+          : visit.status === "finalized"
+            ? "Приключено"
+            : visit.status,
+    },
+    {
+      label: "Дата",
+      value: fmtDateTimeBG(visitTimestamp),
+    },
+    {
+      label: "Лекар",
+      value: visit.doctor ?? "",
+    },
+    {
+      label: "Телефон",
+      value: ownerInfo?.phone ?? "",
+    },
+    {
+      label: "Пациент",
+      value: animalInfo?.name ?? visit.animalName ?? "",
+    },
+  ].filter((fact) => fact.value && fact.value.trim().length > 0);
+
+  const generateVisitPdf = async () => {
+    const animalName = (() => {
+      const animal = (animals ?? []).find((a) => a._id === visit.animalId);
+      return animal?.name ?? "";
+    })();
+    const ownerName = (() => {
+      const owner = (owners ?? []).find((o) => o._id === visit.ownerId);
+      return owner?.name ?? "";
+    })();
+    return generateVisitSummaryPdf({
+      date: visitTimestamp,
+      animalName,
+      ownerName,
+      subjective: s,
+      objective: o,
+      assessment: a,
+      plan: p,
+    });
+  };
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 p-6">
-      <VisitHero
-        visit={visit}
-        actionsMenuDesktop={
-          <VisitActionsMenuDesktop
-            onFinalize={!isFinalized ? onFinalize : undefined}
-            onPrint={() => onPrint()}
-            onInvoice={() => {
-              void router.push(`/invoices/new?visitId=${visit._id}`);
-            }}
-            extraActions={[
-              buildDuplicateAction(() => {
-                void onDuplicate();
-              }),
-            ]}
-          />
-        }
-        actionsMenuMobile={
-          <VisitActionsMenuMobile
-            onFinalize={!isFinalized ? onFinalize : undefined}
-            onPrint={() => onPrint()}
-            onInvoice={() => {
-              void router.push(`/invoices/new?visitId=${visit._id}`);
-            }}
-            extraActions={[
-              buildDuplicateAction(() => {
-                void onDuplicate();
-              }),
-            ]}
-          />
-        }
-        owner={{
-          name: ownerInfo?.name,
-          phone: ownerInfo?.phone,
-        }}
-        animal={{
-          name: animalInfo?.name ?? visit.animalName ?? undefined,
-          species: animalInfo?.species ?? visit.animalSpecies ?? undefined,
-          alerts: visit.alerts ?? [],
-        }}
-        billing={{
-          invoiceCode: visit.invoiceCode ?? null,
-          outstanding: visit.outstandingAmount ?? null,
-        }}
-      />
-      {documents.length || visitHistory.length ? (
-        <SectionCard
-          title="Допълнителни материали"
-          description="Документи, резюмета и история на действията"
-          responsiveCollapsible
-          className="shadow-none"
-        >
-          <VisitSecondaryPanels
-            visit={{ ...visit, documents, history: visitHistory }}
-            footerActions={
-              <>
-                <PdfDownloadButton
-                  variant="outline"
-                  fileName={`visit-${id}.pdf`}
-                  ariaLabel="Изтегли резюме на посещението"
-                  onStart={() => toast.info("Генериране на PDF...")}
-                  onComplete={() =>
-                    toast.success("PDF файлът е свален успешно")
-                  }
-                  generatePdf={async () => {
-                    const datetime =
-                      (visit as VisitDoc & { datetime?: number }).datetime ??
-                      visit.createdAt;
-                    const animalName = (() => {
-                      const animal = (animals ?? []).find(
-                        (a) => a._id === visit.animalId,
-                      );
-                      return animal?.name ?? "";
-                    })();
-                    const ownerName = (() => {
-                      const owner = (owners ?? []).find(
-                        (o) => o._id === visit.ownerId,
-                      );
-                      return owner?.name ?? "";
-                    })();
-                    return generateVisitSummaryPdf({
-                      date: datetime,
-                      animalName,
-                      ownerName,
-                      subjective: s,
-                      objective: o,
-                      assessment: a,
-                      plan: p,
-                    });
-                  }}
-                >
-                  <span className="flex items-center gap-2">
-                    <Printer className="size-4" aria-hidden /> PDF резюме
-                  </span>
-                </PdfDownloadButton>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="justify-start"
-                  onClick={() => {
-                    void router.push(`/invoices/new?visitId=${visit._id}`);
-                  }}
-                >
-                  <FilePlus className="mr-2 h-4 w-4" aria-hidden /> Нова фактура
-                </Button>
-              </>
-            }
-          />
-        </SectionCard>
-      ) : null}
-      {!isFinalized && !sp.get("step") ? (
-        <div className="bg-muted/20 flex items-center justify-between rounded-md border p-3">
-          <div className="text-muted-foreground text-sm">
-            Посещението е чернова. Можете да продължите с ръководен режим.
-          </div>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const next = new URLSearchParams(sp.toString());
-              next.set("step", "1");
-              void router.replace(`${pathname}?${next.toString()}`);
-            }}
-          >
-            Продължи ръководството
-          </Button>
-        </div>
-      ) : null}
-      {!isFinalized ? (
-        <div className="flex items-center justify-between">
-          <div className="text-muted-foreground text-sm">Ръководен режим</div>
-          <Button
-            variant="secondary"
-            onClick={() => setShowWizard((v) => !v)}
-            aria-label="Стартирай ръководство"
-          >
-            {showWizard ? "Скрий ръководство" : "Стартирай ръководство"}
-          </Button>
-        </div>
-      ) : null}
-      {showWizard && !isFinalized ? (
-        <VisitWizard id={id} onClose={() => setShowWizard(false)} />
-      ) : null}
-      <form onSubmit={onSave} className="grid gap-2 md:grid-cols-4">
-        <div className="md:col-span-2">
-          <Label>Собственик</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-between"
-                disabled={isFinalized}
-              >
-                {ownerId
-                  ? (owners ?? []).find((o) => o._id === ownerId)?.name
-                  : "Изберете собственик"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-              <Command>
-                <CommandInput
-                  placeholder="Търси собственик..."
-                  value={ownerSearch}
-                  onValueChange={setOwnerSearch}
-                />
-                <CommandList>
-                  <CommandEmpty>Няма резултати</CommandEmpty>
-                  {(owners ?? []).map((o) => (
-                    <CommandItem
-                      key={o._id}
-                      value={o._id}
-                      onSelect={(value) => {
-                        setOwnerId(value);
-                        setAnimalId(null);
+    <main className="mx-auto max-w-5xl space-y-6 p-6 pb-28 lg:pb-10">
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <VisitHero
+          visit={visit}
+          actionsMenuDesktop={
+            <VisitActionsMenuDesktop
+              onFinalize={!isFinalized ? onFinalize : undefined}
+              onPrint={() => onPrint()}
+              onInvoice={() => {
+                void router.push(`/invoices/new?visitId=${visit._id}`);
+              }}
+              extraActions={[
+                buildDuplicateAction(() => {
+                  void onDuplicate();
+                }),
+              ]}
+            />
+          }
+          actionsMenuMobile={
+            <VisitActionsMenuMobile
+              onFinalize={!isFinalized ? onFinalize : undefined}
+              onPrint={() => onPrint()}
+              onInvoice={() => {
+                void router.push(`/invoices/new?visitId=${visit._id}`);
+              }}
+              extraActions={[
+                buildDuplicateAction(() => {
+                  void onDuplicate();
+                }),
+              ]}
+            />
+          }
+          owner={{
+            name: ownerInfo?.name,
+            phone: ownerInfo?.phone,
+          }}
+          animal={{
+            name: animalInfo?.name ?? visit.animalName ?? undefined,
+            species: animalInfo?.species ?? visit.animalSpecies ?? undefined,
+            alerts: visit.alerts ?? [],
+          }}
+          billing={{
+            invoiceCode: visit.invoiceCode ?? null,
+            outstanding: visit.outstandingAmount ?? null,
+          }}
+        />
+        <aside className="hidden flex-col gap-4 lg:flex">
+          {quickFacts.length ? (
+            <SectionCard
+              title="Накратко"
+              tone="muted"
+              className="shadow-none"
+              responsiveCollapsible
+            >
+              <dl className="grid gap-3 text-sm">
+                {quickFacts.map((fact) => (
+                  <div key={fact.label} className="flex justify-between gap-4">
+                    <dt className="text-muted-foreground font-medium">
+                      {fact.label}
+                    </dt>
+                    <dd className="text-right font-semibold">{fact.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </SectionCard>
+          ) : null}
+          {showSecondary ? (
+            <SectionCard
+              title="Материали"
+              description="Документи и история"
+              responsiveCollapsible
+              className="shadow-none"
+            >
+              <VisitSecondaryPanels
+                visit={{ ...visit, documents, history: visitHistory }}
+                footerActions={
+                  <div className="grid gap-2">
+                    <PdfDownloadButton
+                      variant="outline"
+                      fileName={`visit-${id}.pdf`}
+                      ariaLabel="Изтегли резюме на посещението"
+                      onStart={() => toast.info("Генериране на PDF...")}
+                      onComplete={() =>
+                        toast.success("PDF файлът е свален успешно")
+                      }
+                      generatePdf={generateVisitPdf}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Printer className="size-4" aria-hidden /> PDF резюме
+                      </span>
+                    </PdfDownloadButton>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="justify-start"
+                      onClick={() => {
+                        void router.push(`/invoices/new?visitId=${visit._id}`);
                       }}
                     >
-                      {o.name}
-                      {o.phone ? ` · ${o.phone}` : ""}
-                    </CommandItem>
-                  ))}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div className="md:col-span-2">
-          <Label>Животно</Label>
-          <Popover>
-            <PopoverTrigger asChild>
+                      <FilePlus className="mr-2 h-4 w-4" aria-hidden /> Нова
+                      фактура
+                    </Button>
+                  </div>
+                }
+              />
+            </SectionCard>
+          ) : null}
+        </aside>
+      </section>
+      {quickFacts.length ? (
+        <section className="bg-muted/40 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 lg:hidden">
+          <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs font-medium">
+            {quickFacts.slice(0, 3).map((fact) => (
+              <span key={fact.label} className="inline-flex items-center gap-1">
+                <span className="text-foreground font-semibold">
+                  {fact.value}
+                </span>
+                <span className="tracking-wide uppercase">{fact.label}</span>
+              </span>
+            ))}
+          </div>
+          {ownerInfo?.phone ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-xs"
+              onClick={() => {
+                window.location.href = `tel:${ownerInfo.phone}`;
+              }}
+            >
+              Обади се
+            </Button>
+          ) : null}
+        </section>
+      ) : null}
+      {showSecondary ? (
+        <section className="lg:hidden">
+          <SectionCard
+            title="Материали"
+            description="Документи и история"
+            responsiveCollapsible
+            className="shadow-none"
+          >
+            <VisitSecondaryPanels
+              visit={{ ...visit, documents, history: visitHistory }}
+              footerActions={
+                <div className="grid gap-2">
+                  <PdfDownloadButton
+                    variant="outline"
+                    fileName={`visit-${id}.pdf`}
+                    ariaLabel="Изтегли резюме на посещението"
+                    onStart={() => toast.info("Генериране на PDF...")}
+                    onComplete={() =>
+                      toast.success("PDF файлът е свален успешно")
+                    }
+                    generatePdf={generateVisitPdf}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Printer className="size-4" aria-hidden /> PDF резюме
+                    </span>
+                  </PdfDownloadButton>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="justify-start"
+                    onClick={() => {
+                      void router.push(`/invoices/new?visitId=${visit._id}`);
+                    }}
+                  >
+                    <FilePlus className="mr-2 h-4 w-4" aria-hidden /> Нова
+                    фактура
+                  </Button>
+                </div>
+              }
+            />
+          </SectionCard>
+        </section>
+      ) : null}
+      <section className="space-y-6">
+        {!isFinalized && !sp.get("step") ? (
+          <SectionCard
+            tone="accent"
+            className="border-dashed shadow-none"
+            title="Посещението е чернова"
+            description="Можете да направлявате процеса стъпка по стъпка чрез ръководството."
+            actions={
               <Button
-                variant="outline"
-                className="w-full justify-between"
-                disabled={isFinalized}
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const next = new URLSearchParams(sp.toString());
+                  next.set("step", "1");
+                  void router.replace(`${pathname}?${next.toString()}`);
+                }}
               >
-                {animalId
-                  ? (animals ?? []).find((a) => a._id === animalId)?.name
-                  : "Без животно"}
+                Продължи ръководството
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-              <Command>
-                <CommandInput
-                  placeholder="Търси животно..."
-                  value={animalSearch}
-                  onValueChange={setAnimalSearch}
-                />
-                <CommandList>
-                  <CommandEmpty>Няма резултати</CommandEmpty>
-                  {(animals ?? [])
-                    .filter(
-                      (an) =>
-                        !ownerId || String(an.ownerId) === String(ownerId),
-                    )
-                    .map((an) => (
-                      <CommandItem
-                        key={an._id}
-                        value={an._id}
-                        onSelect={(value) => {
-                          if (isFinalized) return;
-                          setAnimalId(value);
-                          const chosen = (animals ?? []).find(
-                            (x) => x._id === value,
-                          );
-                          if (chosen?.ownerId)
-                            setOwnerId(String(chosen.ownerId));
-                        }}
-                      >
-                        {an.name} ({an.species})
-                      </CommandItem>
-                    ))}
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div className="grid gap-2 md:col-span-4 md:grid-cols-4">
-          <div>
-            <Label>Статус</Label>
-            <div className="bg-muted/30 flex h-10 items-center rounded-md border px-3 text-sm">
-              {visit.status === "draft"
-                ? "Чернова"
-                : visit.status === "finalized"
-                  ? "Приключено"
-                  : visit.status}
+            }
+          />
+        ) : null}
+
+        <SectionCard
+          title="Ръководен режим"
+          description="Структурирани стъпки за обработка на посещението."
+          headerActions={
+            !isFinalized
+              ? [
+                  {
+                    label: showWizard
+                      ? "Скрий ръководство"
+                      : "Стартирай ръководство",
+                    onClick: () => setShowWizard((current) => !current),
+                    variant: "outline",
+                  },
+                ]
+              : undefined
+          }
+        >
+          {isFinalized ? (
+            <p className="text-muted-foreground text-sm">
+              Посещението е приключено и ръководният режим е недостъпен.
+            </p>
+          ) : showWizard ? (
+            <VisitWizard id={id} onClose={() => setShowWizard(false)} />
+          ) : (
+            <div className="text-muted-foreground flex flex-col gap-2 text-sm">
+              <p>
+                Използвайте ръководния режим, за да преминете през всички стъпки
+                на посещението в правилния ред.
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="self-start"
+                onClick={() => setShowWizard(true)}
+              >
+                Стартирай ръководство
+              </Button>
             </div>
-          </div>
-          <div>
-            <Label htmlFor="datetime">Дата/час</Label>
-            <Input
-              id="datetime"
-              type="datetime-local"
-              value={dt}
-              onChange={(e) => setDt(e.target.value)}
-              disabled={isFinalized}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <Label>Създадено</Label>
-            <div className="bg-muted/30 flex h-10 items-center rounded-md border px-3 text-sm">
-              {fmtDateTimeBG(visit.createdAt)}
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Основни данни"
+          description="Редактирайте SOAP полета, процедури и животно към посещението."
+        >
+          <form onSubmit={onSave} className="grid gap-2 md:grid-cols-4">
+            <div className="md:col-span-2">
+              <Label>Собственик</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    disabled={isFinalized}
+                  >
+                    {ownerId
+                      ? (owners ?? []).find((o) => o._id === ownerId)?.name
+                      : "Изберете собственик"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput
+                      placeholder="Търси собственик..."
+                      value={ownerSearch}
+                      onValueChange={setOwnerSearch}
+                    />
+                    <CommandList>
+                      <CommandEmpty>Няма резултати</CommandEmpty>
+                      {(owners ?? []).map((o) => (
+                        <CommandItem
+                          key={o._id}
+                          value={o._id}
+                          onSelect={(value) => {
+                            setOwnerId(value);
+                            setAnimalId(null);
+                          }}
+                        >
+                          {o.name}
+                          {o.phone ? ` · ${o.phone}` : ""}
+                        </CommandItem>
+                      ))}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
-          </div>
-          <div>
-            <Label htmlFor="s">S - Субективно</Label>
-            <Textarea
-              id="s"
-              value={s}
-              onChange={(e) => setS(e.target.value)}
-              disabled={isFinalized}
-            />
-          </div>
-          <div>
-            <Label htmlFor="o">O - Обективно</Label>
-            <Textarea
-              id="o"
-              value={o}
-              onChange={(e) => setO(e.target.value)}
-              disabled={isFinalized}
-            />
-          </div>
-          <div>
-            <Label htmlFor="a">A - Оценка</Label>
-            <Textarea
-              id="a"
-              value={a}
-              onChange={(e) => setA(e.target.value)}
-              disabled={isFinalized}
-            />
-          </div>
-          <div>
-            <Label htmlFor="p">P - План</Label>
-            <Textarea
-              id="p"
-              value={p}
-              onChange={(e) => setP(e.target.value)}
-              disabled={isFinalized}
-            />
-          </div>
-        </div>
-        <div className="grid gap-4 md:col-span-4 md:grid-cols-2">
-          <div>
-            <Label>Процедури</Label>
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
+            <div className="md:col-span-2">
+              <Label>Животно</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    disabled={isFinalized}
+                  >
+                    {animalId
+                      ? (animals ?? []).find((a) => a._id === animalId)?.name
+                      : "Без животно"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput
+                      placeholder="Търси животно..."
+                      value={animalSearch}
+                      onValueChange={setAnimalSearch}
+                    />
+                    <CommandList>
+                      <CommandEmpty>Няма резултати</CommandEmpty>
+                      {(animals ?? [])
+                        .filter(
+                          (an) =>
+                            !ownerId || String(an.ownerId) === String(ownerId),
+                        )
+                        .map((an) => (
+                          <CommandItem
+                            key={an._id}
+                            value={an._id}
+                            onSelect={(value) => {
+                              if (isFinalized) return;
+                              setAnimalId(value);
+                              const chosen = (animals ?? []).find(
+                                (x) => x._id === value,
+                              );
+                              if (chosen?.ownerId)
+                                setOwnerId(String(chosen.ownerId));
+                            }}
+                          >
+                            {an.name} ({an.species})
+                          </CommandItem>
+                        ))}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="grid gap-2 md:col-span-4 md:grid-cols-4">
+              <div>
+                <Label>Статус</Label>
+                <div className="bg-muted/30 flex h-10 items-center rounded-md border px-3 text-sm">
+                  {visit.status === "draft"
+                    ? "Чернова"
+                    : visit.status === "finalized"
+                      ? "Приключено"
+                      : visit.status}
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="datetime">Дата/час</Label>
                 <Input
-                  value={procInput}
-                  onChange={(e) => setProcInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (isFinalized) return;
-                    if (e.key === "Enter") {
-                      e.preventDefault();
+                  id="datetime"
+                  type="datetime-local"
+                  value={dt}
+                  onChange={(e) => setDt(e.target.value)}
+                  disabled={isFinalized}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <Label>Създадено</Label>
+                <div className="bg-muted/30 flex h-10 items-center rounded-md border px-3 text-sm">
+                  {fmtDateTimeBG(visit.createdAt)}
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="s">S - Субективно</Label>
+                <Textarea
+                  id="s"
+                  value={s}
+                  onChange={(e) => setS(e.target.value)}
+                  disabled={isFinalized}
+                />
+              </div>
+              <div>
+                <Label htmlFor="o">O - Обективно</Label>
+                <Textarea
+                  id="o"
+                  value={o}
+                  onChange={(e) => setO(e.target.value)}
+                  disabled={isFinalized}
+                />
+              </div>
+              <div>
+                <Label htmlFor="a">A - Оценка</Label>
+                <Textarea
+                  id="a"
+                  value={a}
+                  onChange={(e) => setA(e.target.value)}
+                  disabled={isFinalized}
+                />
+              </div>
+              <div>
+                <Label htmlFor="p">P - План</Label>
+                <Textarea
+                  id="p"
+                  value={p}
+                  onChange={(e) => setP(e.target.value)}
+                  disabled={isFinalized}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 md:col-span-4 md:grid-cols-2">
+              <div>
+                <Label>Процедури</Label>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Input
+                      value={procInput}
+                      onChange={(e) => setProcInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (isFinalized) return;
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const v = procInput.trim();
+                          if (!v) return;
+                          setProcedures((arr) =>
+                            arr.includes(v) ? arr : [...arr, v],
+                          );
+                          setProcInput("");
+                        }
+                      }}
+                      placeholder="напр. Ваксинация"
+                      disabled={isFinalized}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      if (isFinalized) return;
                       const v = procInput.trim();
                       if (!v) return;
                       setProcedures((arr) =>
                         arr.includes(v) ? arr : [...arr, v],
                       );
                       setProcInput("");
-                    }
-                  }}
-                  placeholder="напр. Ваксинация"
-                  disabled={isFinalized}
-                />
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  if (isFinalized) return;
-                  const v = procInput.trim();
-                  if (!v) return;
-                  setProcedures((arr) => (arr.includes(v) ? arr : [...arr, v]));
-                  setProcInput("");
-                }}
-                disabled={isFinalized}
-              >
-                Добави
-              </Button>
-            </div>
-            {(procedureSuggestions ?? []).length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                {(procedureSuggestions ?? []).map((name, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
-                    onClick={() => {
-                      if (isFinalized) return;
-                      setProcedures((arr) =>
-                        arr.includes(name) ? arr : [...arr, name],
-                      );
                     }}
                     disabled={isFinalized}
                   >
-                    {name}
-                  </button>
-                ))}
+                    Добави
+                  </Button>
+                </div>
+                {(procedureSuggestions ?? []).length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    {(procedureSuggestions ?? []).map((name, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+                        onClick={() => {
+                          if (isFinalized) return;
+                          setProcedures((arr) =>
+                            arr.includes(name) ? arr : [...arr, name],
+                          );
+                        }}
+                        disabled={isFinalized}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <ul className="mt-2 space-y-1 text-sm">
+                  {procedures.map((pr, i) => (
+                    <li key={i} className="flex justify-between">
+                      <span>{pr}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          setProcedures((arr) =>
+                            arr.filter((_, idx) => idx !== i),
+                          )
+                        }
+                        disabled={isFinalized}
+                      >
+                        Премахни
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            ) : null}
-            <ul className="mt-2 space-y-1 text-sm">
-              {procedures.map((pr, i) => (
-                <li key={i} className="flex justify-between">
-                  <span>{pr}</span>
+              <div>
+                <Label>Медикаменти</Label>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Input
+                      value={medInput}
+                      onChange={(e) => setMedInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (isFinalized) return;
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const v = medInput.trim();
+                          if (!v) return;
+                          setMedications((arr) =>
+                            arr.includes(v) ? arr : [...arr, v],
+                          );
+                          setMedInput("");
+                        }
+                      }}
+                      placeholder="напр. Амоксицилин"
+                      disabled={isFinalized}
+                    />
+                  </div>
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={() =>
-                      setProcedures((arr) => arr.filter((_, idx) => idx !== i))
-                    }
-                    disabled={isFinalized}
-                  >
-                    Премахни
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <Label>Медикаменти</Label>
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <Input
-                  value={medInput}
-                  onChange={(e) => setMedInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (isFinalized) return;
-                    if (e.key === "Enter") {
-                      e.preventDefault();
+                    variant="secondary"
+                    onClick={() => {
+                      if (isFinalized) return;
                       const v = medInput.trim();
                       if (!v) return;
                       setMedications((arr) =>
                         arr.includes(v) ? arr : [...arr, v],
                       );
                       setMedInput("");
-                    }
-                  }}
-                  placeholder="напр. Амоксицилин"
-                  disabled={isFinalized}
-                />
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => {
-                  if (isFinalized) return;
-                  const v = medInput.trim();
-                  if (!v) return;
-                  setMedications((arr) =>
-                    arr.includes(v) ? arr : [...arr, v],
-                  );
-                  setMedInput("");
-                }}
-                disabled={isFinalized}
-              >
-                Добави
-              </Button>
-            </div>
-            {(medicationSuggestions ?? []).length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                {(medicationSuggestions ?? []).map((name, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
-                    onClick={() => {
-                      if (isFinalized) return;
-                      setMedications((arr) =>
-                        arr.includes(name) ? arr : [...arr, name],
-                      );
                     }}
                     disabled={isFinalized}
                   >
-                    {name}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            <ul className="mt-2 space-y-1 text-sm">
-              {medications.map((md, i) => (
-                <li key={i} className="flex justify-between">
-                  <span>{md}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() =>
-                      setMedications((arr) => arr.filter((_, idx) => idx !== i))
-                    }
-                    disabled={isFinalized}
-                  >
-                    Премахни
+                    Добави
                   </Button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        <div className="flex gap-2 md:col-span-4">
-          <Button type="submit" disabled={isFinalized}>
-            Запази
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onFinalize}
-            disabled={visit.status !== "draft"}
-            aria-label="Приключи посещението"
-          >
-            <CalendarCheck className="mr-1 size-4" aria-hidden /> Приключи
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onDuplicate}
-            aria-label="Дублирай посещението"
-          >
-            <FilePlus className="mr-1 size-4" aria-hidden /> Дублирай
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onPrint}
-            aria-label="Печат на посещението"
-          >
-            <Printer className="mr-1 size-4" aria-hidden /> Печат
-          </Button>
-          <PdfDownloadButton
-            variant="outline"
-            fileName={`visit-${id}.pdf`}
-            ariaLabel="Изтегли резюме на посещението"
-            generatePdf={async () => {
-              if (!visit) throw new Error("Visit not loaded");
-              const datetime =
-                (visit as VisitDoc & { datetime?: number }).datetime ??
-                visit.createdAt;
-              const animalName = (() => {
-                const animal = (animals ?? []).find(
-                  (a) => a._id === visit.animalId,
-                );
-                return animal?.name ?? "";
-              })();
-              const ownerName = (() => {
-                const owner = (owners ?? []).find(
-                  (o) => o._id === visit.ownerId,
-                );
-                return owner?.name ?? "";
-              })();
-              return generateVisitSummaryPdf({
-                date: datetime,
-                animalName,
-                ownerName,
-                subjective: s,
-                objective: o,
-                assessment: a,
-                plan: p,
-              });
-            }}
-          >
-            <span className="flex items-center gap-2">
-              <FilePlus className="size-4" />
-              PDF Резюме
-            </span>
-          </PdfDownloadButton>
-          <a
-            className="hover:bg-accent inline-flex items-center rounded-md border px-3 py-2 text-sm"
-            href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(visit.animalId)}` : ""}&visitId=${encodeURIComponent(visit._id)}`}
-          >
-            <FilePlus className="mr-1 size-4" aria-hidden /> Нова фактура
-          </a>
-          <Button type="button" variant="outline" onClick={() => router.back()}>
-            Назад
-          </Button>
-        </div>
-      </form>
+                </div>
+                {(medicationSuggestions ?? []).length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    {(medicationSuggestions ?? []).map((name, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+                        onClick={() => {
+                          if (isFinalized) return;
+                          setMedications((arr) =>
+                            arr.includes(name) ? arr : [...arr, name],
+                          );
+                        }}
+                        disabled={isFinalized}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                <ul className="mt-2 space-y-1 text-sm">
+                  {medications.map((md, i) => (
+                    <li key={i} className="flex justify-between">
+                      <span>{md}</span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          setMedications((arr) =>
+                            arr.filter((_, idx) => idx !== i),
+                          )
+                        }
+                        disabled={isFinalized}
+                      >
+                        Премахни
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="flex gap-2 md:col-span-4">
+              <Button type="submit" disabled={isFinalized}>
+                Запази
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onFinalize}
+                disabled={visit.status !== "draft"}
+                aria-label="Приключи посещението"
+              >
+                <CalendarCheck className="mr-1 size-4" aria-hidden /> Приключи
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onDuplicate}
+                aria-label="Дублирай посещението"
+              >
+                <FilePlus className="mr-1 size-4" aria-hidden /> Дублирай
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onPrint}
+                aria-label="Печат на посещението"
+              >
+                <Printer className="mr-1 size-4" aria-hidden /> Печат
+              </Button>
+              <PdfDownloadButton
+                variant="outline"
+                fileName={`visit-${id}.pdf`}
+                ariaLabel="Изтегли резюме на посещението"
+                generatePdf={generateVisitPdf}
+              >
+                <span className="flex items-center gap-2">
+                  <FilePlus className="size-4" />
+                  PDF Резюме
+                </span>
+              </PdfDownloadButton>
+              <a
+                className="hover:bg-accent inline-flex items-center rounded-md border px-3 py-2 text-sm"
+                href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(visit.animalId)}` : ""}&visitId=${encodeURIComponent(visit._id)}`}
+              >
+                <FilePlus className="mr-1 size-4" aria-hidden /> Нова фактура
+              </a>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+              >
+                Назад
+              </Button>
+            </div>
+          </form>
+        </SectionCard>
+      </section>
     </main>
   );
 }

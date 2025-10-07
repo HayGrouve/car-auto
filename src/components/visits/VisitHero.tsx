@@ -40,7 +40,7 @@ export function VisitHero({
     : new Date(visit.createdAt).toLocaleString("bg-BG");
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+    <section className="grid gap-4">
       <Card className="shadow-sm">
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="space-y-1">
