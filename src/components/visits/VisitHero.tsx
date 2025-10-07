@@ -3,20 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  CalendarCheck,
-  FileText,
-  MoreHorizontal,
-  Phone,
-  Printer,
-} from "lucide-react";
+import { CalendarCheck, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type VisitHeroProps = {
@@ -24,10 +11,6 @@ type VisitHeroProps = {
   status?: string;
   datetime?: number | null;
   attending?: string | null;
-  onFinalize?: () => void;
-  onPrint?: () => void;
-  onInvoice?: () => void;
-  isFinalized?: boolean;
   owner?: {
     name?: string | null;
     phone?: string | null;
@@ -42,12 +25,8 @@ type VisitHeroProps = {
     invoiceCode?: string | null;
     outstanding?: string | null;
   } | null;
-  extraActions?: Array<{
-    label: string;
-    onSelect: () => void;
-    icon?: React.ReactNode;
-    disabled?: boolean;
-  }>;
+  actionsMenuDesktop?: React.ReactNode;
+  actionsMenuMobile?: React.ReactNode;
 };
 
 export function VisitHero({
@@ -55,14 +34,11 @@ export function VisitHero({
   status,
   datetime,
   attending,
-  onFinalize,
-  onPrint,
-  onInvoice,
-  isFinalized,
   owner,
   animal,
   billing,
-  extraActions = [],
+  actionsMenuDesktop,
+  actionsMenuMobile,
 }: VisitHeroProps) {
   const formattedDate = datetime
     ? new Date(datetime).toLocaleString("bg-BG")
@@ -76,7 +52,9 @@ export function VisitHero({
             <CardTitle className="flex items-center gap-3 text-2xl font-semibold">
               {code ? `Посещение ${code}` : "Посещение"}
               {status ? (
-                <Badge variant={isFinalized ? "secondary" : "default"}>
+                <Badge
+                  variant={status === "Приключено" ? "secondary" : "default"}
+                >
                   {status}
                 </Badge>
               ) : null}
@@ -91,51 +69,14 @@ export function VisitHero({
               {attending ? <span>Лекар: {attending}</span> : null}
             </div>
           </div>
-          <div className="hidden shrink-0 items-center gap-2 lg:flex">
-            {onFinalize ? (
-              <Button size="sm" onClick={onFinalize} disabled={isFinalized}>
-                {isFinalized ? "Приключено" : "Приключи"}
-              </Button>
-            ) : null}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">Още действия</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {onPrint ? (
-                  <DropdownMenuItem
-                    onSelect={onPrint}
-                    className="cursor-pointer gap-2"
-                  >
-                    <Printer className="h-4 w-4" aria-hidden="true" /> Печат
-                  </DropdownMenuItem>
-                ) : null}
-                {onInvoice ? (
-                  <DropdownMenuItem
-                    onSelect={onInvoice}
-                    className="cursor-pointer gap-2"
-                  >
-                    <FileText className="h-4 w-4" aria-hidden="true" /> Създай
-                    фактура
-                  </DropdownMenuItem>
-                ) : null}
-                {extraActions.map((action, index) => (
-                  <DropdownMenuItem
-                    key={index}
-                    onSelect={action.onSelect}
-                    disabled={action.disabled}
-                    className="cursor-pointer gap-2"
-                  >
-                    {action.icon}
-                    {action.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          {actionsMenuDesktop ? (
+            <div
+              className="hidden shrink-0 items-center gap-2 lg:flex"
+              data-testid="visit-hero-actions-desktop"
+            >
+              {actionsMenuDesktop}
+            </div>
+          ) : null}
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 md:grid-cols-3">
@@ -190,57 +131,14 @@ export function VisitHero({
             </InfoBlock>
           </div>
         </CardContent>
-        <div className="border-t p-4 lg:hidden">
-          <div className="flex flex-wrap items-center gap-2">
-            {onFinalize ? (
-              <Button
-                size="sm"
-                className="flex-1"
-                onClick={onFinalize}
-                disabled={isFinalized}
-              >
-                {isFinalized ? "Приключено" : "Приключи"}
-              </Button>
-            ) : null}
-            <Button
-              size="sm"
-              variant="outline"
-              className="grow"
-              onClick={onPrint}
-            >
-              Печат
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" className="grow">
-                  Още
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {onInvoice ? (
-                  <DropdownMenuItem
-                    onSelect={onInvoice}
-                    className="cursor-pointer gap-2"
-                  >
-                    <FileText className="h-4 w-4" aria-hidden="true" /> Създай
-                    фактура
-                  </DropdownMenuItem>
-                ) : null}
-                {extraActions.map((action, index) => (
-                  <DropdownMenuItem
-                    key={index}
-                    onSelect={action.onSelect}
-                    disabled={action.disabled}
-                    className="cursor-pointer gap-2"
-                  >
-                    {action.icon}
-                    {action.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+        {actionsMenuMobile ? (
+          <div
+            className="border-t p-4 lg:hidden"
+            data-testid="visit-hero-actions-mobile"
+          >
+            {actionsMenuMobile}
           </div>
-        </div>
+        ) : null}
       </Card>
     </section>
   );

@@ -32,7 +32,12 @@ import {
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
 import { VisitHero } from "@/components/visits/VisitHero";
-import { CalendarCheck, Printer, FilePlus } from "lucide-react";
+import {
+  VisitActionsMenuDesktop,
+  VisitActionsMenuMobile,
+  buildDuplicateAction,
+} from "@/components/visits/VisitActionsMenu";
+import { CalendarCheck, FilePlus, Printer } from "lucide-react";
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
@@ -251,12 +256,36 @@ export default function VisitDetailPage() {
         status={visit.status === "draft" ? "Чернова" : visit.status}
         datetime={visit.datetime ?? visit.createdAt}
         attending={visit.doctor ?? undefined}
-        onFinalize={!isFinalized ? onFinalize : undefined}
-        onPrint={() => onPrint()}
-        onInvoice={() => {
-          void router.push(`/invoices/new?visitId=${visit._id}`);
-        }}
-        isFinalized={isFinalized}
+        actionsMenuDesktop={
+          <VisitActionsMenuDesktop
+            onFinalize={!isFinalized ? onFinalize : undefined}
+            onPrint={() => onPrint()}
+            onInvoice={() => {
+              void router.push(`/invoices/new?visitId=${visit._id}`);
+            }}
+            isFinalized={isFinalized}
+            extraActions={[
+              buildDuplicateAction(() => {
+                void onDuplicate();
+              }),
+            ]}
+          />
+        }
+        actionsMenuMobile={
+          <VisitActionsMenuMobile
+            onFinalize={!isFinalized ? onFinalize : undefined}
+            onPrint={() => onPrint()}
+            onInvoice={() => {
+              void router.push(`/invoices/new?visitId=${visit._id}`);
+            }}
+            isFinalized={isFinalized}
+            extraActions={[
+              buildDuplicateAction(() => {
+                void onDuplicate();
+              }),
+            ]}
+          />
+        }
         owner={{
           name: ownerInfo?.name,
           phone: ownerInfo?.phone,
@@ -270,15 +299,6 @@ export default function VisitDetailPage() {
           invoiceCode: visit.invoiceCode ?? null,
           outstanding: visit.outstandingAmount ?? null,
         }}
-        extraActions={[
-          {
-            label: "Дубл. посещение",
-            onSelect: () => {
-              void onDuplicate();
-            },
-            icon: <FilePlus className="h-4 w-4" aria-hidden="true" />,
-          },
-        ]}
       />
       {!isFinalized && !sp.get("step") ? (
         <div className="bg-muted/20 flex items-center justify-between rounded-md border p-3">
