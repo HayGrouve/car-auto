@@ -57,7 +57,6 @@ export function VisitHero({
                 <CalendarCheck className="h-4 w-4" aria-hidden="true" />
                 {formattedDate}
               </span>
-              {visit.doctor ? <span>Лекар: {visit.doctor}</span> : null}
             </div>
           </div>
           {actionsMenuDesktop ? (

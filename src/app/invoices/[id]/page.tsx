@@ -17,11 +17,25 @@ import {
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
-  const id = params.id as Id<"invoices">;
-  const inv = useQuery(
+  const raw = params.id;
+  // Support either Convex _id or human code in the URL param
+  const byId =
+    raw?.startsWith("inv_") || (/^\w{15,}$/i.exec(raw ?? "") ? true : false)
+      ? (raw as Id<"invoices">)
+      : undefined;
+  const invById = useQuery(
     api.invoices.getById,
-    useMemo(() => ({ id }), [id]),
+    useMemo(() => (byId ? { id: byId } : "skip"), [byId]),
   ) as InvoiceDoc | undefined;
+  const list = useQuery(
+    api.invoices.list,
+    useMemo(() => ({}), []),
+  ) as { code?: string }[] | undefined;
+  const inv = useMemo(() => {
+    if (invById) return invById;
+    if (!list) return undefined;
+    return list.find((i) => String(i.code ?? "") === String(raw ?? ""));
+  }, [invById, list, raw]) as InvoiceDoc | undefined;
   const markPaid = useMutation(api.invoices.markPaid) as unknown as (args: {
     id: string;
   }) => Promise<{ ok: boolean }>;
@@ -34,9 +48,9 @@ export default function InvoiceDetailPage() {
       { label: "Фактури", href: "/invoices" } satisfies BreadcrumbItem,
       inv?.code
         ? ({
-            id: String(id),
+            id: String(raw ?? inv._id),
             label: inv.code,
-            href: `/invoices/${id}`,
+            href: `/invoices/${encodeURIComponent(String(raw ?? inv._id))}`,
             current: true,
           } satisfies BreadcrumbItem)
         : ({ label: "Фактура", current: true } satisfies BreadcrumbItem),

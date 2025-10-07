@@ -62,13 +62,31 @@ type InvoicePdfMeta = {
 };
 
 type VisitSummaryData = {
+  // Header
+  code?: string;
+  status?: string;
   date: Date | number | string;
-  animalName: string;
-  ownerName: string;
+  // Parties
+  animalName?: string;
+  animalSpecies?: string;
+  alerts?: string[];
+  ownerName?: string;
+  ownerPhone?: string;
+  // Measurements
+  weight?: string | number | null;
+  temperature?: string | number | null;
+  pulse?: string | number | null;
+  // SOAP
   subjective?: string;
   objective?: string;
   assessment?: string;
   plan?: string;
+  // Lists
+  procedures?: string[];
+  medications?: string[];
+  // Billing
+  invoiceCode?: string | null;
+  outstandingAmount?: string | null;
 };
 
 export async function generateVaccinationCertificatePdf(
@@ -253,20 +271,74 @@ export async function generateVisitSummaryPdf(
   doc.setFontSize(12);
 
   let yPos = 50;
-  doc.text(`Дата: ${formatDate(data.date)}`, 20, yPos);
-  yPos += 10;
-  doc.text(`Пациент: ${data.animalName}`, 20, yPos);
-  yPos += 10;
-  doc.text(`Притежател: ${data.ownerName}`, 20, yPos);
 
-  yPos += 20;
-  doc.setFont("NotoSans", "bold");
-  doc.text("SOAP бележки:", 20, yPos);
-  yPos += 10;
-  doc.setFont("NotoSans", "normal");
+  const ensureSpace = (needed: number) => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    if (yPos + needed > pageHeight - 20) {
+      doc.addPage();
+      yPos = 20;
+    }
+  };
 
+  const addRow = (label: string, value?: string) => {
+    if (!value) return;
+    ensureSpace(8);
+    doc.setFont("NotoSans", "bold");
+    const labelText = `${label}:`;
+    doc.text(labelText, 20, yPos);
+    // Compute dynamic start position for value to avoid overlapping long labels
+    const valueX = Math.max(60, 20 + doc.getTextWidth(labelText) + 4);
+    doc.setFont("NotoSans", "normal");
+    const maxWidth = Math.max(40, pageWidth - valueX - 20);
+    const lines = doc.splitTextToSize(value, maxWidth) as string[];
+    doc.text(lines, valueX, yPos);
+    yPos += Math.max(8, lines.length * 6 + 2);
+  };
+
+  const addHeading = (text: string) => {
+    ensureSpace(12);
+    doc.setFont("NotoSans", "bold");
+    doc.text(text, 20, yPos);
+    yPos += 8;
+    doc.setDrawColor(200);
+    doc.line(20, yPos, pageWidth - 20, yPos);
+    yPos += 6;
+  };
+
+  // Header
+  addHeading("Данни за посещение");
+  addRow("Код", data.code);
+  addRow("Статус", data.status);
+  addRow("Дата/час", formatDate(data.date));
+
+  // Parties
+  addHeading("Пациент и собственик");
+  addRow(
+    "Пациент",
+    [data.animalName, data.animalSpecies].filter(Boolean).join(" · "),
+  );
+  if (data.alerts?.length) addRow("Предупреждения", data.alerts.join(", "));
+  addRow("Собственик", data.ownerName);
+  addRow("Телефон", data.ownerPhone);
+
+  // Measurements
+  addHeading("Измервания");
+  const w =
+    data.weight != null && data.weight !== "" ? String(data.weight) : "—";
+  const t =
+    data.temperature != null && data.temperature !== ""
+      ? String(data.temperature)
+      : "—";
+  const pu = data.pulse != null && data.pulse !== "" ? String(data.pulse) : "—";
+  addRow("Тегло", w ? `${w} кг` : undefined);
+  addRow("Температура", t ? `${t} °C` : undefined);
+  addRow("Пулс", pu);
+
+  // SOAP
+  addHeading("SOAP бележки");
   const addSection = (title: string, value?: string) => {
     if (!value) return;
+    ensureSpace(14);
     doc.setFont("NotoSans", "bold");
     doc.text(title, 20, yPos);
     yPos += 7;
@@ -276,13 +348,36 @@ export async function generateVisitSummaryPdf(
       pageWidth - 40,
     ) as string[];
     doc.text(lines, 25, yPos);
-    yPos += lines.length * 7 + 5;
+    yPos += lines.length * 7 + 4;
   };
+  addSection("Субективно", data.subjective);
+  addSection("Обективно", data.objective);
+  addSection("Оценка", data.assessment);
+  addSection("План", data.plan);
 
-  addSection("Субективни:", data.subjective);
-  addSection("Обективни:", data.objective);
-  addSection("Оценка:", data.assessment);
-  addSection("План:", data.plan);
+  // Lists
+  const addList = (title: string, items?: string[]) => {
+    if (!items || items.length === 0) return;
+    addHeading(title);
+    items.forEach((txt) => {
+      ensureSpace(8);
+      doc.setFont("NotoSans", "normal");
+      const lines = doc.splitTextToSize(txt, pageWidth - 40) as string[];
+      doc.text(`• ${lines[0]}`, 25, yPos);
+      for (let i = 1; i < lines.length; i++) {
+        yPos += 6;
+        doc.text(`  ${lines[i]}`, 25, yPos);
+      }
+      yPos += 6;
+    });
+  };
+  addList("Процедури", data.procedures);
+  addList("Медикаменти", data.medications);
+
+  // Billing
+  addHeading("Фактуриране");
+  addRow("Номер на фактура", data.invoiceCode ?? undefined);
+  addRow("Дължима сума", data.outstandingAmount ?? undefined);
 
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFont("NotoSans", "bold");

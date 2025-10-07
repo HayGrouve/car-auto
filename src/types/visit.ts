@@ -7,7 +7,6 @@ export const VisitDocSchema = z.object({
   status: z.string(),
   code: z.string().optional(),
   datetime: z.number().optional(),
-  doctor: z.string().optional().nullable(),
   animalName: z.string().optional().nullable(),
   animalSpecies: z.string().optional().nullable(),
   alerts: z.array(z.string()).optional(),
