@@ -160,15 +160,19 @@ export default function VisitWizard({
       }
     | undefined;
   const lastWeights = useQuery(
-    api.weights.listByAnimal,
+    api.visits.list,
     useMemo(
       () =>
         visit?.animalId
-          ? { animalId: visit.animalId as Id<"animals"> }
-          : ("skip" as unknown as { animalId: Id<"animals"> }),
+          ? {
+              animalId: visit.animalId as Id<"animals">,
+              sort: "datetimeDesc",
+              limit: 10,
+            }
+          : { sort: "datetimeDesc", limit: 0 },
       [visit?.animalId],
     ),
-  ) as { kg: number }[] | undefined;
+  ) as { weight?: number | null }[] | undefined;
   const update = useMutation(api.visits.update);
   const finalize = useMutation(api.visits.finalize);
   const [activeStep, setActiveStep] = useState<WizardStepId>("measurements");
@@ -214,12 +218,12 @@ export default function VisitWizard({
   useEffect(() => {
     if (!weight && (lastWeights ?? []).length > 0) {
       const latest = (lastWeights ?? [])[0];
-      if (latest?.kg) setWeight(String(latest.kg));
+      if (typeof latest?.weight === "number") setWeight(String(latest.weight));
     }
   }, [lastWeights, weight]);
 
   const latestWeightText = useMemo(() => {
-    const kg = lastWeights?.[0]?.kg;
+    const kg = lastWeights?.[0]?.weight;
     return typeof kg === "number" ? `${kg.toFixed(2)} кг` : "—";
   }, [lastWeights]);
 

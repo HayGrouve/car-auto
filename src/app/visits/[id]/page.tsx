@@ -37,7 +37,6 @@ export default function VisitDetailPage() {
     api.visits.getById,
     useMemo(() => ({ id }), [id]),
   ) as VisitDoc | null | undefined;
-  const update = useMutation(api.visits.update);
   const finalize = useMutation(api.visits.finalize);
   const createVisit = useMutation(api.visits.create) as unknown as (args: {
     ownerId: string;
@@ -53,7 +52,6 @@ export default function VisitDetailPage() {
   const [o, setO] = useState("");
   const [a, setA] = useState("");
   const [p, setP] = useState("");
-  const [dt, setDt] = useState<string>("");
   const [hydrated, setHydrated] = useState(false);
   const [procedures, setProcedures] = useState<string[]>([]);
   const [medications, setMedications] = useState<string[]>([]);
@@ -99,9 +97,6 @@ export default function VisitDetailPage() {
       setO(visit.soap?.o ?? "");
       setA(visit.soap?.a ?? "");
       setP(visit.soap?.p ?? "");
-      const baseTs =
-        (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
-      setDt(baseTs ? new Date(baseTs).toISOString().slice(0, 16) : "");
       setAnimalId(visit.animalId ?? null);
       setOwnerId(visit.ownerId ?? "");
       setProcedures(visit.procedures ?? []);
@@ -110,19 +105,7 @@ export default function VisitDetailPage() {
     }
   }, [visit, hydrated]);
 
-  async function onSave(e: React.FormEvent) {
-    e.preventDefault();
-    const res = (await update({
-      id,
-      datetime: dt ? Date.parse(dt) : undefined,
-      soap: { s, o, a, p },
-      procedures,
-      medications,
-      animalId: animalId ? (animalId as Id<"animals">) : null,
-      ownerId: ownerId ? (ownerId as Id<"owners">) : null,
-    })) as { ok: boolean };
-    if (res?.ok) toast.success("Записът е обновен");
-  }
+  // removed unused onSave (wizard manages updates)
 
   async function onFinalize() {
     const res = await finalize({ id });
@@ -305,9 +288,6 @@ export default function VisitDetailPage() {
   const animalInfo = animalId
     ? (animals ?? []).find((a) => a._id === animalId)
     : null;
-  const documents = visit.documents ?? [];
-  const visitHistory = visit.history ?? [];
-  const showSecondary = documents.length > 0 || visitHistory.length > 0;
   const visitTimestamp =
     (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
   const quickFacts = [

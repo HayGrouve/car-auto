@@ -64,18 +64,11 @@ export default function AnimalDetailPage() {
   ) as unknown;
   const update = useMutation(api.animals.update);
   const createVisit = useMutation(api.visits.create);
-  const addWeight = useMutation(api.weights.add);
   const removeAnimal = useMutation(api.animals.remove);
   const owners = useQuery(
     api.owners.list,
     useMemo(() => ({ search: "" }), []),
   ) as { _id: string; name: string; phone?: string }[] | undefined;
-  const weights = useQuery(
-    api.weights.listByAnimal,
-    useMemo(() => ({ animalId: id }), [id]),
-  ) as
-    | { _id: string; kg: number; notedAt?: number; createdAt: number }[]
-    | undefined;
   const visits = useQuery(
     api.visits.list,
     useMemo(() => ({ animalId: id, limit: 5, sort: "datetimeDesc" }), [id]),
@@ -86,6 +79,7 @@ export default function AnimalDetailPage() {
         datetime?: number | null;
         status: string;
         ownerId?: string | null;
+        weight?: number | null;
         procedures?: string[];
         medications?: string[];
         createdAt?: number;
@@ -108,9 +102,7 @@ export default function AnimalDetailPage() {
   const [ownerSheetOpen, setOwnerSheetOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [kg, setKg] = useState<string>("");
-  const [isAddingWeight, setIsAddingWeight] = useState(false);
-  const [showAllWeights, setShowAllWeights] = useState(false);
+  // removed weight history UI
   const [showIncompleteVisits, setShowIncompleteVisits] = useState(false);
 
   const parsedAnimal = useMemo(
@@ -200,22 +192,6 @@ export default function AnimalDetailPage() {
     }
   }
 
-  async function onAddWeight() {
-    if (isAddingWeight) return;
-    const value = parseFloat(kg);
-    if (Number.isNaN(value) || value <= 0) {
-      toast.error("Невалидно тегло");
-      return;
-    }
-    setIsAddingWeight(true);
-    const res = await addWeight({ animalId: id, kg: value });
-    if (res?.ok) {
-      toast.success("Добавено тегло");
-      setKg("");
-    }
-    setIsAddingWeight(false);
-  }
-
   const summaryAge = form.dob
     ? differenceInYears(new Date(), new Date(form.dob))
     : null;
@@ -223,9 +199,25 @@ export default function AnimalDetailPage() {
   const owner = form.ownerId
     ? (owners ?? []).find((o) => o._id === form.ownerId)
     : undefined;
-  const weightsLoading = weights === undefined;
   const visitsLoading = visits === undefined;
-  const latestWeight = (weights ?? [])[0];
+  const latestWeight = useMemo(() => {
+    const v = (visits ?? []).find(
+      (it: {
+        _id: string;
+        datetime?: number | null;
+        createdAt?: number;
+        weight?: number | null;
+      }) => typeof it.weight === "number",
+    );
+    if (!v || typeof v.weight !== "number") return undefined;
+    const when = v.datetime ?? v.createdAt ?? Date.now();
+    return {
+      _id: String(v._id),
+      kg: Number(v.weight),
+      notedAt: when,
+      createdAt: v.createdAt ?? when,
+    };
+  }, [visits]);
   const lastVisit = (visits ?? [])[0];
   const filteredVisits = useMemo(() => {
     const allVisits = visits ?? [];
@@ -246,7 +238,7 @@ export default function AnimalDetailPage() {
         latestWeight={latestWeight}
         lastVisit={lastVisit}
         visits={visits ?? []}
-        isLoading={visitsLoading || weightsLoading}
+        isLoading={visitsLoading}
       />
       <div
         id="animal-summary-sentinel"
@@ -476,116 +468,10 @@ export default function AnimalDetailPage() {
                 <span className="text-sm">Кастриран/а</span>
               </label>
             </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="kg">Добави тегло (кг)</Label>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                <Input
-                  id="kg"
-                  inputMode="decimal"
-                  value={kg}
-                  onChange={(e) => setKg(e.target.value)}
-                  placeholder="напр. 12.4"
-                  className="sm:max-w-xs"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={onAddWeight}
-                  className="sm:self-start"
-                >
-                  Добави тегло
-                </Button>
-              </div>
-            </div>
             <button type="submit" className="sr-only" aria-hidden="true">
               Запази
             </button>
           </form>
-        </SectionCard>
-
-        <SectionCard
-          title="Тегло"
-          subtitle={
-            latestWeight
-              ? `${latestWeight.kg.toFixed(2)} кг`
-              : "Няма записани тегла"
-          }
-          description={
-            latestWeight
-              ? `Последно измерване: ${fmtDateTimeBG(
-                  latestWeight.notedAt ?? latestWeight.createdAt,
-                )}`
-              : "Добавете първо тегло, за да проследявате тенденции."
-          }
-          footerActions={
-            (weights ?? []).length > 5
-              ? [
-                  {
-                    label: showAllWeights ? "Покажи по-малко" : "Покажи всички",
-                    variant: "ghost",
-                    onClick: () => setShowAllWeights((v) => !v),
-                  },
-                ]
-              : undefined
-          }
-          collapsible
-          responsiveCollapsible
-        >
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault();
-              try {
-                await onAddWeight();
-              } catch (error) {
-                console.error(error);
-                toast.error("Грешка при добавяне на тегло");
-              }
-            }}
-            className="space-y-3 sm:flex sm:flex-wrap sm:items-end sm:gap-3"
-          >
-            <div className="sm:max-w-xs sm:flex-1">
-              <Label htmlFor="kg">Добави тегло (кг)</Label>
-              <Input
-                id="kg"
-                inputMode="decimal"
-                value={kg}
-                onChange={(e) => setKg(e.target.value)}
-                placeholder="напр. 12.4"
-                required
-              />
-            </div>
-            <Button
-              type="submit"
-              variant="secondary"
-              disabled={isAddingWeight}
-              className="sm:self-start"
-            >
-              {isAddingWeight ? "Добавяне..." : "Добави тегло"}
-            </Button>
-          </form>
-          <div className="divide-y rounded-md border">
-            {weightsLoading ? (
-              <div className="text-muted-foreground p-3 text-sm">
-                Зареждане...
-              </div>
-            ) : (weights ?? []).length === 0 ? (
-              <div className="text-muted-foreground p-3 text-sm">
-                Няма записани тегла
-              </div>
-            ) : (
-              (showAllWeights
-                ? (weights ?? [])
-                : (weights ?? []).slice(0, 5)
-              ).map((w) => (
-                <div key={w._id} className="flex justify-between p-3 text-sm">
-                  <span>{w.kg.toFixed(2)} кг</span>
-                  <span className="text-muted-foreground">
-                    {fmtDateTimeBG(w.notedAt ?? w.createdAt)}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
         </SectionCard>
 
         <SectionCard
