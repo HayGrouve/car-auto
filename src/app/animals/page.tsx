@@ -59,6 +59,9 @@ export default function AnimalsPage() {
   const createAnimal = useMutation(api.animals.create);
   const [ownerId, setOwnerId] = useState("");
   const [ownerSearch, setOwnerSearch] = useState("");
+  const [newSex, setNewSex] = useState<"male" | "female" | "unknown">(
+    "unknown",
+  );
   const owners = useQuery(
     api.owners.list,
     useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
@@ -90,6 +93,7 @@ export default function AnimalsPage() {
       breed,
       microchip,
       dob,
+      sex: newSex,
       ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
     })) as { ok: true; id: string } | { ok: false; reason: "microchip" };
     if (!res?.ok) {
@@ -100,6 +104,7 @@ export default function AnimalsPage() {
     form.reset();
     setOwnerId("");
     setOwnerSearch("");
+    setNewSex("unknown");
   }
 
   useBreadcrumbRegistration([
@@ -291,6 +296,24 @@ export default function AnimalsPage() {
               <div>
                 <Label htmlFor="breed">Порода</Label>
                 <Input id="breed" name="breed" />
+              </div>
+              <div>
+                <Label htmlFor="sex">Пол</Label>
+                <Select
+                  value={newSex}
+                  onValueChange={(value: "male" | "female" | "unknown") =>
+                    setNewSex(value)
+                  }
+                >
+                  <SelectTrigger id="sex" className="h-9 w-full">
+                    <SelectValue placeholder="Пол" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Мъжки</SelectItem>
+                    <SelectItem value="female">Женски</SelectItem>
+                    <SelectItem value="unknown">Неизвестен</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="microchip">Микрочип</Label>

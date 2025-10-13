@@ -54,6 +54,13 @@ import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AnimalDetailPage() {
   const params = useParams<{ id: string }>();
@@ -93,6 +100,7 @@ export default function AnimalDetailPage() {
     breed: "",
     microchip: "",
     neutered: false,
+    sex: "unknown" as "male" | "female" | "unknown",
     ownerId: "",
     dob: "",
   });
@@ -127,17 +135,19 @@ export default function AnimalDetailPage() {
 
   useEffect(() => {
     if (parsedAnimal.success) {
-      const a = parsedAnimal.data as {
+      const base = parsedAnimal.data as {
         ownerId?: string | null;
+        sex?: "male" | "female" | "unknown" | null;
       } & typeof parsedAnimal.data;
       setForm({
-        name: a.name ?? "",
-        species: a.species ?? "",
-        breed: a.breed ?? "",
-        microchip: a.microchip ?? "",
-        neutered: Boolean(a.neutered),
-        ownerId: a.ownerId ?? "",
-        dob: a.dob ? new Date(a.dob).toISOString().slice(0, 10) : "",
+        name: base.name ?? "",
+        species: base.species ?? "",
+        breed: base.breed ?? "",
+        microchip: base.microchip ?? "",
+        neutered: Boolean(base.neutered),
+        sex: base.sex ?? "unknown",
+        ownerId: base.ownerId ?? "",
+        dob: base.dob ? new Date(base.dob).toISOString().slice(0, 10) : "",
       });
     }
   }, [parsedAnimal]);
@@ -158,6 +168,7 @@ export default function AnimalDetailPage() {
       breed: form.breed || null,
       microchip: form.microchip || null,
       neutered: form.neutered,
+      sex: form.sex,
       dob:
         form.dob && !Number.isNaN(Date.parse(form.dob))
           ? Date.parse(form.dob)
@@ -454,6 +465,24 @@ export default function AnimalDetailPage() {
                 }
                 placeholder="напр. 985112003178000"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sex">Пол</Label>
+              <Select
+                value={form.sex}
+                onValueChange={(value: "male" | "female" | "unknown") =>
+                  setForm((f) => ({ ...f, sex: value }))
+                }
+              >
+                <SelectTrigger id="sex" className="h-9 w-full">
+                  <SelectValue placeholder="Пол" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Мъжки</SelectItem>
+                  <SelectItem value="female">Женски</SelectItem>
+                  <SelectItem value="unknown">Неизвестен</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="neutered">Стерилизиран</Label>

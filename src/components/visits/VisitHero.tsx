@@ -17,6 +17,7 @@ type VisitHeroProps = {
   animal?: {
     name?: string | null;
     species?: string | null;
+    sex?: string | null;
     alerts?: string[];
   } | null;
   billing?: {
@@ -38,6 +39,20 @@ export function VisitHero({
   const formattedDate = visit.datetime
     ? new Date(visit.datetime).toLocaleString("bg-BG")
     : new Date(visit.createdAt).toLocaleString("bg-BG");
+  const genderLabel =
+    animal?.sex === "male"
+      ? "Мъжки"
+      : animal?.sex === "female"
+        ? "Женски"
+        : animal?.sex === "unknown"
+          ? "Неизвестен"
+          : undefined;
+  const speciesWithGender = [
+    animal?.species ?? visit.animalSpecies ?? "без вид",
+    genderLabel,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <section className="grid gap-4">
@@ -76,7 +91,7 @@ export function VisitHero({
                   {animal?.name ?? visit.animalName ?? "Неизвестно животно"}
                 </p>
                 <p className="text-muted-foreground text-sm">
-                  {animal?.species ?? visit.animalSpecies ?? "без вид"}
+                  {speciesWithGender}
                 </p>
                 {(animal?.alerts ?? visit.alerts ?? []).length ? (
                   <ul className="text-destructive space-y-1 text-xs">

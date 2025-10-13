@@ -65,7 +65,13 @@ export default function VisitDetailPage() {
     api.animals.list,
     useMemo(() => ({ search: "" }), []),
   ) as
-    | { _id: string; name: string; species: string; ownerId?: string | null }[]
+    | {
+        _id: string;
+        name: string;
+        species: string;
+        ownerId?: string | null;
+        sex?: string | null;
+      }[]
     | undefined;
   const [ownerId, setOwnerId] = useState<string>("");
 
@@ -310,6 +316,17 @@ export default function VisitDetailPage() {
       value: ownerInfo?.phone ?? "",
     },
     {
+      label: "Пол",
+      value:
+        animalInfo?.sex === "male"
+          ? "Мъжки"
+          : animalInfo?.sex === "female"
+            ? "Женски"
+            : animalInfo?.sex
+              ? "Неизвестен"
+              : "",
+    },
+    {
       label: "Пациент",
       value: animalInfo?.name ?? visit.animalName ?? "",
     },
@@ -402,6 +419,7 @@ export default function VisitDetailPage() {
             name: animalInfo?.name ?? visit.animalName ?? undefined,
             species: animalInfo?.species ?? visit.animalSpecies ?? undefined,
             alerts: visit.alerts ?? [],
+            sex: animalInfo?.sex ?? undefined,
           }}
           billing={{
             invoiceCode: visit.invoiceCode ?? null,

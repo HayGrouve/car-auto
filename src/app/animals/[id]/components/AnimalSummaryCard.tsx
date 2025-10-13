@@ -38,6 +38,7 @@ type AnimalSummary = {
   microchip?: string | null;
   dob?: number | string | null;
   updatedAt?: number | null;
+  sex?: string | null;
 };
 
 interface AnimalSummaryCardProps {
@@ -172,6 +173,13 @@ export function AnimalSummaryCard({
                 <span className="text-muted-foreground text-sm">
                   {[animal.species, animal.breed].filter(Boolean).join(" · ") ??
                     "Неуточнено"}
+                </span>
+                <span className="bg-muted inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
+                  {animal.sex === "male"
+                    ? "Мъжки"
+                    : animal.sex === "female"
+                      ? "Женски"
+                      : "Неизвестен"}
                 </span>
               </div>
             </div>
