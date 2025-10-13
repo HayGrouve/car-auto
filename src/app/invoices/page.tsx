@@ -28,6 +28,7 @@ import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
+import { SectionCard } from "@/components/ui/section-card";
 
 const ALL_OWNERS_VALUE = "__all";
 
@@ -61,7 +62,13 @@ export default function InvoicesPage() {
       [unpaidOnly, ownerId, from, to, page, sort],
     ),
   ) as InvoiceDoc[] | undefined;
-  const [totalsDay, setTotalsDay] = useState("");
+  const [totalsDay, setTotalsDay] = useState(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
   const totals = useQuery(
     api.invoices.totals,
     useMemo(
@@ -88,24 +95,55 @@ export default function InvoicesPage() {
     <main className="mx-auto max-w-5xl space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Фактури: {invoices?.length}</h1>
-        <div className="text-muted-foreground text-sm">
-          <span className="mr-4">
-            Неплатено:{" "}
-            {fmtNumberBG(totals?.unpaidTotal ?? 0, {
-              style: "currency",
-              currency: "BGN",
-            })}
-          </span>
-          <span>
-            Платено днес:{" "}
-            {fmtNumberBG(totals?.paidTotal ?? 0, {
-              style: "currency",
-              currency: "BGN",
-            })}
-          </span>
-        </div>
+        <div />
       </div>
-
+      <SectionCard
+        title="Обобщение за деня"
+        description="Изберете ден, за да видите обобщение на платени/неплатени фактури."
+        responsiveCollapsible
+      >
+        <div className="space-y-3">
+          <div className="grid items-end gap-2 md:grid-cols-3">
+            <div>
+              <Label htmlFor="totalsDay">Ден за обобщение</Label>
+              <Input
+                id="totalsDay"
+                type="date"
+                value={totalsDay}
+                onChange={(e) => setTotalsDay(e.target.value)}
+                className="h-9"
+              />
+            </div>
+          </div>
+          <div className="border-t" />
+          <div className="text-muted-foreground grid gap-3 text-sm md:grid-cols-3">
+            <div className="flex items-center justify-between gap-3 md:block md:space-y-1">
+              <span className="md:block">Неплатено за деня</span>
+              <span className="text-foreground font-medium">
+                {fmtNumberBG(totals?.unpaidTotal ?? 0, {
+                  style: "currency",
+                  currency: "BGN",
+                })}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 md:block md:space-y-1">
+              <span className="md:block">Платено за деня</span>
+              <span className="text-foreground font-medium">
+                {fmtNumberBG(totals?.paidTotal ?? 0, {
+                  style: "currency",
+                  currency: "BGN",
+                })}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 md:block md:space-y-1">
+              <span className="md:block">Брой</span>
+              <span className="text-foreground font-medium">
+                {totals?.count ?? 0}
+              </span>
+            </div>
+          </div>
+        </div>
+      </SectionCard>
       <div className="grid items-end gap-2 md:grid-cols-5">
         <div>
           <Label>Собственик</Label>
@@ -139,6 +177,7 @@ export default function InvoicesPage() {
               setFrom(e.target.value);
               setPage(0);
             }}
+            className="h-9"
           />
         </div>
         <div>
@@ -151,18 +190,9 @@ export default function InvoicesPage() {
               setTo(e.target.value);
               setPage(0);
             }}
+            className="h-9"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={unpaidOnly}
-            onCheckedChange={(checked) => {
-              setUnpaidOnly(Boolean(checked));
-              setPage(0);
-            }}
-          />
-          Показвай само неплатени
-        </label>
         <div>
           <Label>Подредба</Label>
           <Select
@@ -181,34 +211,80 @@ export default function InvoicesPage() {
             </SelectContent>
           </Select>
         </div>
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={unpaidOnly}
+            onCheckedChange={(checked) => {
+              setUnpaidOnly(Boolean(checked));
+              setPage(0);
+            }}
+          />
+          Само неплатени
+        </label>
       </div>
 
-      <div className="grid items-end gap-2 md:grid-cols-3">
-        <div>
-          <Label htmlFor="totalsDay">Ден за обобщение</Label>
-          <Input
-            id="totalsDay"
-            type="date"
-            value={totalsDay}
-            onChange={(e) => setTotalsDay(e.target.value)}
-          />
-        </div>
-        <div className="text-muted-foreground flex items-end gap-4 text-sm md:col-span-2">
-          <span>
-            Неплатено за деня:{" "}
-            {fmtNumberBG(totals?.unpaidTotal ?? 0, {
-              style: "currency",
-              currency: "BGN",
-            })}
-          </span>
-          <span>
-            Платено за деня:{" "}
-            {fmtNumberBG(totals?.paidTotal ?? 0, {
-              style: "currency",
-              currency: "BGN",
-            })}
-          </span>
-          <span>Брой: {totals?.count ?? 0}</span>
+      <div className="-mt-2 md:col-span-5">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {ownerId !== ALL_OWNERS_VALUE && (
+            <button
+              type="button"
+              onClick={() => {
+                setOwnerId(ALL_OWNERS_VALUE);
+                setPage(0);
+              }}
+              className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+            >
+              <span>
+                Собственик:{" "}
+                {(owners ?? []).find((o) => o._id === ownerId)?.name ?? ownerId}
+              </span>
+              <span aria-hidden>✕</span>
+            </button>
+          )}
+          {(from || to) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFrom("");
+                setTo("");
+                setPage(0);
+              }}
+              className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+            >
+              <span>
+                Период: {from || "—"} – {to || "—"}
+              </span>
+              <span aria-hidden>✕</span>
+            </button>
+          )}
+          {unpaidOnly && (
+            <button
+              type="button"
+              onClick={() => {
+                setUnpaidOnly(false);
+                setPage(0);
+              }}
+              className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+            >
+              <span>Само неплатени</span>
+              <span aria-hidden>✕</span>
+            </button>
+          )}
+          {(ownerId !== ALL_OWNERS_VALUE || from || to || unpaidOnly) && (
+            <button
+              type="button"
+              onClick={() => {
+                setOwnerId(ALL_OWNERS_VALUE);
+                setFrom("");
+                setTo("");
+                setUnpaidOnly(true);
+                setPage(0);
+              }}
+              className="bg-muted hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+            >
+              Изчисти всички
+            </button>
+          )}
         </div>
       </div>
 

@@ -5,7 +5,6 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
@@ -92,10 +91,6 @@ function VisitsPageInner() {
     if (o) setOwnerId(o);
     if (a) setAnimalId(a);
   }, [params]);
-  const [s, setS] = useState("");
-  const [o, setO] = useState("");
-  const [a, setA] = useState("");
-  const [p, setP] = useState("");
   const [ownerSearch, setOwnerSearch] = useState("");
   const [animalSearch, setAnimalSearch] = useState("");
 
@@ -110,8 +105,7 @@ function VisitsPageInner() {
     | { _id: string; name: string; species: string; ownerId?: string | null }[]
     | undefined;
 
-  async function onCreate(e: React.FormEvent) {
-    e.preventDefault();
+  async function onCreateNewVisit() {
     if (!ownerId) {
       toast.error("Изберете собственик (ownerId)");
       return;
@@ -119,15 +113,10 @@ function VisitsPageInner() {
     const res = await createVisit({
       ownerId,
       animalId: animalId || undefined,
-      soap: { s, o, a, p },
+      soap: {},
     });
     if (res?.ok && res.id) {
       toast.success("Посещението е създадено");
-      setS("");
-      setO("");
-      setA("");
-      setP("");
-      // Redirect to guided wizard at step 1
       window.location.href = `/visits/${res.id}?step=1`;
     }
   }
@@ -139,13 +128,16 @@ function VisitsPageInner() {
         <h1 className="text-2xl font-semibold">Посещения: {visits?.length}</h1>
       </div>
 
-      <form onSubmit={onCreate} className="grid gap-2 md:grid-cols-4">
+      <section className="grid gap-2 md:grid-cols-4">
         <div className="grid grid-cols-1 gap-2 md:col-span-2 md:grid-cols-2">
           <div>
             <Label>Собственик</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
+                <Button
+                  variant="outline"
+                  className="h-9 w-full justify-between"
+                >
                   {ownerId
                     ? (owners ?? []).find((o) => o._id === ownerId)?.name
                     : "Изберете собственик"}
@@ -185,7 +177,10 @@ function VisitsPageInner() {
             <Label>Животно</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
+                <Button
+                  variant="outline"
+                  className="h-9 w-full justify-between"
+                >
                   {animalId
                     ? (animals ?? []).find((a) => a._id === animalId)?.name
                     : "Без животно"}
@@ -236,7 +231,10 @@ function VisitsPageInner() {
             <Label>Статус</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between">
+                <Button
+                  variant="outline"
+                  className="h-9 w-full justify-between"
+                >
                   {status || "Всички"}
                 </Button>
               </PopoverTrigger>
@@ -282,6 +280,7 @@ function VisitsPageInner() {
                 setFrom(e.target.value);
                 setPage(0);
               }}
+              className="h-9"
             />
           </div>
           <div>
@@ -294,6 +293,7 @@ function VisitsPageInner() {
                 setTo(e.target.value);
                 setPage(0);
               }}
+              className="h-9"
             />
           </div>
           <div>
@@ -345,30 +345,58 @@ function VisitsPageInner() {
                 <span aria-hidden>✕</span>
               </button>
             )}
-          </div>
-        </div>
-        <div className="grid gap-2 md:col-span-4 md:grid-cols-4">
-          <div>
-            <Label htmlFor="s">S - Субективно</Label>
-            <Textarea id="s" value={s} onChange={(e) => setS(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="o">O - Обективно</Label>
-            <Textarea id="o" value={o} onChange={(e) => setO(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="a">A - Оценка</Label>
-            <Textarea id="a" value={a} onChange={(e) => setA(e.target.value)} />
-          </div>
-          <div>
-            <Label htmlFor="p">P - План</Label>
-            <Textarea id="p" value={p} onChange={(e) => setP(e.target.value)} />
+            {status && (
+              <button
+                type="button"
+                onClick={() => setStatus("")}
+                className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+              >
+                <span>
+                  Статус: {status === "draft" ? "Чернова" : "Приключени"}
+                </span>
+                <span aria-hidden>✕</span>
+              </button>
+            )}
+            {(from || to) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFrom("");
+                  setTo("");
+                  setPage(0);
+                }}
+                className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+              >
+                <span>
+                  Период: {from || "—"} – {to || "—"}
+                </span>
+                <span aria-hidden>✕</span>
+              </button>
+            )}
+            {(ownerId || animalId || status || from || to) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setOwnerId("");
+                  setAnimalId("");
+                  setStatus("");
+                  setFrom("");
+                  setTo("");
+                  setPage(0);
+                }}
+                className="bg-muted hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
+              >
+                Изчисти всички
+              </button>
+            )}
           </div>
         </div>
         <div className="md:col-span-4">
-          <Button type="submit">Ново посещение</Button>
+          <Button type="button" onClick={() => void onCreateNewVisit()}>
+            Ново посещение
+          </Button>
         </div>
-      </form>
+      </section>
 
       <div className="divide-y rounded-md border">
         {visits === undefined ? (
