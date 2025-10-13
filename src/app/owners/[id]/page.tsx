@@ -236,7 +236,10 @@ export default function OwnerDetailPage() {
         </DropdownMenu>
       </div>
       <div className="flex items-center justify-between">
-        <div className="text-muted-foreground text-sm">
+        {/* when owner has unpaid color it red */}
+        <div
+          className={`text-muted-foreground text-sm ${ownerUnpaid?.length && ownerUnpaid.length > 0 ? "font-medium text-red-500" : ""}`}
+        >
           Неплатени общо:{" "}
           {fmtNumberBG(
             (ownerUnpaid ?? []).reduce((s: number, i) => s + (i.total ?? 0), 0),

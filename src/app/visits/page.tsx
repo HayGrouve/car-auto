@@ -110,6 +110,10 @@ function VisitsPageInner() {
       toast.error("Изберете собственик (ownerId)");
       return;
     }
+    if (!animalId) {
+      toast.error("Изберете животно (animalId)");
+      return;
+    }
     const res = await createVisit({
       ownerId,
       animalId: animalId || undefined,
@@ -123,9 +127,20 @@ function VisitsPageInner() {
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6">
-      <div className="flex items-center gap-2">
-        <CalendarCheck className="text-primary size-5" />
-        <h1 className="text-2xl font-semibold">Посещения: {visits?.length}</h1>
+      <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
+        <div className="flex w-full items-center gap-2 md:w-auto">
+          <CalendarCheck className="text-primary size-5" />
+          <h1 className="text-2xl font-semibold">
+            Посещения: {visits?.length}
+          </h1>
+        </div>
+        <Button
+          type="button"
+          onClick={() => void onCreateNewVisit()}
+          className="w-full md:w-auto"
+        >
+          Ново посещение
+        </Button>
       </div>
 
       <section className="grid gap-2 md:grid-cols-4">
@@ -390,11 +405,6 @@ function VisitsPageInner() {
               </button>
             )}
           </div>
-        </div>
-        <div className="md:col-span-4">
-          <Button type="button" onClick={() => void onCreateNewVisit()}>
-            Ново посещение
-          </Button>
         </div>
       </section>
 

@@ -29,6 +29,7 @@ import {
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
 import { SectionCard } from "@/components/ui/section-card";
+import { useRouter } from "next/navigation";
 
 const ALL_OWNERS_VALUE = "__all";
 
@@ -90,12 +91,25 @@ export default function InvoicesPage() {
   ]);
 
   const [paidLoading, setPaidLoading] = useState<string | null>(null);
-
+  const router = useRouter();
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Фактури: {invoices?.length}</h1>
-        <div />
+      <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
+        <div className="flex w-full items-center gap-2 md:w-auto">
+          <FileText className="text-primary size-5" />
+          <h1 className="text-2xl font-semibold">
+            Фактури: {invoices?.length}
+          </h1>
+        </div>
+        <Button
+          type="button"
+          onClick={() => {
+            void router.push("/invoices/new");
+          }}
+          className="w-full md:w-auto"
+        >
+          Нова фактура
+        </Button>
       </div>
       <SectionCard
         title="Обобщение за деня"
