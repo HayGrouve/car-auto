@@ -2,10 +2,10 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { CalendarCheck, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type VisitDoc } from "@/types/visit";
+import { VisitStatusBadge } from "@/components/StatusBadge";
 
 type VisitHeroProps = {
   visit: VisitDoc;
@@ -61,11 +61,7 @@ export function VisitHero({
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-3 text-2xl font-semibold">
               {visit.code ? `Посещение ${visit.code}` : "Посещение"}
-              <Badge
-                variant={visit.status !== "draft" ? "secondary" : "default"}
-              >
-                {visit.status === "draft" ? "Чернова" : visit.status}
-              </Badge>
+              <VisitStatusBadge status={visit.status} />
             </CardTitle>
             <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-sm">
               <span className="inline-flex items-center gap-1">

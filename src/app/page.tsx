@@ -183,9 +183,8 @@ export default function HomePage() {
             клиниката.
           </p>
         </div>
+        <AlertList alerts={overview.alerts} title="Статус" />
       </div>
-
-      <AlertList alerts={overview.alerts} title="Статус" />
 
       <QuickActionsCard className="lg:grid-cols-4" />
 

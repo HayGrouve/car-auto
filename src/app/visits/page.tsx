@@ -88,8 +88,10 @@ function VisitsPageInner() {
   useEffect(() => {
     const o = params.get("ownerId") ?? "";
     const a = params.get("animalId") ?? "";
+    const s = params.get("status") ?? ""; // "draft" | "finalized"
     if (o) setOwnerId(o);
     if (a) setAnimalId(a);
+    if (s === "draft" || s === "finalized") setStatus(s);
   }, [params]);
   const [ownerSearch, setOwnerSearch] = useState("");
   const [animalSearch, setAnimalSearch] = useState("");
@@ -431,7 +433,7 @@ function VisitsPageInner() {
               <div className="space-y-1">
                 <a
                   href={`/visits/${v._id}`}
-                  className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
+                  className="mr-2 inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
                   aria-label={`Преглед на посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                 >
                   <CalendarCheck className="size-4" aria-hidden />{" "}
