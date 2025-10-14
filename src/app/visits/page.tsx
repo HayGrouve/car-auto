@@ -79,7 +79,7 @@ function VisitsPageInner() {
     ownerId: string;
     animalId?: string;
     soap: { s?: string; o?: string; a?: string; p?: string };
-  }) => Promise<{ ok: boolean; id: string }>;
+  }) => Promise<{ ok: boolean; id?: string; reason?: string }>;
   const finalizeVisit = useMutation(api.visits.finalize) as unknown as (args: {
     id: string;
   }) => Promise<{ ok: boolean }>;
@@ -124,6 +124,13 @@ function VisitsPageInner() {
     if (res?.ok && res.id) {
       toast.success("Посещението е създадено");
       window.location.href = `/visits/${res.id}?step=1`;
+      return;
+    }
+    if (res && res.reason === "draft_exists" && res.id) {
+      toast.info("Има незавършено посещение за това животно, пренасочване...");
+      setTimeout(() => {
+        window.location.href = `/visits/${res.id}`;
+      }, 4000);
     }
   }
 

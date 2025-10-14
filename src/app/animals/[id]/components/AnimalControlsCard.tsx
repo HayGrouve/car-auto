@@ -26,6 +26,7 @@ interface AnimalControlsCardProps {
   hasOwner: boolean;
   hasDraftVisit?: boolean;
   hasIncompleteVisit?: boolean;
+  draftVisitId?: string;
   canStartVisit?: boolean;
   primaryLabel?: string;
   exportLabel?: string;
@@ -49,6 +50,7 @@ export function AnimalControlsCard({
   hasOwner,
   hasDraftVisit = false,
   hasIncompleteVisit = false,
+  draftVisitId,
   canStartVisit = true,
   primaryLabel,
   exportLabel = "Експортиране PDF",
@@ -143,7 +145,7 @@ export function AnimalControlsCard({
               <AlertDescription>
                 Има незавършено посещение за това животно. Може да го продължите
                 <Link
-                  href={`/visits`}
+                  href={draftVisitId ? `/visits/${draftVisitId}` : `/visits`}
                   className="text-primary inline underline underline-offset-4"
                 >
                   от тук.
@@ -220,16 +222,6 @@ export function AnimalControlsCard({
               <ArrowLeft className="mr-2 size-4" aria-hidden="true" />
               Назад към животните
             </Button>
-          </div>
-
-          <div className="text-muted-foreground text-xs">
-            <p>Нужда от помощ? Вижте </p>
-            <Link
-              className="text-primary underline underline-offset-4"
-              href="/visits"
-            >
-              инструкциите за посещения
-            </Link>
           </div>
         </div>
       </SectionCard>

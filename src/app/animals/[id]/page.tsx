@@ -42,7 +42,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { brand } from "@/lib/brand";
-import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
 import { generateVaccinationCertificatePdf } from "@/lib/pdf-generator";
 import { SkeletonList } from "@/components/SkeletonList";
 import { AnimalSummaryCard } from "./components/AnimalSummaryCard";
@@ -87,9 +86,25 @@ export default function AnimalDetailPage() {
         status: string;
         ownerId?: string | null;
         weight?: number | null;
+        temperature?: number | null;
+        pulse?: number | null;
         procedures?: string[];
         medications?: string[];
         createdAt?: number;
+      }[]
+    | undefined;
+  const draftVisits = useQuery(
+    api.visits.list,
+    useMemo(
+      () => ({ animalId: id, status: "draft", limit: 1, sort: "datetimeDesc" }),
+      [id],
+    ),
+  ) as
+    | {
+        _id: string;
+        code?: string | null;
+        datetime?: number | null;
+        status: string;
       }[]
     | undefined;
   const router = useRouter();
@@ -133,6 +148,15 @@ export default function AnimalDetailPage() {
     ].filter(Boolean) as BreadcrumbItem[],
   );
 
+  function normalizeSex(input?: string | null): "male" | "female" | "unknown" {
+    const v = String(input ?? "")
+      .trim()
+      .toLowerCase();
+    if (v === "male" || v === "m") return "male";
+    if (v === "female" || v === "f") return "female";
+    return "unknown";
+  }
+
   useEffect(() => {
     if (parsedAnimal.success) {
       const base = parsedAnimal.data as {
@@ -145,7 +169,7 @@ export default function AnimalDetailPage() {
         breed: base.breed ?? "",
         microchip: base.microchip ?? "",
         neutered: Boolean(base.neutered),
-        sex: base.sex ?? "unknown",
+        sex: normalizeSex(base.sex),
         ownerId: base.ownerId ?? "",
         dob: base.dob ? new Date(base.dob).toISOString().slice(0, 10) : "",
       });
@@ -189,17 +213,23 @@ export default function AnimalDetailPage() {
       toast.error("Изберете собственик преди да започнете посещение");
       return;
     }
-    const res = await createVisit({
+    const res = (await createVisit({
       ownerId: form.ownerId as Id<"owners">,
       animalId: id,
       datetime: Date.now(),
       soap: {},
       procedures: [],
       medications: [],
-    });
-    if (res?.ok && "id" in res && res.id) {
+    })) as { ok: boolean; id?: string; reason?: string } | undefined;
+    if (res?.ok && res.id) {
       toast.success("Стартирано посещение");
       router.push(`/visits/${res.id}?step=1`);
+      return;
+    }
+    if (res && res.reason === "draft_exists" && res.id) {
+      toast.info("Има незавършено посещение за това животно");
+      router.push(`/visits/${res.id}`);
+      return;
     }
   }
 
@@ -230,6 +260,7 @@ export default function AnimalDetailPage() {
     };
   }, [visits]);
   const lastVisit = (visits ?? [])[0];
+  const draftVisit = (draftVisits ?? [])[0];
   const filteredVisits = useMemo(() => {
     const allVisits = visits ?? [];
     return showIncompleteVisits
@@ -258,9 +289,15 @@ export default function AnimalDetailPage() {
       />
       <AnimalControlsCard
         hasOwner={Boolean(owner)}
-        hasDraftVisit={false}
+        hasDraftVisit={Boolean(draftVisit)}
+        draftVisitId={draftVisit?._id}
         onStartVisit={onStartVisit}
-        hasIncompleteVisit={filteredVisits.some(
+        onResumeVisit={
+          draftVisit
+            ? () => router.push(`/visits/${draftVisit._id}`)
+            : undefined
+        }
+        hasIncompleteVisit={(visits ?? []).some(
           (visit) => visit.status === "draft",
         )}
         onExport={async () => {
@@ -291,10 +328,154 @@ export default function AnimalDetailPage() {
           }
         }}
         exportLabel="Ваксинационен сертификат"
-        onPrint={() => window.print()}
+        onPrint={() => {
+          try {
+            const parsed = AnimalDocSchema.safeParse(animalUnknown);
+            if (!parsed.success) throw new Error("Invalid animal data");
+            const animal = parsed.data;
+            const sexLabel =
+              animal.sex === "male"
+                ? "Мъжки"
+                : animal.sex === "female"
+                  ? "Женски"
+                  : "Неизвестен";
+            const neuteredLabel = animal.neutered ? "Да" : "Не";
+            const ageYears = summaryAge != null ? String(summaryAge) : "—";
+            const ownerName = owner?.name ?? "";
+            const ownerPhone = owner?.phone ?? "";
+            const v5 = (visits ?? []).slice(0, 5);
+            const esc = (t: unknown) => {
+              let s = "";
+              if (t == null) s = "";
+              else if (typeof t === "string") s = t;
+              else if (typeof t === "number" || typeof t === "boolean")
+                s = String(t);
+              return s
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+            };
+            const row = (label: string, value?: string) =>
+              value && value.trim().length > 0
+                ? `<tr><td class="label">${esc(label)}</td><td>${esc(value)}</td></tr>`
+                : "";
+            const visitRows = v5
+              .map((v) => {
+                const code = v.code ?? `#${String(v._id)}`;
+                const when = v.datetime ?? v.createdAt ?? Date.now();
+                const statusLabel =
+                  v.status === "draft"
+                    ? "Чернова"
+                    : v.status === "finalized"
+                      ? "Приключено"
+                      : v.status;
+                const weight =
+                  typeof v.weight === "number" ? `${v.weight} кг` : "—";
+                const temp =
+                  typeof v.temperature === "number"
+                    ? `${v.temperature} °C`
+                    : "—";
+                const pulse =
+                  typeof v.pulse === "number" ? String(v.pulse) : "—";
+                const procedures = (v.procedures ?? []).join(", ");
+                const medications = (v.medications ?? []).join(", ");
+                return `
+                  <tr>
+                    <td>${esc(code)}</td>
+                    <td>${esc(statusLabel)}</td>
+                    <td>${esc(fmtDateTimeBG(when))}</td>
+                    <td>${esc(weight)}</td>
+                    <td>${esc(temp)}</td>
+                    <td>${esc(pulse)}</td>
+                    <td>${esc(procedures)}</td>
+                    <td>${esc(medications)}</td>
+                  </tr>
+                `;
+              })
+              .join("");
+            const html = `<!doctype html><html lang="bg"><head><meta charset="utf-8" />
+              <title>Животно ${esc(animal.name)}</title>
+              <style>
+                body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px;color:#111}
+                h1{font-size:20px;margin:0 0 12px}
+                h2{font-size:16px;margin:18px 0 8px}
+                table{border-collapse:collapse;width:100%;margin-top:8px}
+                th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
+                .label{color:#374151;width:220px;font-weight:600}
+                thead th{background:#f6f6f6;text-align:left}
+                @media print{a{color:inherit;text-decoration:none}}
+              </style></head><body>
+              <h1>Животно: ${esc(animal.name)}</h1>
+
+              <h2>Данни за животното</h2>
+              <table><tbody>
+                ${row("Име", animal.name)}
+                ${row("Вид", animal.species)}
+                ${row("Порода", animal.breed ?? "")}
+                ${row("Микрочип", animal.microchip ?? "")}
+                ${row("Пол", sexLabel)}
+                ${row("Кастриран/а", neuteredLabel)}
+                ${row("Дата на раждане", animal.dob ? fmtDateTimeBG(animal.dob) : "")}
+                ${row("Възраст (г.)", ageYears)}
+                ${row("Създадено", fmtDateTimeBG(animal.createdAt))}
+              </tbody></table>
+
+              ${
+                ownerName || ownerPhone
+                  ? `
+                <h2>Притежател</h2>
+                <table><tbody>
+                  ${row("Име", ownerName)}
+                  ${row("Телефон", ownerPhone)}
+                </tbody></table>
+              `
+                  : ""
+              }
+
+              <h2>Последни 5 посещения</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Код</th>
+                    <th>Статус</th>
+                    <th>Дата/час</th>
+                    <th>Тегло</th>
+                    <th>Температура</th>
+                    <th>Пулс</th>
+                    <th>Процедури</th>
+                    <th>Медикаменти</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${visitRows || `<tr><td colspan="8" class="muted">(няма данни)</td></tr>`}
+                </tbody>
+              </table>
+
+              </body></html>`;
+            const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const w = window.open(url, "_blank");
+            if (!w) {
+              URL.revokeObjectURL(url);
+              return;
+            }
+            const handleLoad = () => {
+              try {
+                w.focus();
+              } catch {}
+              w.print();
+              w.removeEventListener("load", handleLoad);
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            };
+            w.addEventListener("load", handleLoad);
+          } catch (error) {
+            console.error(error);
+            toast.error("Неуспешно подготвяне за печат");
+          }
+        }}
         onConfirmDelete={() => setConfirmDeleteOpen(true)}
         onBack={() => router.push("/animals")}
-        disablePrimary={!owner}
+        disablePrimary={!owner || Boolean(draftVisit)}
         isDeleting={isDeleting}
       />
       <div className="space-y-6">
@@ -472,13 +653,8 @@ export default function AnimalDetailPage() {
             <div className="space-y-2">
               <Label htmlFor="sex">Пол</Label>
               <Select
-                value={
-                  form.sex === "male"
-                    ? "male"
-                    : form.sex === "female"
-                      ? "female"
-                      : "unknown"
-                }
+                key={`sex-${form.sex ?? "unknown"}`}
+                value={form.sex ?? "unknown"}
                 onValueChange={(value: "male" | "female" | "unknown") =>
                   setForm((f) => ({ ...f, sex: value }))
                 }

@@ -187,6 +187,21 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    // Prevent multiple draft visits per animal
+    if (args.animalId) {
+      const existing = await ctx.db.query("visits").collect();
+      const existingDraft = existing.find(
+        (v: any) =>
+          v.status === "draft" && String(v.animalId) === String(args.animalId),
+      );
+      if (existingDraft) {
+        return {
+          ok: false,
+          reason: "draft_exists",
+          id: existingDraft._id,
+        } as const;
+      }
+    }
     // Generate human-friendly code (best-effort uniqueness)
     const existing = await ctx.db.query("visits").collect();
     let code = "";
