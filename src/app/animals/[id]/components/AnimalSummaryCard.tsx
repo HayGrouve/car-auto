@@ -320,22 +320,6 @@ export function AnimalSummaryCard({
               ))}
             </div>
           </SectionCard>
-          <SectionCard title="Метрики">
-            <div className="grid gap-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Общо посещения:</span>
-                <span>{visitMetrics.total}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Чернови:</span>
-                <span>{visitMetrics.drafts}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Финализирани:</span>
-                <span>{visitMetrics.finalized}</span>
-              </div>
-            </div>
-          </SectionCard>
           <SectionCard title="Последни посещения">
             <div className="space-y-3">
               {recentVisits.map((visit) => (
@@ -360,6 +344,22 @@ export function AnimalSummaryCard({
                   )}
                 </div>
               ))}
+            </div>
+          </SectionCard>
+          <SectionCard title="Метрики">
+            <div className="grid gap-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Общо посещения:</span>
+                <span>{visitMetrics.total}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Чернови:</span>
+                <span>{visitMetrics.drafts}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Финализирани:</span>
+                <span>{visitMetrics.finalized}</span>
+              </div>
             </div>
           </SectionCard>
         </div>

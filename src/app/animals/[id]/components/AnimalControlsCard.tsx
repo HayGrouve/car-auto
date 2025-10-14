@@ -143,13 +143,8 @@ export function AnimalControlsCard({
           {hasIncompleteVisit ? (
             <Alert>
               <AlertDescription>
-                Има незавършено посещение за това животно. Може да го продължите
-                <Link
-                  href={draftVisitId ? `/visits/${draftVisitId}` : `/visits`}
-                  className="text-primary inline underline underline-offset-4"
-                >
-                  от тук.
-                </Link>
+                Има незавършено посещение за това животно. Може да го
+                продължите.
               </AlertDescription>
             </Alert>
           ) : null}
