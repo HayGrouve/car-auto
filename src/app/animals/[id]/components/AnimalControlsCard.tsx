@@ -142,7 +142,12 @@ export function AnimalControlsCard({
             <Alert>
               <AlertDescription>
                 Има незавършено посещение за това животно. Може да го продължите
-                от тук.
+                <Link
+                  href={`/visits`}
+                  className="text-primary inline underline underline-offset-4"
+                >
+                  от тук.
+                </Link>
               </AlertDescription>
             </Alert>
           ) : null}

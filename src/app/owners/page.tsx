@@ -245,27 +245,50 @@ export default function OwnersPage() {
             <form onSubmit={handleCreate} className="grid grid-cols-1 gap-3">
               <div>
                 <Label htmlFor="name">Име</Label>
-                <Input id="name" name="name" required />
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoCapitalize="words"
+                  autoComplete="name"
+                  pattern="[A-Za-zА-Яа-я ]+"
+                  title="Въведете само букви"
+                  placeholder="Иван Иванов"
+                  required
+                />
               </div>
               <div>
                 <Label htmlFor="phone">Телефон</Label>
                 <Input
                   id="phone"
                   name="phone"
+                  type="tel"
+                  pattern="[0-9]{10}"
+                  title="Въведете телефонния номер във формат 08xx xxx xxx"
+                  placeholder="08xx xxx xxx"
                   required
-                  aria-describedby="phone-help"
                 />
-                <span id="phone-help" className="sr-only">
-                  Въведете телефонния номер във формат 08xx xxx xxx
-                </span>
               </div>
               <div>
                 <Label htmlFor="email">Имейл</Label>
-                <Input id="email" name="email" />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="ivan@example.com"
+                  pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+                  title="Въведете валиден имейл адрес"
+                  required
+                />
               </div>
               <div>
                 <Label htmlFor="address">Адрес</Label>
-                <Input id="address" name="address" />
+                <Input
+                  id="address"
+                  name="address"
+                  placeholder="ул. Иван Иванов 123"
+                />
               </div>
               <label className="flex items-center gap-2">
                 <Checkbox name="gdpr" />

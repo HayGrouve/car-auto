@@ -285,17 +285,41 @@ export default function AnimalsPage() {
                 <Input
                   id="aname"
                   name="name"
+                  type="text"
+                  autoCapitalize="words"
+                  pattern="[A-Za-zА-Яа-я ]+"
+                  title="Въведете само букви"
+                  placeholder="Шаро"
                   required
                   aria-label="Име на животно"
                 />
               </div>
               <div>
                 <Label htmlFor="species">Вид</Label>
-                <Input id="species" name="species" required />
+                <Input
+                  id="species"
+                  name="species"
+                  type="text"
+                  autoCapitalize="words"
+                  pattern="[A-Za-zА-Яа-я ]+"
+                  title="Въведете само букви"
+                  placeholder="Куче"
+                  required
+                  aria-label="Вид на животно"
+                />
               </div>
               <div>
                 <Label htmlFor="breed">Порода</Label>
-                <Input id="breed" name="breed" />
+                <Input
+                  id="breed"
+                  name="breed"
+                  type="text"
+                  autoCapitalize="words"
+                  pattern="[A-Za-zА-Яа-я ]+"
+                  title="Въведете само букви"
+                  placeholder="Лабрадор"
+                  aria-label="Порода на животно"
+                />
               </div>
               <div>
                 <Label htmlFor="sex">Пол</Label>
@@ -317,7 +341,13 @@ export default function AnimalsPage() {
               </div>
               <div>
                 <Label htmlFor="microchip">Микрочип</Label>
-                <Input id="microchip" name="microchip" />
+                <Input
+                  id="microchip"
+                  name="microchip"
+                  type="text"
+                  placeholder="напр. 985112003178000"
+                  aria-label="Микрочип на животно"
+                />
               </div>
               <div>
                 <Label htmlFor="birthdate">Дата на раждане</Label>
