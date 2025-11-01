@@ -30,6 +30,7 @@ import {
 } from "@/components/breadcrumbs";
 import { SectionCard } from "@/components/ui/section-card";
 import { useRouter } from "next/navigation";
+import { printInvoice } from "@/lib/printInvoice";
 
 const ALL_OWNERS_VALUE = "__all";
 
@@ -385,67 +386,7 @@ export default function InvoicesPage() {
                     variant="outline"
                     aria-label={`Печат за фактура ${inv.code ?? String(inv._id)}`}
                     onClick={() => {
-                      const w = window.open(
-                        "",
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
-                      if (!w) return;
-                      const rows = inv.items
-                        .map(
-                          (it) => `
-                        <tr>
-                          <td>${it.description}</td>
-                          <td style="text-align:right;">${it.quantity}</td>
-                          <td style="text-align:right;">${fmtNumberBG(it.price, { style: "currency", currency: "BGN" })}</td>
-                          <td style="text-align:right;">${fmtNumberBG(it.total, { style: "currency", currency: "BGN" })}</td>
-                        </tr>
-                      `,
-                        )
-                        .join("");
-                      const html = `<!doctype html>
-                        <html lang=\"bg\">
-                          <head>
-                            <meta charset=\"utf-8\" />
-                            <title>Фактура ${inv.code ?? `#${String(inv._id)}`}</title>
-                            <style>
-                              body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px;color:#111}
-                              h1{font-size:20px;margin:0 0 12px}
-                              table{border-collapse:collapse;width:100%;margin-top:12px}
-                              th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
-                              tfoot td{font-weight:600}
-                              .muted{color:#666}
-                            </style>
-                          </head>
-                          <body>
-                            <h1>Фактура ${inv.code ?? `#${String(inv._id)}`}</h1>
-                            <div class=\"muted\">Дата: ${new Date(inv.createdAt).toLocaleString("bg-BG")}</div>
-                            <div class=\"muted\">Статус: ${inv.paid ? "Платена" : "Неплатена"}${inv.paid && inv.paidAt ? " · " + new Date(inv.paidAt).toLocaleString("bg-BG") : ""}</div>
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th>Описание</th>
-                                  <th style=\"text-align:right;\">Кол-во</th>
-                                  <th style=\"text-align:right;\">Цена</th>
-                                  <th style=\"text-align:right;\">Сума</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                ${rows}
-                              </tbody>
-                              <tfoot>
-                                <tr>
-                                  <td colspan=\"3\" style=\"text-align:right;\">Общо</td>
-                                  <td style=\"text-align:right;\">${fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}</td>
-                                </tr>
-                              </tfoot>
-                            </table>
-                            <script>window.onload = () => window.print()</script>
-                          </body>
-                        </html>`;
-                      w.document.open();
-                      w.document.write(html);
-                      w.document.close();
+                      printInvoice(inv);
                     }}
                   >
                     <Printer className="mr-1 size-4" aria-hidden /> Печат
