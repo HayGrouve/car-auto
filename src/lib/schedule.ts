@@ -103,19 +103,20 @@ export function validateSlotTime(
   return { valid: true };
 }
 
-export function getAvailableSlots(
+export function getNextAvailableSlot(
   date: Date,
   existingSlots: Array<{ startTime: number; endTime: number }>,
-): Array<{ start: number; end: number }> {
+  slotDurationMinutes: number = 30,
+): { startHour: number; startMinute: number; endHour: number; endMinute: number } | null {
   const schedule = getWorkingHours(date);
   if (!schedule) {
-    return [];
+    return null;
   }
 
-  const slots: Array<{ start: number; end: number }> = [];
   const dayStart = startOfDay(date);
+  const slots: Array<{ start: number; end: number }> = [];
 
-  // Morning slot
+  // Build working time periods
   if (schedule.morning) {
     const morningStart = setMinutes(
       setHours(dayStart, schedule.morning.start),
@@ -131,7 +132,6 @@ export function getAvailableSlots(
     });
   }
 
-  // Afternoon slot
   if (schedule.afternoon) {
     const afternoonStart = setMinutes(
       setHours(dayStart, Math.floor(schedule.afternoon.start)),
@@ -147,8 +147,106 @@ export function getAvailableSlots(
     });
   }
 
-  // Filter out times occupied by existing slots
-  // This is a simplified version - in a real scenario you'd want more sophisticated conflict detection
-  return slots;
+  // Sort existing slots by start time
+  const sortedExisting = [...existingSlots]
+    .map((s) => ({ start: s.startTime, end: s.endTime }))
+    .sort((a, b) => a.start - b.start);
+
+  // Find the first available gap
+  for (const period of slots) {
+    let currentTime = period.start;
+    const periodEnd = period.end;
+
+    // Check if we can fit a slot at the start of the period
+    if (sortedExisting.length === 0 || sortedExisting[0].start > currentTime + slotDurationMinutes * 60 * 1000) {
+      const endTime = currentTime + slotDurationMinutes * 60 * 1000;
+      if (endTime <= periodEnd) {
+        return {
+          startHour: new Date(currentTime).getHours(),
+          startMinute: new Date(currentTime).getMinutes(),
+          endHour: new Date(endTime).getHours(),
+          endMinute: new Date(endTime).getMinutes(),
+        };
+      }
+    }
+
+    // Check gaps between existing slots
+    for (const existing of sortedExisting) {
+      // If there's a gap before this slot
+      if (currentTime < existing.start) {
+        const gapDuration = existing.start - currentTime;
+        if (gapDuration >= slotDurationMinutes * 60 * 1000) {
+          const endTime = currentTime + slotDurationMinutes * 60 * 1000;
+          if (endTime <= periodEnd) {
+            return {
+              startHour: new Date(currentTime).getHours(),
+              startMinute: new Date(currentTime).getMinutes(),
+              endHour: new Date(endTime).getHours(),
+              endMinute: new Date(endTime).getMinutes(),
+            };
+          }
+        }
+      }
+      // Move current time to after this slot
+      currentTime = Math.max(currentTime, existing.end);
+    }
+
+    // Check if there's space after the last slot
+    if (currentTime < periodEnd) {
+      const endTime = currentTime + slotDurationMinutes * 60 * 1000;
+      if (endTime <= periodEnd) {
+        return {
+          startHour: new Date(currentTime).getHours(),
+          startMinute: new Date(currentTime).getMinutes(),
+          endHour: new Date(endTime).getHours(),
+          endMinute: new Date(endTime).getMinutes(),
+        };
+      }
+    }
+  }
+
+  // If no gap found, return the first available time in working hours
+  if (slots.length > 0) {
+    const firstPeriod = slots[0];
+    const firstStart = new Date(firstPeriod.start);
+    const firstEnd = firstStart.getTime() + slotDurationMinutes * 60 * 1000;
+    if (firstEnd <= firstPeriod.end) {
+      return {
+        startHour: firstStart.getHours(),
+        startMinute: firstStart.getMinutes(),
+        endHour: new Date(firstEnd).getHours(),
+        endMinute: new Date(firstEnd).getMinutes(),
+      };
+    }
+  }
+
+  return null;
+}
+
+export function getAvailableHours(date: Date): number[] {
+  const schedule = getWorkingHours(date);
+  if (!schedule) {
+    return [];
+  }
+
+  const hours = new Set<number>();
+
+  if (schedule.morning) {
+    const start = Math.floor(schedule.morning.start);
+    const end = Math.ceil(schedule.morning.end);
+    for (let h = start; h < end; h++) {
+      hours.add(h);
+    }
+  }
+
+  if (schedule.afternoon) {
+    const start = Math.floor(schedule.afternoon.start);
+    const end = Math.ceil(schedule.afternoon.end);
+    for (let h = start; h < end; h++) {
+      hours.add(h);
+    }
+  }
+
+  return Array.from(hours).sort((a, b) => a - b);
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,11 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { bg } from "date-fns/locale";
 import { startOfDay, setHours, setMinutes } from "date-fns";
-import { validateSlotTime } from "@/lib/schedule";
+import {
+  validateSlotTime,
+  getAvailableHours,
+  getNextAvailableSlot,
+} from "@/lib/schedule";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
@@ -49,8 +53,15 @@ type ScheduleSlotFormProps = {
   onCancel?: () => void;
   initialData?: ScheduleSlot | null;
   owners?: Array<{ _id: string; name: string; phone?: string }>;
-  animals?: Array<{ _id: string; name: string; species: string }>;
+  animals?: Array<{
+    _id: string;
+    name: string;
+    species: string;
+    ownerId?: string | null;
+  }>;
   visits?: Array<{ _id: string; code?: string | null }>;
+  hideDatePicker?: boolean; // Hide date picker when using calendar selection
+  existingSlots?: Array<{ startTime: number; endTime: number }>; // Existing slots for the selected date
 };
 
 export function ScheduleSlotForm({
@@ -61,35 +72,120 @@ export function ScheduleSlotForm({
   owners = [],
   animals = [],
   visits = [],
+  hideDatePicker = false,
+  existingSlots = [],
 }: ScheduleSlotFormProps) {
-  const [date, setDate] = useState<Date>(initialData ? new Date(initialData.date) : selectedDate);
-  const [startTime, setStartTime] = useState(
-    initialData
-      ? format(new Date(initialData.startTime), "HH:mm")
-      : "09:00",
+  const [date, setDate] = useState<Date>(
+    initialData ? new Date(initialData.date) : selectedDate,
   );
-  const [endTime, setEndTime] = useState(
+  const [startHour, setStartHour] = useState(
+    initialData ? new Date(initialData.startTime).getHours() : 9,
+  );
+  const [startMinute, setStartMinute] = useState(
     initialData
-      ? format(new Date(initialData.endTime), "HH:mm")
-      : "10:00",
+      ? Math.round(new Date(initialData.startTime).getMinutes() / 15) * 15
+      : 0,
+  );
+  const [endHour, setEndHour] = useState(
+    initialData ? new Date(initialData.endTime).getHours() : 10,
+  );
+  const [endMinute, setEndMinute] = useState(
+    initialData
+      ? Math.round(new Date(initialData.endTime).getMinutes() / 15) * 15
+      : 0,
   );
   const [title, setTitle] = useState(initialData?.title || "");
   const [description, setDescription] = useState(
     initialData?.description || "",
   );
-  const [visitId, setVisitId] = useState<string>(
-    initialData?.visitId || "",
-  );
-  const [ownerId, setOwnerId] = useState<string>(
-    initialData?.ownerId || "",
-  );
-  const [animalId, setAnimalId] = useState<string>(
-    initialData?.animalId || "",
-  );
+  const [visitId, setVisitId] = useState<string>(initialData?.visitId || "");
+  const [ownerId, setOwnerId] = useState<string>(initialData?.ownerId || "");
+  const [animalId, setAnimalId] = useState<string>(initialData?.animalId || "");
   const [ownerSearch, setOwnerSearch] = useState("");
   const [animalSearch, setAnimalSearch] = useState("");
   const [visitSearch, setVisitSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
+  const [animalPopoverOpen, setAnimalPopoverOpen] = useState(false);
+  const isInitialMount = useRef(true);
+
+  // Update form values when initialData changes (for editing)
+  useEffect(() => {
+    if (initialData) {
+      setDate(new Date(initialData.date));
+      setStartHour(new Date(initialData.startTime).getHours());
+      setStartMinute(
+        Math.round(new Date(initialData.startTime).getMinutes() / 15) * 15,
+      );
+      setEndHour(new Date(initialData.endTime).getHours());
+      setEndMinute(
+        Math.round(new Date(initialData.endTime).getMinutes() / 15) * 15,
+      );
+      setTitle(initialData.title || "");
+      setDescription(initialData.description || "");
+      setVisitId(initialData.visitId || "");
+      setOwnerId(initialData.ownerId || "");
+      setAnimalId(initialData.animalId || "");
+      // Reset the initial mount flag when editing a new slot
+      isInitialMount.current = true;
+    }
+  }, [initialData]);
+
+  // Update date when selectedDate changes (for new slots)
+  useEffect(() => {
+    if (!initialData) {
+      setDate(selectedDate);
+    }
+  }, [selectedDate, initialData]);
+
+  // Filter animals by owner when owner is selected
+  const filteredAnimals = useMemo(() => {
+    let filtered = animals;
+
+    // Filter by owner if owner is selected
+    if (ownerId) {
+      filtered = filtered.filter((a) => a.ownerId === ownerId);
+    }
+
+    // Filter by search
+    if (animalSearch) {
+      const search = animalSearch.toLowerCase();
+      filtered = filtered.filter(
+        (a) =>
+          a.name.toLowerCase().includes(search) ||
+          a.species.toLowerCase().includes(search),
+      );
+    }
+
+    return filtered;
+  }, [animals, ownerId, animalSearch]);
+
+  // Auto-fill owner when animal is selected
+  const handleAnimalSelect = (animalIdValue: string) => {
+    setAnimalId(animalIdValue);
+    if (animalIdValue) {
+      const selectedAnimal = animals.find((a) => a._id === animalIdValue);
+      if (selectedAnimal?.ownerId) {
+        setOwnerId(selectedAnimal.ownerId);
+      }
+    }
+    setAnimalPopoverOpen(false);
+  };
+
+  // Clear animal when owner changes (if animal doesn't belong to new owner)
+  const handleOwnerSelect = (ownerIdValue: string) => {
+    setOwnerId(ownerIdValue);
+    if (ownerIdValue && animalId) {
+      const selectedAnimal = animals.find((a) => a._id === animalId);
+      if (selectedAnimal?.ownerId !== ownerIdValue) {
+        setAnimalId("");
+      }
+    } else if (!ownerIdValue) {
+      // Clear animal when owner is cleared
+      setAnimalId("");
+    }
+    setOwnerPopoverOpen(false);
+  };
 
   const filteredOwners = useMemo(() => {
     if (!ownerSearch) return owners;
@@ -101,22 +197,10 @@ export function ScheduleSlotForm({
     );
   }, [owners, ownerSearch]);
 
-  const filteredAnimals = useMemo(() => {
-    if (!animalSearch) return animals;
-    const search = animalSearch.toLowerCase();
-    return animals.filter(
-      (a) =>
-        a.name.toLowerCase().includes(search) ||
-        a.species.toLowerCase().includes(search),
-    );
-  }, [animals, animalSearch]);
-
   const filteredVisits = useMemo(() => {
     if (!visitSearch) return visits;
     const search = visitSearch.toLowerCase();
-    return visits.filter((v) =>
-      v.code?.toLowerCase().includes(search),
-    );
+    return visits.filter((v) => v.code?.toLowerCase().includes(search));
   }, [visits, visitSearch]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -125,23 +209,16 @@ export function ScheduleSlotForm({
 
     try {
       const dayStart = startOfDay(date);
-      const [startHour, startMin] = startTime.split(":").map(Number);
-      const [endHour, endMin] = endTime.split(":").map(Number);
-
       const startTimestamp = setMinutes(
         setHours(dayStart, startHour),
-        startMin,
+        startMinute,
       ).getTime();
       const endTimestamp = setMinutes(
         setHours(dayStart, endHour),
-        endMin,
+        endMinute,
       ).getTime();
 
-      const validation = validateSlotTime(
-        date,
-        startTimestamp,
-        endTimestamp,
-      );
+      const validation = validateSlotTime(date, startTimestamp, endTimestamp);
       if (!validation.valid) {
         throw new Error(validation.error);
       }
@@ -164,8 +241,10 @@ export function ScheduleSlotForm({
         setVisitId("");
         setOwnerId("");
         setAnimalId("");
-        setStartTime("09:00");
-        setEndTime("10:00");
+        setStartHour(9);
+        setStartMinute(0);
+        setEndHour(10);
+        setEndMinute(0);
       }
     } catch (error) {
       throw error;
@@ -174,55 +253,194 @@ export function ScheduleSlotForm({
     }
   };
 
+  // Update date when selectedDate changes (for new slots)
+  useEffect(() => {
+    if (!initialData) {
+      setDate(selectedDate);
+      // Prefill with next available slot
+      const nextSlot = getNextAvailableSlot(selectedDate, existingSlots, 30);
+      if (nextSlot) {
+        // Round minutes to nearest 15-minute increment
+        const roundedStartMinute = Math.round(nextSlot.startMinute / 15) * 15;
+        const roundedEndMinute = Math.round(nextSlot.endMinute / 15) * 15;
+
+        setStartHour(nextSlot.startHour);
+        setStartMinute(roundedStartMinute);
+        setEndHour(nextSlot.endHour);
+        setEndMinute(roundedEndMinute);
+        // Reset the initial mount flag so auto-fill doesn't override
+        isInitialMount.current = true;
+      } else {
+        // Fallback to first available hour if no slot found
+        const hourOptions = getAvailableHours(selectedDate);
+        if (hourOptions.length > 0) {
+          const firstHour = hourOptions[0];
+          if (firstHour !== undefined) {
+            setStartHour(firstHour);
+            setStartMinute(0);
+            setEndHour(firstHour);
+            setEndMinute(30);
+            isInitialMount.current = true;
+          }
+        }
+      }
+    }
+  }, [selectedDate, initialData, existingSlots]);
+
+  // Adjust hours when date changes to ensure they're within working hours
+  const hourOptions = useMemo(() => getAvailableHours(date), [date]);
+  useEffect(() => {
+    if (hourOptions.length > 0) {
+      // If start hour is not in available hours, set to first available hour
+      if (!hourOptions.includes(startHour)) {
+        const firstHour = hourOptions[0];
+        if (firstHour !== undefined) {
+          setStartHour(firstHour);
+          setStartMinute(0);
+        }
+      }
+      // If end hour is not in available hours, set to last available hour
+      if (!hourOptions.includes(endHour)) {
+        const lastHour = hourOptions[hourOptions.length - 1];
+        if (lastHour !== undefined) {
+          setEndHour(lastHour);
+          setEndMinute(0);
+        }
+      }
+    }
+  }, [date, hourOptions, startHour, endHour]);
+
+  // Auto-fill end time to be 30 minutes after start time
+  useEffect(() => {
+    // Skip auto-fill on initial mount to preserve existing end time when editing
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    // Auto-fill when start time changes (for both new and editing slots)
+    let newEndMinute = startMinute + 30;
+    let newEndHour = startHour;
+
+    // Handle minute overflow (e.g., 45 + 30 = 75 -> next hour + 15)
+    if (newEndMinute >= 60) {
+      newEndMinute = newEndMinute - 60;
+      newEndHour = startHour + 1;
+    }
+
+    // Ensure end time is within working hours
+    if (hourOptions.length > 0) {
+      const lastAvailableHour = hourOptions[hourOptions.length - 1];
+      if (lastAvailableHour !== undefined && newEndHour <= lastAvailableHour) {
+        setEndHour(newEndHour);
+        setEndMinute(newEndMinute);
+      }
+    }
+  }, [startHour, startMinute, hourOptions]);
+
+  const minuteOptions = [0, 15, 30, 45];
+
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3">
-      <div>
-        <Label>Дата</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !date && "text-muted-foreground",
-              )}
-            >
-              <CalendarIcon className="mr-2 size-4" />
-              {date ? format(date, "PPP", { locale: bg }) : "Изберете дата"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={(d) => d && setDate(d)}
-              locale={bg}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
+      {!hideDatePicker && (
+        <div>
+          <Label>Дата</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !date && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 size-4" />
+                {date ? format(date, "PPP", { locale: bg }) : "Изберете дата"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(d) => d && setDate(d)}
+                locale={bg}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label htmlFor="startTime">Начален час</Label>
-          <Input
-            id="startTime"
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            required
-          />
+          <Label>Начален час</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Select
+              value={startHour.toString()}
+              onValueChange={(v) => setStartHour(Number(v))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {hourOptions.map((h) => (
+                  <SelectItem key={h} value={h.toString()}>
+                    {h.toString().padStart(2, "0")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={startMinute.toString()}
+              onValueChange={(v) => setStartMinute(Number(v))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {minuteOptions.map((m) => (
+                  <SelectItem key={m} value={m.toString()}>
+                    {m.toString().padStart(2, "0")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div>
-          <Label htmlFor="endTime">Краен час</Label>
-          <Input
-            id="endTime"
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            required
-          />
+          <Label>Краен час</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <Select
+              value={endHour.toString()}
+              onValueChange={(v) => setEndHour(Number(v))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {hourOptions.map((h) => (
+                  <SelectItem key={h} value={h.toString()}>
+                    {h.toString().padStart(2, "0")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={endMinute.toString()}
+              onValueChange={(v) => setEndMinute(Number(v))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {minuteOptions.map((m) => (
+                  <SelectItem key={m} value={m.toString()}>
+                    {m.toString().padStart(2, "0")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -267,10 +485,7 @@ export function ScheduleSlotForm({
               />
               <CommandList>
                 <CommandEmpty>Няма резултати</CommandEmpty>
-                <CommandItem
-                  value=""
-                  onSelect={() => setVisitId("")}
-                >
+                <CommandItem value="" onSelect={() => setVisitId("")}>
                   Без посещение
                 </CommandItem>
                 {filteredVisits.map((v) => (
@@ -290,7 +505,7 @@ export function ScheduleSlotForm({
 
       <div>
         <Label>Собственик</Label>
-        <Popover>
+        <Popover open={ownerPopoverOpen} onOpenChange={setOwnerPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               {ownerId
@@ -307,14 +522,20 @@ export function ScheduleSlotForm({
               />
               <CommandList>
                 <CommandEmpty>Няма резултати</CommandEmpty>
-                <CommandItem value="" onSelect={() => setOwnerId("")}>
+                <CommandItem
+                  value=""
+                  onSelect={() => {
+                    setOwnerId("");
+                    setOwnerPopoverOpen(false);
+                  }}
+                >
                   Без собственик
                 </CommandItem>
                 {filteredOwners.map((o) => (
                   <CommandItem
                     key={o._id}
                     value={o._id}
-                    onSelect={(val) => setOwnerId(val)}
+                    onSelect={(val) => handleOwnerSelect(val)}
                   >
                     {o.name}
                     {o.phone ? ` · ${o.phone}` : ""}
@@ -328,7 +549,7 @@ export function ScheduleSlotForm({
 
       <div>
         <Label>Животно</Label>
-        <Popover>
+        <Popover open={animalPopoverOpen} onOpenChange={setAnimalPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               {animalId
@@ -345,14 +566,20 @@ export function ScheduleSlotForm({
               />
               <CommandList>
                 <CommandEmpty>Няма резултати</CommandEmpty>
-                <CommandItem value="" onSelect={() => setAnimalId("")}>
+                <CommandItem
+                  value=""
+                  onSelect={() => {
+                    setAnimalId("");
+                    setAnimalPopoverOpen(false);
+                  }}
+                >
                   Без животно
                 </CommandItem>
                 {filteredAnimals.map((a) => (
                   <CommandItem
                     key={a._id}
                     value={a._id}
-                    onSelect={(val) => setAnimalId(val)}
+                    onSelect={(val) => handleAnimalSelect(val)}
                   >
                     {a.name} ({a.species})
                   </CommandItem>
@@ -385,4 +612,3 @@ export function ScheduleSlotForm({
     </form>
   );
 }
-

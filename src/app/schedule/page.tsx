@@ -23,6 +23,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function SchedulePage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
@@ -31,6 +41,8 @@ export default function SchedulePage() {
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [slotToDelete, setSlotToDelete] = useState<ScheduleSlot | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const dateTimestamp = useMemo(() => {
     if (!selectedDate) return undefined;
@@ -73,7 +85,7 @@ export default function SchedulePage() {
   const animals = useQuery(
     api.animals.list,
     useMemo(() => ({ search: "", limit: 1000, sort: "createdAtDesc" }), []),
-  ) as { _id: string; name: string; species: string }[] | undefined;
+  ) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
 
   const visits = useQuery(
     api.visits.list,
@@ -137,13 +149,21 @@ export default function SchedulePage() {
   };
 
   const handleDelete = async (slotId: string) => {
-    if (!confirm("Сигурни ли сте, че искате да изтриете този слот?")) {
-      return;
+    const slot = slots?.find((s) => s._id === slotId);
+    if (slot) {
+      setSlotToDelete(slot);
+      setShowDeleteDialog(true);
     }
+  };
+
+  const confirmDelete = async () => {
+    if (!slotToDelete) return;
     try {
-      const res = await removeSlot({ id: slotId as Id<"schedule"> });
+      const res = await removeSlot({ id: slotToDelete._id as Id<"schedule"> });
       if (res?.ok) {
         toast.success("Слотът е изтрит успешно");
+        setShowDeleteDialog(false);
+        setSlotToDelete(null);
       }
     } catch (error) {
       toast.error(
@@ -252,6 +272,8 @@ export default function SchedulePage() {
                 owners={owners}
                 animals={animals}
                 visits={visits}
+                hideDatePicker={true}
+                existingSlots={slots || []}
               />
             ) : (
               <p className="text-muted-foreground text-sm">
@@ -295,6 +317,35 @@ export default function SchedulePage() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Изтриване на слот</AlertDialogTitle>
+            <AlertDialogDescription>
+              Сигурни ли сте, че искате да изтриете този слот? Това действие не
+              може да бъде отменено.
+              {slotToDelete && (
+                <>
+                  <br />
+                  <br />
+                  <strong>{slotToDelete.title}</strong>
+                  {slotToDelete.description && ` - ${slotToDelete.description}`}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSlotToDelete(null)}>
+              Отказ
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Изтрий
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
