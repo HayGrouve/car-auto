@@ -146,13 +146,82 @@ export const markPaid = mutation({
     await ctx.db.patch(args.id, { paid: true, paidAt: now } as any);
     if (invoice?.visitId) {
       try {
-        await ctx.db.patch(
-          invoice.visitId as any,
-          {
-            outstandingAmount: null,
-            updatedAt: now,
-          } as any,
-        );
+        // Fetch the visit to check its status
+        const visit = await ctx.db.get(invoice.visitId as any);
+        if (visit) {
+          // Update outstandingAmount
+          await ctx.db.patch(
+            invoice.visitId as any,
+            {
+              outstandingAmount: null,
+              updatedAt: now,
+            } as any,
+          );
+          
+          // Finalize the visit if it's not already finalized
+          const visitStatus = (visit as any).status;
+          if (visitStatus !== "finalized") {
+            await ctx.db.patch(invoice.visitId as any, {
+              status: "finalized",
+              updatedAt: now,
+            });
+            
+            // Update schedule slot status to "completed" if linked to this visit
+            try {
+              const slots = await ctx.db
+                .query("schedule")
+                .filter((q: any) => q.eq(q.field("visitId"), invoice.visitId))
+                .collect();
+              for (const slot of slots) {
+                await ctx.db.patch(slot._id, {
+                  status: "completed",
+                  updatedAt: now,
+                } as any);
+              }
+            } catch (_) {
+              // optional; ignore failures
+            }
+            
+            // Update procedure/medication catalogs (same logic as visits.finalize)
+            const procedures: string[] = (visit as any).procedures ?? [];
+            const medications: string[] = (visit as any).medications ?? [];
+            
+            // Update procedure catalog
+            try {
+              for (const name of procedures) {
+                const existing = await ctx.db
+                  .query("procedureCatalog")
+                  .filter((q: any) => q.eq(q.field("name"), name))
+                  .first();
+                if (existing)
+                  await ctx.db.patch(existing._id, {
+                    count: (existing as any).count + 1,
+                  } as any);
+                else await ctx.db.insert("procedureCatalog", { name, count: 1 } as any);
+              }
+            } catch (_) {
+              // table may not exist; ignore
+            }
+            
+            // Update medication catalog
+            try {
+              for (const name of medications) {
+                const existing = await ctx.db
+                  .query("medicationCatalog")
+                  .filter((q: any) => q.eq(q.field("name"), name))
+                  .first();
+                if (existing)
+                  await ctx.db.patch(existing._id, {
+                    count: (existing as any).count + 1,
+                  } as any);
+                else
+                  await ctx.db.insert("medicationCatalog", { name, count: 1 } as any);
+              }
+            } catch (_) {
+              // table may not exist; ignore
+            }
+          }
+        }
       } catch (_) {
         // optional back-prop; ignore failures
       }

@@ -24,25 +24,32 @@ export function Footer() {
 
         <nav aria-label="Навигация" className="flex flex-col gap-2 text-sm">
           <Link
-            className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none cursor-pointer"
             href="/owners"
             aria-label="Собственици"
           >
             Собственици
           </Link>
           <Link
-            className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none cursor-pointer"
             href="/animals"
             aria-label="Животни"
           >
             Животни
           </Link>
           <Link
-            className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none cursor-pointer"
             href="/visits"
             aria-label="Посещения"
           >
             Посещения
+          </Link>
+          <Link
+            className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none cursor-pointer"
+            href="/schedule"
+            aria-label="График"
+          >
+            График
           </Link>
         </nav>
 
@@ -93,7 +100,7 @@ export function Footer() {
             </DialogContent>
           </Dialog>
           <Link
-            className="text-muted-foreground focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            className="text-muted-foreground focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none cursor-pointer"
             href="/privacy"
             aria-label="Политика за поверителност"
           >

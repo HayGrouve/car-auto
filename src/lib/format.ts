@@ -32,3 +32,26 @@ export function formatDate(value: number | string | Date): string {
       : value;
   return new Intl.DateTimeFormat("bg-BG", { dateStyle: "medium" }).format(date);
 }
+
+export function formatTimeRange(start: number, end: number): string {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const startTime = new Intl.DateTimeFormat("bg-BG", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(startDate);
+  const endTime = new Intl.DateTimeFormat("bg-BG", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(endDate);
+  return `${startTime} - ${endTime}`;
+}
+
+export function formatScheduleDate(date: Date): string {
+  return new Intl.DateTimeFormat("bg-BG", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}

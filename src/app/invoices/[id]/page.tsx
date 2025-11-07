@@ -1,6 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useMemo, useState, useEffect, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
@@ -17,6 +17,14 @@ import {
 } from "@/components/breadcrumbs";
 
 export default function InvoiceDetailPage() {
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-3xl p-6">Зареждане...</main>}>
+      <InvoiceDetailPageContent />
+    </Suspense>
+  );
+}
+
+function InvoiceDetailPageContent() {
   const params = useParams<{ id: string }>();
   const raw = params.id;
   // Support either Convex _id or human code in the URL param
@@ -41,7 +49,22 @@ export default function InvoiceDetailPage() {
     id: string;
   }) => Promise<{ ok: boolean }>;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+
+  // Handle auto-mark as paid from query param
+  useEffect(() => {
+    const payParam = searchParams.get("pay");
+    if (payParam === "true" && inv && !inv.paid && !loading) {
+      const handleAutoPay = async () => {
+        setLoading(true);
+        await markPaid({ id: inv._id });
+        setLoading(false);
+        router.push("/");
+      };
+      void handleAutoPay();
+    }
+  }, [searchParams, inv, loading, markPaid, router]);
 
   useBreadcrumbRegistration(
     [
@@ -97,6 +120,7 @@ export default function InvoiceDetailPage() {
                   setLoading(true);
                   await markPaid({ id: inv._id });
                   setLoading(false);
+                  router.push("/");
                 }}
               >
                 Маркирай платена

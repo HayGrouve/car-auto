@@ -257,7 +257,7 @@ export default function OwnerDetailPage() {
       </div>
       <p className="text-muted-foreground text-sm">
         Прочетете нашата{" "}
-        <Link className="underline underline-offset-2" href="/privacy">
+        <Link className="underline underline-offset-2 cursor-pointer" href="/privacy">
           политика за поверителност
         </Link>
         .
@@ -482,6 +482,7 @@ function OwnerAuditLog({ ownerId }: { ownerId: Id<"owners"> }) {
 
 function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
   const [unpaidOnly, setUnpaidOnly] = useState(false);
+  const router = useRouter();
   const invoices = useQuery(
     api.invoices.list,
     useMemo(() => ({ ownerId, unpaidOnly }), [ownerId, unpaidOnly]),
@@ -568,8 +569,10 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
                       setLoading(inv._id);
                       const r = await markPaid({ id: inv._id });
                       setLoading(null);
-                      if (r?.ok)
+                      if (r?.ok) {
                         toast.success("Фактура маркирана като платена");
+                        router.push("/");
+                      }
                     }}
                   >
                     Маркирай платена

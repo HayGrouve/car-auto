@@ -5,16 +5,12 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { type VisitDoc } from "@/types/visit";
-// removed inline edit inputs in favor of wizard-only editing
 import { Button } from "@/components/ui/button";
-// removed popover/command inputs tied to inline form
 import { toast } from "sonner";
 import { fmtDateTimeBG } from "@/lib/format";
 import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
 import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
 import VisitWizard from "./VisitWizard";
-// pathname/searchParams no longer used in wizard default flow
-// import { usePathname, useSearchParams } from "next/navigation";
 import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
@@ -25,9 +21,6 @@ import {
   VisitActionsMenuMobile,
   buildDuplicateAction,
 } from "@/components/visits/VisitActionsMenu";
-// icons only used in other sections
-// import { CalendarCheck, FilePlus, Printer } from "lucide-react";
-// import { VisitSecondaryPanels } from "@/components/visits/VisitSecondaryPanels";
 import { SectionCard } from "@/components/ui/section-card";
 
 export default function VisitDetailPage() {
@@ -55,7 +48,6 @@ export default function VisitDetailPage() {
   const [hydrated, setHydrated] = useState(false);
   const [procedures, setProcedures] = useState<string[]>([]);
   const [medications, setMedications] = useState<string[]>([]);
-  // removed inline editing helpers (wizard-only editing)
   const [animalId, setAnimalId] = useState<string | null>(null);
   const owners = useQuery(
     api.owners.list,
@@ -76,8 +68,6 @@ export default function VisitDetailPage() {
   const [ownerId, setOwnerId] = useState<string>("");
 
   const visit: VisitDoc | null = visitUnknown ?? null;
-  // const pathname = usePathname();
-  // const sp = useSearchParams();
 
   // Wizard visibility
   const [showWizard, setShowWizard] = useState(true);
@@ -110,8 +100,6 @@ export default function VisitDetailPage() {
       setHydrated(true);
     }
   }, [visit, hydrated]);
-
-  // removed unused onSave (wizard manages updates)
 
   async function onFinalize() {
     const res = await finalize({ id });
@@ -637,7 +625,6 @@ export default function VisitDetailPage() {
           </SectionCard>
         )}
 
-        {/* Removed editable "Основни данни" block – edits now happen in the Visit Wizard exclusively */}
       </section>
       <div className="lg:hidden" aria-hidden>
         <div className="bg-background/95 supports-[backdrop-filter]:bg-background/70 fixed inset-x-0 bottom-0 z-20 border-t p-3 shadow-lg shadow-black/5 backdrop-blur">

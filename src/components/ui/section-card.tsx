@@ -4,6 +4,8 @@ import type { HTMLAttributes, ReactNode } from "react";
 import { forwardRef, useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface SectionCardProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
   title?: ReactNode;
@@ -105,41 +107,33 @@ export const SectionCard = forwardRef<HTMLElement, SectionCardProps>(
           {items.map((action, index) => {
             if (action.href) {
               return (
-                <a
+                <Button
                   key={index}
-                  href={action.href}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium transition",
-                    action.variant === "ghost"
-                      ? "text-muted-foreground hover:bg-muted"
-                      : action.variant === "outline"
-                        ? "border-border text-foreground hover:bg-muted border"
-                        : "bg-primary text-primary-foreground hover:bg-primary/90",
-                  )}
+                  asChild
+                  variant={action.variant === "ghost" ? "ghost" : action.variant === "outline" ? "outline" : "default"}
+                  size="sm"
+                  className="gap-1"
                 >
-                  {action.icon}
-                  {action.label}
-                </a>
+                  <Link href={action.href}>
+                    {action.icon}
+                    {action.label}
+                  </Link>
+                </Button>
               );
             }
 
             return (
-              <button
+              <Button
                 type="button"
                 key={index}
                 onClick={action.onClick}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium transition",
-                  action.variant === "ghost"
-                    ? "text-muted-foreground hover:bg-muted"
-                    : action.variant === "outline"
-                      ? "border-border text-foreground hover:bg-muted border"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90",
-                )}
+                variant={action.variant === "ghost" ? "ghost" : action.variant === "outline" ? "outline" : "default"}
+                size="sm"
+                className="gap-1"
               >
                 {action.icon}
                 {action.label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -164,7 +158,7 @@ export const SectionCard = forwardRef<HTMLElement, SectionCardProps>(
           <button
             type="button"
             onClick={toggle}
-            className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium transition"
+            className="text-muted-foreground hover:bg-muted flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium transition cursor-pointer"
             aria-expanded={expanded}
             aria-controls={
               effectiveCollapsible ? "section-card-content" : undefined

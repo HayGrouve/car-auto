@@ -45,6 +45,20 @@ type InvoiceDoc = {
   createdAt: number;
   total?: number | null;
   paid?: boolean | null;
+  visitId?: string | null;
+};
+
+type ScheduleSlotDoc = {
+  _id: string;
+  date: number;
+  startTime: number;
+  endTime: number;
+  title: string;
+  description?: string | null;
+  visitId?: string | null;
+  ownerId?: string | null;
+  animalId?: string | null;
+  status: string;
 };
 
 export const overview = query({
@@ -55,12 +69,14 @@ export const overview = query({
     const todayEnd = endOfDay(now);
     const weekStart = startOfDay(now - 6 * DAY_MS);
 
-    const [ownerDocs, animalDocs, visitDocs, invoiceDocs] = await Promise.all([
-      ctx.db.query("owners").collect() as Promise<OwnerDoc[]>,
-      ctx.db.query("animals").collect() as Promise<AnimalDoc[]>,
-      ctx.db.query("visits").collect() as Promise<VisitDoc[]>,
-      ctx.db.query("invoices").collect() as Promise<InvoiceDoc[]>,
-    ]);
+    const [ownerDocs, animalDocs, visitDocs, invoiceDocs, scheduleDocs] =
+      await Promise.all([
+        ctx.db.query("owners").collect() as Promise<OwnerDoc[]>,
+        ctx.db.query("animals").collect() as Promise<AnimalDoc[]>,
+        ctx.db.query("visits").collect() as Promise<VisitDoc[]>,
+        ctx.db.query("invoices").collect() as Promise<InvoiceDoc[]>,
+        ctx.db.query("schedule").collect() as Promise<ScheduleSlotDoc[]>,
+      ]);
 
     const ownerMap = new Map<string, { name: string; phone?: string | null }>();
     ownerDocs.forEach((owner) => {
@@ -72,23 +88,20 @@ export const overview = query({
       }
     });
 
+    const animalMap = new Map<
+      string,
+      { name: string; species?: string | null; ownerId?: string | null }
+    >();
+    animalDocs.forEach((animal) => {
+      animalMap.set(String(animal._id), {
+        name: animal.name,
+        species: animal.species ?? null,
+        ownerId: animal.ownerId ? String(animal.ownerId) : null,
+      });
+    });
+
     const animalCount = animalDocs.length;
     const ownerCount = ownerDocs.filter((o) => !o?.deletedAt).length;
-
-    const visitsSorted = [...visitDocs].sort(
-      (a, b) => (b.datetime ?? b.createdAt) - (a.datetime ?? a.createdAt),
-    );
-    const recentVisits = visitsSorted.slice(0, 6).map((visit) => ({
-      _id: String(visit._id),
-      code: visit.code ?? null,
-      datetime: visit.datetime ?? visit.createdAt ?? Date.now(),
-      status: visit.status,
-      ownerId: visit.ownerId ? String(visit.ownerId) : null,
-      ownerName: visit.ownerId
-        ? (ownerMap.get(String(visit.ownerId))?.name ?? null)
-        : null,
-      animalId: visit.animalId ? String(visit.animalId) : null,
-    }));
 
     const draftVisitsCount = visitDocs.filter(
       (v) => v.status === "draft",
@@ -114,29 +127,13 @@ export const overview = query({
         animalId: visit.animalId ? String(visit.animalId) : null,
       }));
 
-    const patientBook = animalDocs
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 8)
-      .map((animal) => ({
-        _id: String(animal._id),
-        name: animal.name,
-        species: animal.species ?? null,
-        ownerId: animal.ownerId ? String(animal.ownerId) : null,
-        ownerName: animal.ownerId
-          ? (ownerMap.get(String(animal.ownerId))?.name ?? null)
-          : null,
-      }));
-
-    const invoicesSorted = [...invoiceDocs].sort(
-      (a, b) => b.createdAt - a.createdAt,
-    );
-    const recentInvoices = invoicesSorted.slice(0, 6).map((invoice) => ({
-      _id: String(invoice._id),
-      code: invoice.code ?? null,
-      createdAt: invoice.createdAt,
-      total: invoice.total ?? 0,
-      paid: Boolean(invoice.paid),
-    }));
+    // Create a map of visitId -> invoiceId for quick lookup
+    const visitInvoiceMap = new Map<string, string>();
+    invoiceDocs.forEach((invoice) => {
+      if (invoice.visitId) {
+        visitInvoiceMap.set(String(invoice.visitId), String(invoice._id));
+      }
+    });
 
     const unpaidInvoices = invoiceDocs.filter((inv) => !inv.paid);
     const unpaidInvoicesTotal = unpaidInvoices.reduce(
@@ -164,13 +161,47 @@ export const overview = query({
       .filter((inv) => !inv.paid)
       .reduce((sum, inv) => sum + (inv.total ?? 0), 0);
 
-    const alerts: string[] = [];
-    if (unpaidInvoices.length > 0) {
-      alerts.push(`Неплатени фактури: ${unpaidInvoices.length}`);
-    }
-    if (draftVisitsCount > 0) {
-      alerts.push(`Чернови посещения: ${draftVisitsCount}`);
-    }
+    // Get today's schedule slots
+    // Filter by startTime (actual appointment time) to ensure we only show today's slots
+    // Compare dates by calendar day (year/month/day) to handle timezone differences
+
+    const todayDate = new Date(now);
+    const todayYear = todayDate.getUTCFullYear();
+    const todayMonth = todayDate.getUTCMonth();
+    const todayDay = todayDate.getUTCDate();
+
+    const todayScheduleSlots = scheduleDocs
+      .filter((slot) => {
+        // Only check startTime - this is the actual appointment time
+        const startTimeDate = new Date(slot.startTime);
+        const startYear = startTimeDate.getUTCFullYear();
+        const startMonth = startTimeDate.getUTCMonth();
+        const startDay = startTimeDate.getUTCDate();
+
+        const dateMatches =
+          startYear === todayYear &&
+          startMonth === todayMonth &&
+          startDay === todayDay;
+        const statusMatch = slot.status === "scheduled";
+        return dateMatches && statusMatch;
+      })
+      .sort((a, b) => a.startTime - b.startTime)
+      .map((slot) => ({
+        _id: String(slot._id),
+        title: slot.title,
+        description: slot.description ?? null,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        visitId: slot.visitId ? String(slot.visitId) : null,
+        ownerId: slot.ownerId ? String(slot.ownerId) : null,
+        ownerName: slot.ownerId
+          ? (ownerMap.get(String(slot.ownerId))?.name ?? null)
+          : null,
+        animalId: slot.animalId ? String(slot.animalId) : null,
+        animalName: slot.animalId
+          ? (animalMap.get(String(slot.animalId))?.name ?? null)
+          : null,
+      }));
 
     return {
       counts: {
@@ -184,11 +215,9 @@ export const overview = query({
         week: { paid: weekPaidTotal, unpaid: weekUnpaidTotal },
         unpaidInvoicesTotal,
       },
-      recentVisits,
-      recentInvoices,
       todayVisits,
-      patientBook,
-      alerts,
+      todayScheduleSlots,
+      visitInvoiceMap: Object.fromEntries(visitInvoiceMap),
     } as const;
   },
 });

@@ -4,7 +4,7 @@ import Image from "next/image";
 import logoJpg from "@/../public/logo.jpg";
 import { usePathname } from "next/navigation";
 import { brand } from "@/lib/brand";
-import { Menu, PawPrint, User, CalendarCheck, FileText } from "lucide-react";
+import { Menu, PawPrint, User, CalendarCheck, FileText, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
@@ -24,6 +24,7 @@ export function AppNav() {
     { href: "/owners", label: "Собственици", icon: User },
     { href: "/animals", label: "Животни", icon: PawPrint },
     { href: "/visits", label: "Посещения", icon: CalendarCheck },
+    { href: "/schedule", label: "График", icon: Calendar },
     { href: "/invoices", label: "Фактури", icon: FileText },
   ];
 
@@ -34,7 +35,7 @@ export function AppNav() {
           key={l.href}
           href={l.href}
           onClick={onClick}
-          className={`inline-flex items-center gap-2 rounded-md px-3 py-1 ${pathname === l.href ? "bg-accent" : "hover:bg-accent"}`}
+          className={`inline-flex items-center gap-2 rounded-md px-3 py-1 cursor-pointer ${pathname === l.href ? "bg-accent" : "hover:bg-accent"}`}
         >
           {l.icon ? <l.icon className="size-4" /> : null}
           {l.label}
@@ -49,7 +50,7 @@ export function AppNav() {
         <div className="flex items-center gap-2">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 font-semibold hover:underline"
+            className="inline-flex items-center gap-2 font-semibold hover:underline cursor-pointer"
           >
             <Image
               src={logoJpg}
@@ -67,7 +68,7 @@ export function AppNav() {
           <GlobalSearch />
         </div>
         <button
-          className="p-2 md:hidden"
+          className="p-2 md:hidden cursor-pointer"
           aria-label="Меню"
           onClick={() => setOpen((o) => !o)}
         >

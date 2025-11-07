@@ -370,6 +370,7 @@ export default function InvoicesPage() {
                         await markPaid({ id: inv._id });
                         setPaidLoading(null);
                         toast.success("Фактура маркирана като платена");
+                        router.push("/");
                       }}
                     >
                       <CheckCircle className="mr-1 size-4" aria-hidden />{" "}
