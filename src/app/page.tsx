@@ -1,16 +1,15 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
-import { Users, PawPrint, ClipboardList, FileText, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 
 import { api } from "@/../convex/_generated/api";
 import { brand } from "@/lib/brand";
 import { fmtNumberBG, formatTimeRange } from "@/lib/format";
 import { SkeletonList } from "@/components/SkeletonList";
-import { MetricCard } from "@/components/dashboard/MetricCard";
-import { QuickActionsCard } from "@/components/dashboard/QuickActionsCard";
 import {
   VisitList,
   type VisitListItem,
@@ -27,8 +26,6 @@ import {
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
 import type { Id } from "@/../convex/_generated/dataModel";
-
-const ICON_CLASS = "size-5 text-muted-foreground";
 
 type DashboardCounts = {
   owners: number;
@@ -91,6 +88,7 @@ type DashboardOverview = {
   patientBook: DashboardPatient[];
   todayScheduleSlots: DashboardScheduleSlot[];
   alerts: string[];
+  visitInvoiceMap: Record<string, string>; // visitId -> invoiceId
 };
 
 export default function HomePage() {
@@ -105,6 +103,30 @@ export default function HomePage() {
     soap: { s?: string; o?: string; a?: string; p?: string };
   }) => Promise<{ ok: boolean; id?: string; reason?: string }>;
   const updateScheduleSlot = useMutation(api.schedule.update);
+
+  // Query for draft visits to check if animals have existing visits
+  const allDraftVisits = useQuery(
+    api.visits.list,
+    useMemo(() => ({ status: "draft", limit: 1000 }), []),
+  ) as
+    | {
+        _id: string;
+        animalId?: string | null;
+      }[]
+    | undefined;
+
+  // Create a map of animalId -> draft visit ID
+  const animalDraftVisitMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (allDraftVisits) {
+      allDraftVisits.forEach((visit) => {
+        if (visit.animalId) {
+          map.set(String(visit.animalId), visit._id);
+        }
+      });
+    }
+    return map;
+  }, [allDraftVisits]);
 
   useBreadcrumbRegistration([
     { label: "Начало", href: "/" } satisfies BreadcrumbItem,
@@ -180,47 +202,6 @@ export default function HomePage() {
     );
   }
 
-  const metrics: Array<{
-    label: string;
-    value: number;
-    href: string;
-    icon: React.ReactNode;
-    description?: string;
-  }> = [
-    {
-      label: "Собственици",
-      value: overview.counts.owners,
-      href: "/owners",
-      icon: <Users className={ICON_CLASS} aria-hidden />,
-    },
-    {
-      label: "Животни",
-      value: overview.counts.animals,
-      href: "/animals",
-      icon: <PawPrint className={ICON_CLASS} aria-hidden />,
-    },
-    {
-      label: "Чернови посещения",
-      value: overview.counts.draftVisits,
-      href: "/visits?status=draft",
-      icon: <ClipboardList className={ICON_CLASS} aria-hidden />,
-      description:
-        overview.todayVisits.length === 0
-          ? undefined
-          : `Планирани днес: ${overview.todayVisits.length}`,
-    },
-    {
-      label: "Неплатени фактури",
-      value: overview.counts.unpaidInvoices,
-      href: "/invoices?unpaid=true",
-      icon: <FileText className={ICON_CLASS} aria-hidden />,
-      description:
-        overview.totals.unpaidInvoicesTotal === 0
-          ? undefined
-          : `Общо: ${fmtNumberBG(overview.totals.unpaidInvoicesTotal, { style: "currency", currency: "BGN" })}`,
-    },
-  ];
-
   const recentVisits: VisitListItem[] = overview.recentVisits.map((visit) => ({
     _id: visit._id,
     code: visit.code ?? null,
@@ -229,6 +210,7 @@ export default function HomePage() {
     ownerName: visit.ownerName,
     ownerId: visit.ownerId,
     animalId: visit.animalId,
+    invoiceId: overview.visitInvoiceMap[visit._id] ?? null,
   }));
 
   const todayVisits: VisitListItem[] = overview.todayVisits.map((visit) => ({
@@ -239,6 +221,7 @@ export default function HomePage() {
     ownerName: visit.ownerName,
     ownerId: visit.ownerId,
     animalId: visit.animalId,
+    invoiceId: overview.visitInvoiceMap[visit._id] ?? null,
   }));
 
   const recentInvoices: InvoiceListItem[] = overview.recentInvoices.map(
@@ -267,32 +250,10 @@ export default function HomePage() {
         <AlertList alerts={overview.alerts} title="Статус" />
       </div>
 
-      <QuickActionsCard className="lg:grid-cols-4" />
-
-      <section className="grid gap-3 md:grid-cols-4">
-        {metrics.map(({ label, value, href, icon, description }) => (
-          <MetricCard
-            key={label}
-            label={label}
-            value={value}
-            href={href}
-            icon={icon}
-            description={description}
-          />
-        ))}
-      </section>
-
       <section className="grid gap-4 md:grid-cols-2">
-        <VisitList
-          title="Посещения днес"
-          visits={todayVisits}
-          emptyLabel="Няма планирани посещения"
-          footer={`Планирани днес: ${overview.todayVisits.length}`}
-        />
-
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Запланирани посещения днес</h2>
+            <h2 className="text-lg font-medium">Планирани посещения днес</h2>
             <Link
               href="/schedule"
               className="text-muted-foreground text-xs underline underline-offset-2"
@@ -316,7 +277,7 @@ export default function HomePage() {
                       <Clock className="text-primary size-4 flex-shrink-0" />
                       <Link
                         href={`/schedule?date=${new Date(slot.startTime).toISOString().split("T")[0]}`}
-                        className="font-medium hover:underline"
+                        className="cursor-pointer font-medium hover:underline"
                       >
                         {slot.title}
                       </Link>
@@ -342,6 +303,22 @@ export default function HomePage() {
                         Отвори посещение
                       </Button>
                     </Link>
+                  ) : slot.animalId &&
+                    animalDraftVisitMap.has(slot.animalId) ? (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const draftVisitId = animalDraftVisitMap.get(
+                          slot.animalId!,
+                        );
+                        if (draftVisitId) {
+                          router.push(`/visits/${draftVisitId}`);
+                        }
+                      }}
+                      disabled={!slot.ownerId || !slot.animalId}
+                    >
+                      Продължи посещение
+                    </Button>
                   ) : (
                     <Button
                       size="sm"
@@ -356,6 +333,13 @@ export default function HomePage() {
             )}
           </div>
         </section>
+
+        <VisitList
+          title="Посещения днес"
+          visits={todayVisits}
+          emptyLabel="Няма планирани посещения"
+          footer={`Планирани днес: ${overview.todayVisits.length}`}
+        />
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">

@@ -15,6 +15,7 @@ export type VisitListItem = {
   animalId: string | null;
   highlight?: boolean;
   badge?: string;
+  invoiceId?: string | null;
 };
 
 export function VisitList({
@@ -39,7 +40,7 @@ export function VisitList({
         {actionLabel ? (
           <Link
             href="/visits"
-            className="text-muted-foreground text-xs underline underline-offset-2"
+            className="text-muted-foreground text-xs underline underline-offset-2 cursor-pointer"
           >
             {actionLabel}
           </Link>
@@ -60,7 +61,7 @@ export function VisitList({
               <div className="space-y-1">
                 <Link
                   href={`/visits/${visit._id}`}
-                  className="font-medium underline-offset-2 hover:underline"
+                  className="font-medium underline-offset-2 hover:underline cursor-pointer"
                 >
                   {visit.code ?? `#${visit._id}`}
                 </Link>
@@ -82,17 +83,25 @@ export function VisitList({
                   ) : null}
                 </div>
               </div>
-              <Link
-                href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId ?? "")}${
-                  visit.animalId
-                    ? `&animalId=${encodeURIComponent(visit.animalId)}`
-                    : ""
-                }&visitId=${encodeURIComponent(visit._id)}`}
-              >
-                <Button size="sm" variant="outline">
-                  Нова фактура
-                </Button>
-              </Link>
+              {visit.invoiceId ? (
+                <Link href={`/invoices/${visit.invoiceId}`}>
+                  <Button size="sm" variant="outline">
+                    Виж фактура
+                  </Button>
+                </Link>
+              ) : (
+                <Link
+                  href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId ?? "")}${
+                    visit.animalId
+                      ? `&animalId=${encodeURIComponent(visit.animalId)}`
+                      : ""
+                  }&visitId=${encodeURIComponent(visit._id)}`}
+                >
+                  <Button size="sm" variant="outline">
+                    Нова фактура
+                  </Button>
+                </Link>
+              )}
             </div>
           ))
         )}

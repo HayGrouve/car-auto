@@ -33,6 +33,7 @@ import {
   validateSlotTime,
   getAvailableHours,
   getNextAvailableSlot,
+  isPastDate,
 } from "@/lib/schedule";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { Id } from "@/../convex/_generated/dataModel";
@@ -49,6 +50,7 @@ type ScheduleSlotFormProps = {
     visitId?: Id<"visits">;
     ownerId?: Id<"owners">;
     animalId?: Id<"animals">;
+    status?: "scheduled" | "completed" | "cancelled";
   }) => Promise<void>;
   onCancel?: () => void;
   initialData?: ScheduleSlot | null;
@@ -62,6 +64,7 @@ type ScheduleSlotFormProps = {
   visits?: Array<{ _id: string; code?: string | null }>;
   hideDatePicker?: boolean; // Hide date picker when using calendar selection
   existingSlots?: Array<{ startTime: number; endTime: number }>; // Existing slots for the selected date
+  animalDraftVisitMap?: Map<string, string>; // Map of animalId -> draft visit ID
 };
 
 export function ScheduleSlotForm({
@@ -74,6 +77,7 @@ export function ScheduleSlotForm({
   visits = [],
   hideDatePicker = false,
   existingSlots = [],
+  animalDraftVisitMap,
 }: ScheduleSlotFormProps) {
   const [date, setDate] = useState<Date>(
     initialData ? new Date(initialData.date) : selectedDate,
@@ -94,13 +98,26 @@ export function ScheduleSlotForm({
       ? Math.round(new Date(initialData.endTime).getMinutes() / 15) * 15
       : 0,
   );
-  const [title, setTitle] = useState(initialData?.title || "");
-  const [description, setDescription] = useState(
-    initialData?.description || "",
+  // Generate a unique ID for new slots
+  const generateSlotId = useMemo(() => {
+    if (initialData) return null; // Don't generate for existing slots
+    // Generate a 2-3 digit number (100-999)
+    const randomId = Math.floor(100 + Math.random() * 900);
+    return randomId;
+  }, [initialData]);
+
+  const [title, setTitle] = useState(
+    initialData?.title ?? (generateSlotId ? `Преглед ${generateSlotId}` : "Преглед"),
   );
-  const [visitId, setVisitId] = useState<string>(initialData?.visitId || "");
-  const [ownerId, setOwnerId] = useState<string>(initialData?.ownerId || "");
-  const [animalId, setAnimalId] = useState<string>(initialData?.animalId || "");
+  const [description, setDescription] = useState(
+    initialData?.description ?? "",
+  );
+  const [visitId, setVisitId] = useState<string>(initialData?.visitId ?? "");
+  const [ownerId, setOwnerId] = useState<string>(initialData?.ownerId ?? "");
+  const [animalId, setAnimalId] = useState<string>(initialData?.animalId ?? "");
+  const [status, setStatus] = useState<"scheduled" | "completed" | "cancelled">(
+    initialData?.status ?? "scheduled",
+  );
   const [ownerSearch, setOwnerSearch] = useState("");
   const [animalSearch, setAnimalSearch] = useState("");
   const [visitSearch, setVisitSearch] = useState("");
@@ -121,11 +138,12 @@ export function ScheduleSlotForm({
       setEndMinute(
         Math.round(new Date(initialData.endTime).getMinutes() / 15) * 15,
       );
-      setTitle(initialData.title || "");
-      setDescription(initialData.description || "");
-      setVisitId(initialData.visitId || "");
-      setOwnerId(initialData.ownerId || "");
-      setAnimalId(initialData.animalId || "");
+      setTitle(initialData.title ?? "");
+      setDescription(initialData.description ?? "");
+      setVisitId(initialData.visitId ?? "");
+      setOwnerId(initialData.ownerId ?? "");
+      setAnimalId(initialData.animalId ?? "");
+      setStatus(initialData.status ?? "scheduled");
       // Reset the initial mount flag when editing a new slot
       isInitialMount.current = true;
     }
@@ -167,6 +185,13 @@ export function ScheduleSlotForm({
       const selectedAnimal = animals.find((a) => a._id === animalIdValue);
       if (selectedAnimal?.ownerId) {
         setOwnerId(selectedAnimal.ownerId);
+      }
+      // Auto-fill draft visit if one exists for this animal
+      if (animalDraftVisitMap?.has(animalIdValue)) {
+        const draftVisitId = animalDraftVisitMap.get(animalIdValue);
+        if (draftVisitId) {
+          setVisitId(draftVisitId);
+        }
       }
     }
     setAnimalPopoverOpen(false);
@@ -232,15 +257,19 @@ export function ScheduleSlotForm({
         visitId: visitId ? (visitId as Id<"visits">) : undefined,
         ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
         animalId: animalId ? (animalId as Id<"animals">) : undefined,
+        status: status,
       });
 
       // Reset form if not editing
       if (!initialData) {
-        setTitle("");
+        // Generate new ID for next slot
+        const newId = Math.floor(100 + Math.random() * 900);
+        setTitle(`Преглед ${newId}`);
         setDescription("");
         setVisitId("");
         setOwnerId("");
         setAnimalId("");
+        setStatus("scheduled");
         setStartHour(9);
         setStartMinute(0);
         setEndHour(10);
@@ -340,6 +369,9 @@ export function ScheduleSlotForm({
 
   const minuteOptions = [0, 15, 30, 45];
 
+  // Check if editing a past slot (readonly mode)
+  const isEditingPastSlot = initialData ? isPastDate(new Date(initialData.date)) : false;
+
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3">
       {!hideDatePicker && (
@@ -353,6 +385,7 @@ export function ScheduleSlotForm({
                   "w-full justify-start text-left font-normal",
                   !date && "text-muted-foreground",
                 )}
+                disabled={isEditingPastSlot}
               >
                 <CalendarIcon className="mr-2 size-4" />
                 {date ? format(date, "PPP", { locale: bg }) : "Изберете дата"}
@@ -362,12 +395,18 @@ export function ScheduleSlotForm({
               <Calendar
                 mode="single"
                 selected={date}
-                onSelect={(d) => d && setDate(d)}
+                onSelect={(d) => d && !isPastDate(d) && setDate(d)}
                 locale={bg}
+                disabled={(date) => isPastDate(date)}
                 initialFocus
               />
             </PopoverContent>
           </Popover>
+          {isEditingPastSlot && (
+            <p className="text-muted-foreground mt-1 text-xs">
+              Не можете да променяте датата на минали слотове
+            </p>
+          )}
         </div>
       )}
 
@@ -472,12 +511,12 @@ export function ScheduleSlotForm({
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               {visitId
-                ? visits.find((v) => v._id === visitId)?.code || "Избрано"
+                ? visits.find((v) => v._id === visitId)?.code ?? "Избрано"
                 : "Без посещение"}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
+            <Command shouldFilter={false}>
               <CommandInput
                 placeholder="Търси посещение..."
                 value={visitSearch}
@@ -494,7 +533,7 @@ export function ScheduleSlotForm({
                     value={v._id}
                     onSelect={(val) => setVisitId(val)}
                   >
-                    {v.code || v._id}
+                    {v.code ?? v._id}
                   </CommandItem>
                 ))}
               </CommandList>
@@ -514,7 +553,7 @@ export function ScheduleSlotForm({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
+            <Command shouldFilter={false}>
               <CommandInput
                 placeholder="Търси собственик..."
                 value={ownerSearch}
@@ -558,7 +597,7 @@ export function ScheduleSlotForm({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
+            <Command shouldFilter={false}>
               <CommandInput
                 placeholder="Търси животно..."
                 value={animalSearch}
@@ -589,6 +628,22 @@ export function ScheduleSlotForm({
           </PopoverContent>
         </Popover>
       </div>
+
+      {initialData && (
+        <div>
+          <Label>Статус</Label>
+          <Select value={status} onValueChange={(v) => setStatus(v as "scheduled" | "completed" | "cancelled")}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="scheduled">Планирано</SelectItem>
+              <SelectItem value="completed">Завършено</SelectItem>
+              <SelectItem value="cancelled">Отменено</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={isSubmitting} className="flex-1">

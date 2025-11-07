@@ -237,6 +237,23 @@ export const finalize = mutation({
     const visit = await ctx.db.get(args.id);
     if (!visit) return { ok: false } as const;
     await ctx.db.patch(args.id, { status: "finalized", updatedAt: Date.now() });
+    
+    // Update schedule slot status to "completed" if linked to this visit
+    try {
+      const slots = await ctx.db
+        .query("schedule")
+        .filter((q: any) => q.eq(q.field("visitId"), args.id))
+        .collect();
+      for (const slot of slots) {
+        await ctx.db.patch(slot._id, {
+          status: "completed",
+          updatedAt: Date.now(),
+        } as any);
+      }
+    } catch (_) {
+      // optional; ignore failures
+    }
+    
     // Upsert procedure/medication catalogs with simple frequency counts
     const procedures: string[] = (visit as any).procedures ?? [];
     const medications: string[] = (visit as any).medications ?? [];

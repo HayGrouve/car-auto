@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { Check, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Accordion,
@@ -14,7 +15,7 @@ type BaseStep = {
   id: string;
   label: string;
   description?: string;
-  summary?: string;
+  summary?: string | ReactNode;
   hints?: ReactNode;
   content: ReactNode;
   completed?: boolean;
@@ -82,7 +83,7 @@ export function VisitWizardPanel({
           onValueChange={onStepChange}
           className="space-y-4"
         >
-          <TabsList className="grid w-full gap-3 bg-transparent p-0 sm:grid-cols-2 lg:grid-cols-5">
+          <TabsList className="grid w-full items-start gap-3 bg-transparent p-0 sm:grid-cols-2 lg:grid-cols-5">
             {steps.map((step, index) => {
               const isCompleted = Boolean(step.completed);
               const handleTriggerClick = () => {
@@ -94,15 +95,20 @@ export function VisitWizardPanel({
                   key={step.id}
                   value={step.id}
                   className={cn(
-                    "flex min-h-[116px] flex-col items-start gap-1 rounded-lg border px-3 py-3 text-left transition",
+                    "flex min-h-[116px] flex-col items-start justify-start gap-1 rounded-lg border px-3 py-3 text-left transition",
                     "cursor-pointer break-words whitespace-normal",
                     "data-[state=active]:border-ring data-[state=active]:bg-background data-[state=active]:shadow",
                   )}
                   disabled={isFinalized}
                   onClick={handleTriggerClick}
                 >
-                  <span className="text-muted-foreground text-[11px] tracking-wide uppercase">
+                  <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] tracking-wide uppercase">
                     Стъпка {index + 1}
+                    {isCompleted ? (
+                      <Check className="size-3 text-emerald-600" />
+                    ) : (
+                      <X className="size-3 text-red-600" />
+                    )}
                   </span>
                   <span
                     className="cursor-pointer text-sm leading-snug font-medium"
@@ -115,15 +121,11 @@ export function VisitWizardPanel({
                       className="text-muted-foreground cursor-pointer text-xs"
                       onClick={handleTriggerClick}
                     >
-                      {step.summary}
-                    </span>
-                  ) : null}
-                  {isCompleted ? (
-                    <span
-                      className="cursor-pointer text-xs font-medium text-emerald-600"
-                      onClick={handleTriggerClick}
-                    >
-                      Завършено
+                      {typeof step.summary === "string" ? (
+                        step.summary
+                      ) : (
+                        <span className="flex flex-col">{step.summary}</span>
+                      )}
                     </span>
                   ) : null}
                 </TabsTrigger>

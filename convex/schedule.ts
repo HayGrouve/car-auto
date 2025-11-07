@@ -58,6 +58,7 @@ export const create = mutation({
     visitId: v.optional(v.id("visits")),
     ownerId: v.optional(v.id("owners")),
     animalId: v.optional(v.id("animals")),
+    status: v.optional(v.union(v.literal("scheduled"), v.literal("completed"), v.literal("cancelled"))),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -70,7 +71,7 @@ export const create = mutation({
       visitId: args.visitId ?? null,
       ownerId: args.ownerId ?? null,
       animalId: args.animalId ?? null,
-      status: "scheduled",
+      status: args.status ?? "scheduled",
       createdAt: now,
       updatedAt: now,
     } as any);

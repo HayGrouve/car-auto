@@ -35,7 +35,7 @@ export function InvoiceList({
         <h2 className="text-lg font-medium">{title}</h2>
         <Link
           href="/invoices"
-          className="text-muted-foreground text-xs underline underline-offset-2"
+          className="text-muted-foreground text-xs underline underline-offset-2 cursor-pointer"
         >
           Към фактури
         </Link>
@@ -52,7 +52,7 @@ export function InvoiceList({
               <div className="space-y-0.5">
                 <Link
                   href={`/invoices/${invoice._id}`}
-                  className="font-medium underline-offset-2 hover:underline"
+                  className="font-medium underline-offset-2 hover:underline cursor-pointer"
                 >
                   {invoice.code ?? `#${invoice._id}`}
                 </Link>
@@ -76,7 +76,7 @@ export function InvoiceList({
                 {!invoice.paid ? (
                   <Link
                     href={`/invoices/${invoice._id}?pay=true`}
-                    className="text-primary text-xs underline"
+                    className="text-primary text-xs underline cursor-pointer"
                   >
                     Маркирай платена
                   </Link>

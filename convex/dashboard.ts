@@ -45,6 +45,7 @@ type InvoiceDoc = {
   createdAt: number;
   total?: number | null;
   paid?: boolean | null;
+  visitId?: string | null;
 };
 
 type ScheduleSlotDoc = {
@@ -165,6 +166,14 @@ export const overview = query({
       paid: Boolean(invoice.paid),
     }));
 
+    // Create a map of visitId -> invoiceId for quick lookup
+    const visitInvoiceMap = new Map<string, string>();
+    invoiceDocs.forEach((invoice) => {
+      if (invoice.visitId) {
+        visitInvoiceMap.set(String(invoice.visitId), String(invoice._id));
+      }
+    });
+
     const unpaidInvoices = invoiceDocs.filter((inv) => !inv.paid);
     const unpaidInvoicesTotal = unpaidInvoices.reduce(
       (sum: number, inv) => sum + (inv.total ?? 0),
@@ -259,6 +268,7 @@ export const overview = query({
       patientBook,
       todayScheduleSlots,
       alerts,
+      visitInvoiceMap: Object.fromEntries(visitInvoiceMap),
     } as const;
   },
 });

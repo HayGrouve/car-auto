@@ -101,10 +101,10 @@ export default function OwnersPage() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_380px]">
         <nav className="text-muted-foreground mb-2 inline-flex items-center gap-3 text-xs md:hidden">
-          <a href="#search" className="underline underline-offset-2">
+          <a href="#search" className="underline underline-offset-2 cursor-pointer">
             Търсене
           </a>
-          <a href="#create" className="underline underline-offset-2">
+          <a href="#create" className="underline underline-offset-2 cursor-pointer">
             Създаване
           </a>
         </nav>

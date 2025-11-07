@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactNode } from "react";
-import Link from "next/link";
 import {
   FileDown,
   Printer,
@@ -50,7 +49,6 @@ export function AnimalControlsCard({
   hasOwner,
   hasDraftVisit = false,
   hasIncompleteVisit = false,
-  draftVisitId,
   canStartVisit = true,
   primaryLabel,
   exportLabel = "Експортиране PDF",

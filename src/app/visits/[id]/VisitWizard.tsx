@@ -14,7 +14,6 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
 import {
   VisitWizardPanel,
   type VisitWizardStep,
@@ -131,6 +130,37 @@ function isWizardStepId(value: string | null): value is WizardStepId {
   return wizardStepOrder.includes(value as WizardStepId);
 }
 
+function getFirstUnfinishedStep(
+  weight: string,
+  temperature: string,
+  pulse: string,
+  s: string,
+  o: string,
+  a: string,
+  p: string,
+  procedures: string[],
+  medications: string[],
+): WizardStepId {
+  // Check measurements step
+  if (!weight && !temperature && !pulse) {
+    return "measurements";
+  }
+  // Check soap-so step
+  if (![s, o].some((val) => (val ?? "").trim())) {
+    return "soap-so";
+  }
+  // Check soap-ap step
+  if (![a, p].some((val) => (val ?? "").trim())) {
+    return "soap-ap";
+  }
+  // Check procedures step
+  if (!procedures.length && !medications.length) {
+    return "procedures";
+  }
+  // All steps completed, go to review
+  return "review";
+}
+
 export default function VisitWizard({
   id,
   onClose,
@@ -174,7 +204,6 @@ export default function VisitWizard({
     ),
   ) as { weight?: number | null }[] | undefined;
   const update = useMutation(api.visits.update);
-  const finalize = useMutation(api.visits.finalize);
   const [activeStep, setActiveStep] = useState<WizardStepId>("measurements");
   const contentRef = useRef<HTMLDivElement>(null);
   const [announceText, setAnnounceText] = useState("");
@@ -201,6 +230,7 @@ export default function VisitWizard({
   ) as string[] | undefined;
 
   const [hydratedWizard, setHydratedWizard] = useState(false);
+  const [initializedStep, setInitializedStep] = useState(false);
   useEffect(() => {
     if (!visit || hydratedWizard) return;
     setWeight(visit.weight ? String(visit.weight) : "");
@@ -227,36 +257,77 @@ export default function VisitWizard({
     return typeof kg === "number" ? `${kg.toFixed(2)} кг` : "—";
   }, [lastWeights]);
 
+  // Initialize step on mount - only run once when visit data is loaded and hydrated
   useEffect(() => {
+    if (!visit || !hydratedWizard || initializedStep) return;
+
     if (isFinalized) {
       setActiveStep("review");
+      setInitializedStep(true);
       return;
     }
-    // Draft mode: respect user interaction; only adopt URL if it explicitly specifies a valid step.
-    const param = searchParams.get("step");
-    if (isWizardStepId(param) && param !== activeStep) {
-      setActiveStep(param);
-    }
-  }, [isFinalized, searchParams, activeStep]);
 
+    // Check URL parameter first
+    const param = searchParams.get("step");
+    if (isWizardStepId(param)) {
+      setActiveStep(param);
+      setInitializedStep(true);
+      return;
+    }
+
+    // Otherwise, find first unfinished step
+    const firstUnfinished = getFirstUnfinishedStep(
+      weight,
+      temperature,
+      pulse,
+      s,
+      o,
+      a,
+      p,
+      procedures,
+      medications,
+    );
+    setActiveStep(firstUnfinished);
+    setInitializedStep(true);
+  }, [
+    visit,
+    hydratedWizard,
+    isFinalized,
+    searchParams,
+    initializedStep,
+    weight,
+    temperature,
+    pulse,
+    s,
+    o,
+    a,
+    p,
+    procedures,
+    medications,
+  ]);
+
+  // Update URL when step changes in draft mode (without page reload)
   useEffect(() => {
-    if (!isFinalized) return;
+    if (isFinalized || !initializedStep) return;
     const current = searchParams.get("step");
     if (current === activeStep) return;
     const sp = new URLSearchParams(searchParams.toString());
     sp.set("step", activeStep);
-    router.replace(`${pathname}?${sp.toString()}`);
+    const newUrl = `${pathname}?${sp.toString()}`;
+    window.history.replaceState({}, "", newUrl);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep]);
+  }, [activeStep, isFinalized, initializedStep]);
 
   useEffect(() => {
-    if (!isFinalized) return;
+    if (!isFinalized || !initializedStep) return;
+    const current = searchParams.get("step");
+    if (current === activeStep) return;
     const sp = new URLSearchParams(searchParams.toString());
-    if (!sp.has("step")) return;
-    sp.delete("step");
-    router.replace(`${pathname}${sp.toString() ? `?${sp.toString()}` : ""}`);
+    sp.set("step", activeStep);
+    const newUrl = `${pathname}?${sp.toString()}`;
+    window.history.replaceState({}, "", newUrl);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFinalized]);
+  }, [activeStep, initializedStep]);
 
   useEffect(() => {
     const index = wizardStepOrder.indexOf(activeStep);
@@ -386,19 +457,6 @@ export default function VisitWizard({
     sp.delete("step");
     router.replace(`${pathname}${sp.toString() ? `?${sp.toString()}` : ""}`);
     onClose?.();
-  }
-
-  async function finalizeVisit() {
-    const res = await finalize({ id });
-    if (res?.ok) {
-      toast.success("Посещението е приключено");
-      const sp = new URLSearchParams(searchParams.toString());
-      sp.delete("step");
-      router.replace(`${pathname}${sp.toString() ? `?${sp.toString()}` : ""}`);
-      onClose?.();
-    } else {
-      toast.error("Неуспешно финализиране");
-    }
   }
 
   const steps: VisitWizardStep[] = visit
@@ -605,9 +663,12 @@ export default function VisitWizard({
           id: proceduresId,
           label: wizardStepTitles[proceduresId],
           summary:
-            procedures.length || medications.length
-              ? `${procedures.length} процедури · ${medications.length} медикаменти`
-              : undefined,
+            procedures.length || medications.length ? (
+              <span className="flex flex-col">
+                <span>{procedures.length} процедури</span>
+                <span>{medications.length} медикаменти</span>
+              </span>
+            ) : undefined,
           completed: Boolean(procedures.length || medications.length),
           hints: hintsByStep[proceduresId],
           content: (
@@ -776,31 +837,109 @@ export default function VisitWizard({
           hints: hintsByStep.review,
           content: (
             <div className="space-y-4">
-              <div className="space-y-1 text-sm">
-                <div>Кратко резюме:</div>
-                <ul className="text-muted-foreground ml-5 list-disc space-y-1">
-                  <li>
-                    Тегло: {weight || "—"} кг · Температура:{" "}
-                    {temperature || "—"}
-                    °C · Пулс: {pulse || "—"}
-                  </li>
-                  <li>
-                    S/O/A/P въведени:{" "}
-                    {[s, o, a, p].some((v) => (v ?? "").trim()) ? "Да" : "Не"}
-                  </li>
-                  <li>Процедури: {(procedures ?? []).length}</li>
-                  <li>Медикаменти: {(medications ?? []).length}</li>
-                </ul>
+              <div className="space-y-3 text-sm">
+                <div className="font-medium">Кратко резюме:</div>
+
+                {/* Measurements */}
+                <div className="space-y-1">
+                  <div className="font-medium">Измервания:</div>
+                  <ul className="text-muted-foreground ml-5 list-disc space-y-1">
+                    <li>Тегло: {weight || "—"} кг</li>
+                    <li>Температура: {temperature || "—"} °C</li>
+                    <li>Пулс: {pulse || "—"}</li>
+                  </ul>
+                </div>
+
+                {/* SOAP Notes */}
+                <div className="space-y-1">
+                  <div className="font-medium">SOAP бележки:</div>
+                  <div className="text-muted-foreground ml-5 space-y-2">
+                    {s.trim() ? (
+                      <div>
+                        <span className="font-medium">Субективно:</span>{" "}
+                        <span className="whitespace-pre-wrap">{s}</span>
+                      </div>
+                    ) : (
+                      <div className="text-muted-foreground/70">
+                        Субективно: —
+                      </div>
+                    )}
+                    {o.trim() ? (
+                      <div>
+                        <span className="font-medium">Обективно:</span>{" "}
+                        <span className="whitespace-pre-wrap">{o}</span>
+                      </div>
+                    ) : (
+                      <div className="text-muted-foreground/70">
+                        Обективно: —
+                      </div>
+                    )}
+                    {a.trim() ? (
+                      <div>
+                        <span className="font-medium">Оценка:</span>{" "}
+                        <span className="whitespace-pre-wrap">{a}</span>
+                      </div>
+                    ) : (
+                      <div className="text-muted-foreground/70">Оценка: —</div>
+                    )}
+                    {p.trim() ? (
+                      <div>
+                        <span className="font-medium">План:</span>{" "}
+                        <span className="whitespace-pre-wrap">{p}</span>
+                      </div>
+                    ) : (
+                      <div className="text-muted-foreground/70">План: —</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Procedures */}
+                <div className="space-y-1">
+                  <div className="font-medium">
+                    Процедури:{" "}
+                    {(procedures ?? []).length > 0
+                      ? `(${(procedures ?? []).length})`
+                      : ""}
+                  </div>
+                  {(procedures ?? []).length > 0 ? (
+                    <ul className="text-muted-foreground ml-5 list-disc space-y-1">
+                      {(procedures ?? []).map((proc, idx) => (
+                        <li key={`proc-review-${idx}`}>{proc}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-muted-foreground/70 ml-5">
+                      Няма процедури
+                    </div>
+                  )}
+                </div>
+
+                {/* Medications */}
+                <div className="space-y-1">
+                  <div className="font-medium">
+                    Медикаменти:{" "}
+                    {(medications ?? []).length > 0
+                      ? `(${(medications ?? []).length})`
+                      : ""}
+                  </div>
+                  {(medications ?? []).length > 0 ? (
+                    <ul className="text-muted-foreground ml-5 list-disc space-y-1">
+                      {(medications ?? []).map((med, idx) => (
+                        <li key={`med-review-${idx}`}>{med}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-muted-foreground/70 ml-5">
+                      Няма медикаменти
+                    </div>
+                  )}
+                </div>
               </div>
               {!isFinalized ? (
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" onClick={() => void finalizeVisit()}>
-                    Приключи посещението
-                  </Button>
                   {visit?.ownerId ? (
                     <Button
                       type="button"
-                      variant="outline"
                       onClick={() => {
                         void router.push(
                           `/invoices/new?ownerId=${encodeURIComponent(String(visit.ownerId))}${visit?.animalId ? `&animalId=${encodeURIComponent(String(visit.animalId))}` : ""}&visitId=${encodeURIComponent(String(visit._id))}`,

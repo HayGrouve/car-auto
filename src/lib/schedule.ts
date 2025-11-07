@@ -1,4 +1,4 @@
-import { startOfDay, getDay, setHours, setMinutes, isWithinInterval } from "date-fns";
+import { startOfDay, getDay, setHours, setMinutes, isBefore } from "date-fns";
 
 export type WorkingHours = {
   start: number; // hour (0-23)
@@ -27,9 +27,15 @@ export function isWorkingDay(date: Date): boolean {
   return dayOfWeek !== 0 && WORKING_HOURS[dayOfWeek] !== undefined;
 }
 
+export function isPastDate(date: Date): boolean {
+  const today = startOfDay(new Date());
+  const checkDate = startOfDay(date);
+  return isBefore(checkDate, today);
+}
+
 export function getWorkingHours(date: Date): DaySchedule | null {
   const dayOfWeek = getDay(date);
-  return WORKING_HOURS[dayOfWeek] || null;
+  return WORKING_HOURS[dayOfWeek] ?? null;
 }
 
 export function validateSlotTime(
@@ -37,6 +43,10 @@ export function validateSlotTime(
   startTime: number,
   endTime: number,
 ): { valid: boolean; error?: string } {
+  if (isPastDate(date)) {
+    return { valid: false, error: "Не можете да планирате слотове за минали дни" };
+  }
+
   if (!isWorkingDay(date)) {
     return { valid: false, error: "Неделята е почивен ден" };
   }
@@ -106,7 +116,7 @@ export function validateSlotTime(
 export function getNextAvailableSlot(
   date: Date,
   existingSlots: Array<{ startTime: number; endTime: number }>,
-  slotDurationMinutes: number = 30,
+  slotDurationMinutes = 30,
 ): { startHour: number; startMinute: number; endHour: number; endMinute: number } | null {
   const schedule = getWorkingHours(date);
   if (!schedule) {
@@ -158,7 +168,7 @@ export function getNextAvailableSlot(
     const periodEnd = period.end;
 
     // Check if we can fit a slot at the start of the period
-    if (sortedExisting.length === 0 || sortedExisting[0].start > currentTime + slotDurationMinutes * 60 * 1000) {
+    if (sortedExisting.length === 0 || (sortedExisting[0] && sortedExisting[0].start > currentTime + slotDurationMinutes * 60 * 1000)) {
       const endTime = currentTime + slotDurationMinutes * 60 * 1000;
       if (endTime <= periodEnd) {
         return {
@@ -208,15 +218,17 @@ export function getNextAvailableSlot(
   // If no gap found, return the first available time in working hours
   if (slots.length > 0) {
     const firstPeriod = slots[0];
-    const firstStart = new Date(firstPeriod.start);
-    const firstEnd = firstStart.getTime() + slotDurationMinutes * 60 * 1000;
-    if (firstEnd <= firstPeriod.end) {
-      return {
-        startHour: firstStart.getHours(),
-        startMinute: firstStart.getMinutes(),
-        endHour: new Date(firstEnd).getHours(),
-        endMinute: new Date(firstEnd).getMinutes(),
-      };
+    if (firstPeriod) {
+      const firstStart = new Date(firstPeriod.start);
+      const firstEnd = firstStart.getTime() + slotDurationMinutes * 60 * 1000;
+      if (firstEnd <= firstPeriod.end) {
+        return {
+          startHour: firstStart.getHours(),
+          startMinute: firstStart.getMinutes(),
+          endHour: new Date(firstEnd).getHours(),
+          endMinute: new Date(firstEnd).getMinutes(),
+        };
+      }
     }
   }
 

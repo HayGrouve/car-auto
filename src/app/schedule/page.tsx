@@ -12,6 +12,7 @@ import { ScheduleList } from "@/components/schedule/ScheduleList";
 import { ScheduleSlotForm } from "@/components/schedule/ScheduleSlotForm";
 import { formatScheduleDate } from "@/lib/format";
 import { startOfDay } from "date-fns";
+import { isPastDate } from "@/lib/schedule";
 import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
@@ -112,7 +113,47 @@ function SchedulePageContent() {
   const visits = useQuery(
     api.visits.list,
     useMemo(() => ({ limit: 1000, sort: "datetimeDesc" }), []),
-  ) as { _id: string; code?: string | null }[] | undefined;
+  ) as { _id: string; code?: string | null; animalId?: string | null; status?: string }[] | undefined;
+
+  // Query for draft visits to create animal -> draft visit map
+  const draftVisits = useQuery(
+    api.visits.list,
+    useMemo(() => ({ status: "draft", limit: 1000 }), []),
+  ) as { _id: string; animalId?: string | null }[] | undefined;
+
+  // Create a map of animalId -> draft visit ID
+  const animalDraftVisitMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (draftVisits) {
+      draftVisits.forEach((visit) => {
+        if (visit.animalId) {
+          map.set(String(visit.animalId), visit._id);
+        }
+      });
+    }
+    return map;
+  }, [draftVisits]);
+
+  // Create lookup maps for visits and animals
+  const visitMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (visits) {
+      visits.forEach((visit) => {
+        map.set(visit._id, visit.code ?? visit._id);
+      });
+    }
+    return map;
+  }, [visits]);
+
+  const animalMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (animals) {
+      animals.forEach((animal) => {
+        map.set(animal._id, animal.name);
+      });
+    }
+    return map;
+  }, [animals]);
 
   const handleCreate = async (data: {
     date: number;
@@ -123,6 +164,7 @@ function SchedulePageContent() {
     visitId?: Id<"visits">;
     ownerId?: Id<"owners">;
     animalId?: Id<"animals">;
+    status?: "scheduled" | "completed" | "cancelled";
   }) => {
     try {
       const res = await createSlot(data);
@@ -173,6 +215,11 @@ function SchedulePageContent() {
   const handleDelete = async (slotId: string) => {
     const slot = slots?.find((s) => s._id === slotId);
     if (slot) {
+      // Prevent deleting past slots
+      if (isPastDate(new Date(slot.date))) {
+        toast.error("Не можете да изтривате слотове за минали дни");
+        return;
+      }
       setSlotToDelete(slot);
       setShowDeleteDialog(true);
     }
@@ -195,6 +242,11 @@ function SchedulePageContent() {
   };
 
   const handleEdit = (slot: ScheduleSlot) => {
+    // Prevent editing past slots
+    if (isPastDate(new Date(slot.date))) {
+      toast.error("Не можете да редактирате слотове за минали дни");
+      return;
+    }
     setEditingSlot(slot);
     setShowEditDialog(true);
   };
@@ -219,22 +271,24 @@ function SchedulePageContent() {
             </p>
           )}
         </div>
-        <Button
-          className="md:hidden"
-          variant="outline"
-          onClick={() => setShowCreatePanel(true)}
-        >
-          <Plus className="mr-2 size-4" />
-          Нов слот
-        </Button>
+        {selectedDate && !isPastDate(selectedDate) && (
+          <Button
+            className="md:hidden"
+            variant="outline"
+            onClick={() => setShowCreatePanel(true)}
+          >
+            <Plus className="mr-2 size-4" />
+            Нов слот
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_380px]">
         <nav className="text-muted-foreground mb-2 inline-flex items-center gap-3 text-xs md:hidden">
-          <a href="#list" className="underline underline-offset-2">
+          <a href="#list" className="underline underline-offset-2 cursor-pointer">
             Списък
           </a>
-          <a href="#calendar" className="underline underline-offset-2">
+          <a href="#calendar" className="underline underline-offset-2 cursor-pointer">
             Календар
           </a>
         </nav>
@@ -246,6 +300,8 @@ function SchedulePageContent() {
             selectedDate={selectedDate}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            visitMap={visitMap}
+            animalMap={animalMap}
           />
         </section>
 
@@ -274,36 +330,48 @@ function SchedulePageContent() {
           </div>
 
           <div className="space-y-3 rounded-md border p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-medium">
-                {editingSlot ? "Редактиране на слот" : "Нов слот"}
-              </h2>
-              <Button
-                className="md:hidden"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowCreatePanel(false);
-                  setEditingSlot(null);
-                }}
-              >
-                Затвори
-              </Button>
-            </div>
-            {selectedDate ? (
-              <ScheduleSlotForm
-                selectedDate={selectedDate}
-                onSubmit={handleCreate}
-                owners={owners}
-                animals={animals}
-                visits={visits}
-                hideDatePicker={true}
-                existingSlots={slots ?? []}
-              />
+            {selectedDate && isPastDate(selectedDate) ? (
+              <div>
+                <h2 className="font-medium mb-2">Само за преглед</h2>
+                <p className="text-muted-foreground text-sm">
+                  Не можете да създавате или редактирате слотове за минали дни.
+                </p>
+              </div>
             ) : (
-              <p className="text-muted-foreground text-sm">
-                Изберете дата от календара, за да добавите слот.
-              </p>
+              <>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-medium">
+                    {editingSlot ? "Редактиране на слот" : "Нов слот"}
+                  </h2>
+                  <Button
+                    className="md:hidden"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowCreatePanel(false);
+                      setEditingSlot(null);
+                    }}
+                  >
+                    Затвори
+                  </Button>
+                </div>
+                {selectedDate ? (
+                  <ScheduleSlotForm
+                    selectedDate={selectedDate}
+                    onSubmit={handleCreate}
+                    owners={owners}
+                    animals={animals}
+                    visits={visits}
+                    animalDraftVisitMap={animalDraftVisitMap}
+                    hideDatePicker={true}
+                    existingSlots={slots ?? []}
+                  />
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    Изберете дата от календара, за да добавите слот.
+                  </p>
+                )}
+              </>
             )}
           </div>
         </aside>
@@ -328,6 +396,7 @@ function SchedulePageContent() {
                   visitId: data.visitId,
                   ownerId: data.ownerId,
                   animalId: data.animalId,
+                  status: data.status,
                 });
               }}
               onCancel={() => {
@@ -338,6 +407,7 @@ function SchedulePageContent() {
               owners={owners}
               animals={animals}
               visits={visits}
+              animalDraftVisitMap={animalDraftVisitMap}
             />
           ) : null}
         </DialogContent>

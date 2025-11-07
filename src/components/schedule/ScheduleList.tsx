@@ -7,12 +7,15 @@ import { Clock, Calendar as CalendarIcon } from "lucide-react";
 import type { ScheduleSlot } from "@/types/schedule";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { isPastDate } from "@/lib/schedule";
 
 type ScheduleListProps = {
   slots: ScheduleSlot[] | undefined;
   selectedDate: Date | undefined;
   onEdit?: (slot: ScheduleSlot) => void;
   onDelete?: (slotId: string) => void;
+  visitMap?: Map<string, string>;
+  animalMap?: Map<string, string>;
 };
 
 function ScheduleStatusBadge({ status }: { status: string }) {
@@ -44,6 +47,8 @@ export function ScheduleList({
   selectedDate,
   onEdit,
   onDelete,
+  visitMap,
+  animalMap,
 }: ScheduleListProps) {
   if (slots === undefined) {
     return <SkeletonList rows={6} />;
@@ -71,60 +76,70 @@ export function ScheduleList({
 
   return (
     <div className="divide-y rounded-md border">
-      {slots.map((slot) => (
-        <div
-          key={slot._id}
-          className="hover:bg-accent flex items-center justify-between p-3 text-sm"
-        >
-          <div className="flex items-center gap-3 flex-1">
-            <Clock className="text-primary size-5" />
-            <div className="flex-1 min-w-0">
-              <div className="font-medium">{slot.title}</div>
-              <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                <span>{formatTimeRange(slot.startTime, slot.endTime)}</span>
-                {slot.description && (
-                  <span className="truncate">{slot.description}</span>
-                )}
-                {slot.visitId && (
-                  <Link
-                    href={`/visits/${slot.visitId}`}
-                    className="underline-offset-2 hover:underline"
-                  >
-                    Посещение
-                  </Link>
-                )}
-                {slot.animalId && (
-                  <Link
-                    href={`/animals/${slot.animalId}`}
-                    className="underline-offset-2 hover:underline"
-                  >
-                    Животно
-                  </Link>
-                )}
+      {slots.map((slot) => {
+        const slotDate = new Date(slot.date);
+        const isSlotPast = isPastDate(slotDate);
+        
+        return (
+          <div
+            key={slot._id}
+            className={`flex items-center justify-between p-3 text-sm ${isSlotPast ? "" : "hover:bg-accent"}`}
+          >
+            <div className="flex items-center gap-3 flex-1">
+              <Clock className="text-primary size-5" />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">{slot.title}</div>
+                <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                  <span>{formatTimeRange(slot.startTime, slot.endTime)}</span>
+                  {slot.description && (
+                    <span className="truncate">{slot.description}</span>
+                  )}
+                  {slot.visitId && (
+                    <Link
+                      href={`/visits/${slot.visitId}`}
+                      className="underline-offset-2 hover:underline cursor-pointer"
+                    >
+                      {visitMap?.get(slot.visitId) ?? "Посещение"}
+                    </Link>
+                  )}
+                  {slot.animalId && (
+                    <Link
+                      href={`/animals/${slot.animalId}`}
+                      className="underline-offset-2 hover:underline cursor-pointer"
+                    >
+                      {animalMap?.get(slot.animalId) ?? "Животно"}
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <ScheduleStatusBadge status={slot.status} />
-              {onEdit && (
+              {!isSlotPast && onEdit && (
                 <button
                   onClick={() => onEdit(slot)}
-                  className="text-primary hover:underline text-xs"
+                  className="text-primary hover:underline text-xs cursor-pointer"
                 >
                   Редактирай
                 </button>
               )}
-              {onDelete && (
+              {!isSlotPast && onDelete && (
                 <button
                   onClick={() => onDelete(slot._id)}
-                  className="text-destructive hover:underline text-xs"
+                  className="text-destructive hover:underline text-xs cursor-pointer"
                 >
                   Изтрий
                 </button>
               )}
+              {isSlotPast && (
+                <span className="text-muted-foreground text-xs">
+                  Само за преглед
+                </span>
+              )}
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
