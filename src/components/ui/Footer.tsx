@@ -44,6 +44,13 @@ export function Footer() {
           >
             Посещения
           </Link>
+          <Link
+            className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            href="/schedule"
+            aria-label="График"
+          >
+            График
+          </Link>
         </nav>
 
         <div className="flex flex-col gap-2 text-sm">

@@ -4,7 +4,7 @@ import Image from "next/image";
 import logoJpg from "@/../public/logo.jpg";
 import { usePathname } from "next/navigation";
 import { brand } from "@/lib/brand";
-import { Menu, PawPrint, User, CalendarCheck, FileText } from "lucide-react";
+import { Menu, PawPrint, User, CalendarCheck, FileText, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
@@ -24,6 +24,7 @@ export function AppNav() {
     { href: "/owners", label: "Собственици", icon: User },
     { href: "/animals", label: "Животни", icon: PawPrint },
     { href: "/visits", label: "Посещения", icon: CalendarCheck },
+    { href: "/schedule", label: "График", icon: Calendar },
     { href: "/invoices", label: "Фактури", icon: FileText },
   ];
 

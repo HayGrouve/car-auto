@@ -18,6 +18,7 @@ import type * as auditLogs from "../auditLogs.js";
 import type * as dashboard from "../dashboard.js";
 import type * as invoices from "../invoices.js";
 import type * as owners from "../owners.js";
+import type * as schedule from "../schedule.js";
 import type * as seed from "../seed.js";
 import type * as visits from "../visits.js";
 
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   dashboard: typeof dashboard;
   invoices: typeof invoices;
   owners: typeof owners;
+  schedule: typeof schedule;
   seed: typeof seed;
   visits: typeof visits;
 }>;
