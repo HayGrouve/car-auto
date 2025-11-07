@@ -8,17 +8,14 @@ import { Clock } from "lucide-react";
 
 import { api } from "@/../convex/_generated/api";
 import { brand } from "@/lib/brand";
-import { fmtNumberBG, formatTimeRange } from "@/lib/format";
+import { formatTimeRange } from "@/lib/format";
 import { SkeletonList } from "@/components/SkeletonList";
+import { TodayInvoicesChart } from "@/components/dashboard/TodayInvoicesChart";
+import { StatusBarChart } from "@/components/dashboard/StatusBarChart";
 import {
   VisitList,
   type VisitListItem,
 } from "@/components/dashboard/VisitList";
-import {
-  InvoiceList,
-  type InvoiceListItem,
-} from "@/components/dashboard/InvoiceList";
-import { AlertList } from "@/components/dashboard/AlertList";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import {
@@ -50,22 +47,6 @@ type DashboardVisit = {
   animalId: string | null;
 };
 
-type DashboardInvoice = {
-  _id: string;
-  code: string | null;
-  createdAt: number;
-  total: number;
-  paid: boolean;
-};
-
-type DashboardPatient = {
-  _id: string;
-  name: string;
-  species: string | null;
-  ownerId: string | null;
-  ownerName: string | null;
-};
-
 type DashboardScheduleSlot = {
   _id: string;
   title: string;
@@ -82,12 +63,8 @@ type DashboardScheduleSlot = {
 type DashboardOverview = {
   counts: DashboardCounts;
   totals: DashboardTotals;
-  recentVisits: DashboardVisit[];
-  recentInvoices: DashboardInvoice[];
   todayVisits: DashboardVisit[];
-  patientBook: DashboardPatient[];
   todayScheduleSlots: DashboardScheduleSlot[];
-  alerts: string[];
   visitInvoiceMap: Record<string, string>; // visitId -> invoiceId
 };
 
@@ -202,17 +179,6 @@ export default function HomePage() {
     );
   }
 
-  const recentVisits: VisitListItem[] = overview.recentVisits.map((visit) => ({
-    _id: visit._id,
-    code: visit.code ?? null,
-    datetime: visit.datetime,
-    status: visit.status,
-    ownerName: visit.ownerName,
-    ownerId: visit.ownerId,
-    animalId: visit.animalId,
-    invoiceId: overview.visitInvoiceMap[visit._id] ?? null,
-  }));
-
   const todayVisits: VisitListItem[] = overview.todayVisits.map((visit) => ({
     _id: visit._id,
     code: visit.code ?? null,
@@ -223,16 +189,6 @@ export default function HomePage() {
     animalId: visit.animalId,
     invoiceId: overview.visitInvoiceMap[visit._id] ?? null,
   }));
-
-  const recentInvoices: InvoiceListItem[] = overview.recentInvoices.map(
-    (invoice) => ({
-      _id: invoice._id,
-      code: invoice.code ?? null,
-      createdAt: invoice.createdAt,
-      total: invoice.total,
-      paid: invoice.paid,
-    }),
-  );
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6">
@@ -247,13 +203,12 @@ export default function HomePage() {
             клиниката.
           </p>
         </div>
-        <AlertList alerts={overview.alerts} title="Статус" />
       </div>
 
       <section className="grid gap-4 md:grid-cols-2">
         <section className="space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">Планирани посещения днес</h2>
+            <h2 className="text-lg font-medium">График днес</h2>
             <Link
               href="/schedule"
               className="text-muted-foreground text-xs underline underline-offset-2"
@@ -264,7 +219,7 @@ export default function HomePage() {
           <div className="divide-y rounded-md border">
             {overview.todayScheduleSlots.length === 0 ? (
               <div className="text-muted-foreground p-3 text-sm">
-                Няма запланирани посещения за днес
+                Няма планирани посещения за днес
               </div>
             ) : (
               overview.todayScheduleSlots.map((slot) => (
@@ -343,33 +298,18 @@ export default function HomePage() {
       </section>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <VisitList
-          title="Последни посещения"
-          visits={recentVisits}
-          emptyLabel="Няма посещения"
-          actionLabel="Всички посещения"
-          footer={`Общо посещения: ${overview.recentVisits.length}`}
-        />
-
-        <InvoiceList
-          title="Последни фактури"
-          invoices={recentInvoices}
-          emptyLabel="Няма фактури"
-          summary={
-            <span>
-              Последни 7 дни — Платено:{" "}
-              {fmtNumberBG(overview.totals.week.paid, {
-                style: "currency",
-                currency: "BGN",
-              })}{" "}
-              · Неплатено:{" "}
-              {fmtNumberBG(overview.totals.week.unpaid, {
-                style: "currency",
-                currency: "BGN",
-              })}
-            </span>
-          }
-        />
+        <div className="flex flex-col rounded-lg border p-4">
+          <TodayInvoicesChart
+            paid={overview.totals.today.paid ?? 0}
+            unpaid={overview.totals.today.unpaid ?? 0}
+          />
+        </div>
+        <div className="flex flex-col rounded-lg border p-4">
+          <StatusBarChart
+            unpaidInvoices={overview.counts.unpaidInvoices ?? 0}
+            draftVisits={overview.counts.draftVisits ?? 0}
+          />
+        </div>
       </section>
     </main>
   );

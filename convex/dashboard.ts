@@ -103,21 +103,6 @@ export const overview = query({
     const animalCount = animalDocs.length;
     const ownerCount = ownerDocs.filter((o) => !o?.deletedAt).length;
 
-    const visitsSorted = [...visitDocs].sort(
-      (a, b) => (b.datetime ?? b.createdAt) - (a.datetime ?? a.createdAt),
-    );
-    const recentVisits = visitsSorted.slice(0, 6).map((visit) => ({
-      _id: String(visit._id),
-      code: visit.code ?? null,
-      datetime: visit.datetime ?? visit.createdAt ?? Date.now(),
-      status: visit.status,
-      ownerId: visit.ownerId ? String(visit.ownerId) : null,
-      ownerName: visit.ownerId
-        ? (ownerMap.get(String(visit.ownerId))?.name ?? null)
-        : null,
-      animalId: visit.animalId ? String(visit.animalId) : null,
-    }));
-
     const draftVisitsCount = visitDocs.filter(
       (v) => v.status === "draft",
     ).length;
@@ -141,30 +126,6 @@ export const overview = query({
           : null,
         animalId: visit.animalId ? String(visit.animalId) : null,
       }));
-
-    const patientBook = animalDocs
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 8)
-      .map((animal) => ({
-        _id: String(animal._id),
-        name: animal.name,
-        species: animal.species ?? null,
-        ownerId: animal.ownerId ? String(animal.ownerId) : null,
-        ownerName: animal.ownerId
-          ? (ownerMap.get(String(animal.ownerId))?.name ?? null)
-          : null,
-      }));
-
-    const invoicesSorted = [...invoiceDocs].sort(
-      (a, b) => b.createdAt - a.createdAt,
-    );
-    const recentInvoices = invoicesSorted.slice(0, 6).map((invoice) => ({
-      _id: String(invoice._id),
-      code: invoice.code ?? null,
-      createdAt: invoice.createdAt,
-      total: invoice.total ?? 0,
-      paid: Boolean(invoice.paid),
-    }));
 
     // Create a map of visitId -> invoiceId for quick lookup
     const visitInvoiceMap = new Map<string, string>();
@@ -242,14 +203,6 @@ export const overview = query({
           : null,
       }));
 
-    const alerts: string[] = [];
-    if (unpaidInvoices.length > 0) {
-      alerts.push(`Неплатени фактури: ${unpaidInvoices.length}`);
-    }
-    if (draftVisitsCount > 0) {
-      alerts.push(`Чернови посещения: ${draftVisitsCount}`);
-    }
-
     return {
       counts: {
         owners: ownerCount,
@@ -262,12 +215,8 @@ export const overview = query({
         week: { paid: weekPaidTotal, unpaid: weekUnpaidTotal },
         unpaidInvoicesTotal,
       },
-      recentVisits,
-      recentInvoices,
       todayVisits,
-      patientBook,
       todayScheduleSlots,
-      alerts,
       visitInvoiceMap: Object.fromEntries(visitInvoiceMap),
     } as const;
   },
