@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { useSearchParams } from "next/navigation";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Calendar as CalendarIcon, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { ScheduleCalendar } from "@/components/schedule/ScheduleCalendar";
 import { ScheduleList } from "@/components/schedule/ScheduleList";
 import { ScheduleSlotForm } from "@/components/schedule/ScheduleSlotForm";
@@ -35,9 +36,28 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function SchedulePage() {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    new Date(),
+  return (
+    <Suspense
+      fallback={<div className="mx-auto max-w-6xl p-6">Зареждане...</div>}
+    >
+      <SchedulePageContent />
+    </Suspense>
   );
+}
+
+function SchedulePageContent() {
+  const searchParams = useSearchParams();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => {
+    // Check if there's a date parameter in the URL
+    const dateParam = searchParams.get("date");
+    if (dateParam) {
+      const parsedDate = new Date(dateParam);
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate;
+      }
+    }
+    return new Date();
+  });
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ScheduleSlot | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -51,9 +71,7 @@ export default function SchedulePage() {
 
   const slots = useQuery(
     api.schedule.getByDate,
-    dateTimestamp !== undefined
-      ? { date: dateTimestamp }
-      : "skip",
+    dateTimestamp !== undefined ? { date: dateTimestamp } : "skip",
   ) as ScheduleSlot[] | undefined;
 
   const createSlot = useMutation(api.schedule.create);
@@ -70,7 +88,9 @@ export default function SchedulePage() {
     if (allSlots) {
       allSlots.forEach((slot) => {
         const dateStr = new Date(slot.date).toISOString().split("T")[0];
-        map[dateStr] = (map[dateStr] || 0) + 1;
+        if (dateStr) {
+          map[dateStr] = (map[dateStr] ?? 0) + 1;
+        }
       });
     }
     return map;
@@ -85,7 +105,9 @@ export default function SchedulePage() {
   const animals = useQuery(
     api.animals.list,
     useMemo(() => ({ search: "", limit: 1000, sort: "createdAtDesc" }), []),
-  ) as { _id: string; name: string; species: string; ownerId?: string | null }[] | undefined;
+  ) as
+    | { _id: string; name: string; species: string; ownerId?: string | null }[]
+    | undefined;
 
   const visits = useQuery(
     api.visits.list,
@@ -228,7 +250,10 @@ export default function SchedulePage() {
         </section>
 
         {/* Right: Calendar + Create Panel */}
-        <aside id="calendar" className={`${showCreatePanel ? "block" : "hidden"} md:block space-y-4`}>
+        <aside
+          id="calendar"
+          className={`${showCreatePanel ? "block" : "hidden"} space-y-4 md:block`}
+        >
           <div className="space-y-3 rounded-md border p-4">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">Календар</h2>
@@ -273,7 +298,7 @@ export default function SchedulePage() {
                 animals={animals}
                 visits={visits}
                 hideDatePicker={true}
-                existingSlots={slots || []}
+                existingSlots={slots ?? []}
               />
             ) : (
               <p className="text-muted-foreground text-sm">
@@ -340,7 +365,10 @@ export default function SchedulePage() {
             <AlertDialogCancel onClick={() => setSlotToDelete(null)}>
               Отказ
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Изтрий
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -349,4 +377,3 @@ export default function SchedulePage() {
     </main>
   );
 }
-
