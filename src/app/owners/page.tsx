@@ -101,10 +101,16 @@ export default function OwnersPage() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_380px]">
         <nav className="text-muted-foreground mb-2 inline-flex items-center gap-3 text-xs md:hidden">
-          <a href="#search" className="underline underline-offset-2 cursor-pointer">
+          <a
+            href="#search"
+            className="cursor-pointer underline underline-offset-2"
+          >
             Търсене
           </a>
-          <a href="#create" className="underline underline-offset-2 cursor-pointer">
+          <a
+            href="#create"
+            className="cursor-pointer underline underline-offset-2"
+          >
             Създаване
           </a>
         </nav>
@@ -277,7 +283,6 @@ export default function OwnersPage() {
                   type="email"
                   autoComplete="email"
                   placeholder="ivan@example.com"
-                  pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
                   title="Въведете валиден имейл адрес"
                   required
                 />
