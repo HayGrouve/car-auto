@@ -1,29 +1,350 @@
-# Create T3 App
+# Alisa (Алиса) - Veterinary Clinic CRM
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+A comprehensive veterinary clinic management system built with Next.js 15, React 19, and Convex. This application helps veterinary clinics manage owners, animals (patients), visits, appointments, and billing.
 
-## What's next? How do I make an app with this?
+## Features
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+- **Owner Management**: Register and manage pet owners with GDPR compliance
+- **Animal (Patient) Management**: Track patient information, medical history, and weight records
+- **Visit Management**: Create and manage veterinary visits with SOAP notes
+- **Appointment Scheduling**: Schedule and manage appointments with calendar view
+- **Billing & Invoicing**: Generate invoices and track payments
+- **PDF Generation**: Create vaccination certificates, visit summaries, and invoices
+- **Bulgarian Localization**: Fully localized Bulgarian interface
+- **GDPR Compliance**: Built-in GDPR consent management and data protection features
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+## Technology Stack
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+- **Frontend**: Next.js 15 (App Router), React 19, TypeScript
+- **Styling**: Tailwind CSS 4, shadcn/ui components
+- **Backend**: Convex (database and serverless functions)
+- **Authentication**: JWT-based authentication with httpOnly cookies
+- **PDF Generation**: jsPDF
+- **Form Validation**: Zod
+- **Icons**: Lucide React
 
-## Learn More
+## Prerequisites
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+Before you begin, ensure you have the following installed:
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+- **Node.js** 18.x or later
+- **pnpm** 8.x or later (package manager)
+- **Convex account** (sign up at https://convex.dev)
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+## Setup Instructions
 
-## How do I deploy this?
+### 1. Clone the Repository
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+```bash
+git clone <repository-url>
+cd zoo
+```
+
+### 2. Install Dependencies
+
+```bash
+pnpm install
+```
+
+### 3. Set Up Convex
+
+1. Sign up for a Convex account at https://convex.dev
+2. Install Convex CLI globally (if not already installed):
+   ```bash
+   npm install -g convex
+   ```
+3. Login to Convex:
+   ```bash
+   npx convex login
+   ```
+4. Initialize Convex in your project:
+   ```bash
+   npx convex dev
+   ```
+5. Copy the deployment URL from the Convex dashboard (format: `https://your-deployment.convex.cloud`)
+
+### 4. Configure Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```env
+# Node environment
+NODE_ENV=development
+
+# JWT secret key (minimum 32 characters)
+# Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+JWT_SECRET=your-secret-key-minimum-32-characters-long
+
+# Single user email for authentication
+SINGLE_USER_EMAIL=admin@clinic.local
+
+# Password hash (generate with bcrypt)
+# Generate with: node -e "const bcrypt=require('bcryptjs'); bcrypt.hash('your-password', 10).then(h=>console.log(h))"
+SINGLE_USER_PASSWORD_HASH=
+
+# Development fallback password (remove in production)
+SINGLE_USER_PASSWORD=your-dev-password
+
+# Convex deployment URL (from step 3)
+NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
+```
+
+### 5. Run Development Server
+
+```bash
+pnpm dev
+```
+
+The application will be available at http://localhost:3000
+
+### 6. Build for Production
+
+```bash
+pnpm build
+pnpm start
+```
+
+## Environment Variables
+
+### Required Variables
+
+| Variable | Description | Required For |
+|----------|-------------|--------------|
+| `NODE_ENV` | Environment mode (`development`, `test`, `production`) | All |
+| `JWT_SECRET` | Secret key for JWT tokens (min 32 chars) | All |
+| `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL | All |
+| `SINGLE_USER_EMAIL` | Admin user email | All |
+| `SINGLE_USER_PASSWORD_HASH` | Bcrypt hash of admin password | Production |
+| `SINGLE_USER_PASSWORD` | Plain password (dev only) | Development |
+
+### Generating Secrets
+
+**JWT Secret:**
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+**Password Hash:**
+```bash
+node -e "const bcrypt=require('bcryptjs'); bcrypt.hash('your-password', 10).then(h=>console.log(h))"
+```
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push your code to GitHub
+2. Import your repository in Vercel
+3. Configure environment variables in Vercel dashboard:
+   - Add all required variables from `.env.local`
+   - **Important**: Remove `SINGLE_USER_PASSWORD` in production
+   - Ensure `NODE_ENV=production`
+   - Set `NEXT_PUBLIC_CONVEX_URL` to your production Convex deployment
+4. Deploy
+
+### Convex Deployment
+
+Deploy your Convex backend:
+```bash
+npx convex deploy --prod
+```
+
+### Environment Variables in Production
+
+**Critical Security Notes:**
+- Never use `SINGLE_USER_PASSWORD` in production
+- Always use `SINGLE_USER_PASSWORD_HASH` with a bcrypt hash
+- Use strong, randomly generated `JWT_SECRET` (32+ characters)
+- Use different secrets for each environment
+- Store secrets securely using your platform's environment variable management
+
+## Architecture
+
+### High-Level Overview
+
+```
+┌─────────────────┐
+│   Next.js App   │
+│  (Frontend)     │
+└────────┬────────┘
+         │
+         │ HTTP/WebSocket
+         │
+┌────────▼────────┐
+│  Convex Backend │
+│  (Database +    │
+│   Functions)    │
+└─────────────────┘
+```
+
+### Key Design Decisions
+
+1. **Single-User Authentication**: MVP uses a single admin account for simplicity
+2. **Convex Backend**: Real-time database with automatic reactivity
+3. **JWT Tokens**: Stateless authentication with httpOnly cookies for security
+4. **Bulgarian First**: Primary language is Bulgarian with English code comments
+5. **GDPR Compliance**: Built-in consent management and data protection
+
+### Data Flow
+
+1. User interacts with React components
+2. Components use Convex hooks (`useQuery`, `useMutation`) for data
+3. Convex automatically syncs data in real-time
+4. API routes handle authentication (JWT validation)
+5. Middleware protects routes and validates tokens
+
+## API Documentation
+
+### Authentication Endpoints
+
+#### POST `/api/auth/login`
+
+Authenticate user and receive JWT token.
+
+**Request:**
+```json
+{
+  "email": "admin@clinic.local",
+  "password": "your-password"
+}
+```
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "data": {
+    "ok": true
+  }
+}
+```
+Sets httpOnly cookie `tm_jwt` with JWT token.
+
+**Response (Error):**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid credentials"
+  }
+}
+```
+
+#### POST `/api/auth/logout`
+
+Logout user and clear authentication cookie.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "ok": true
+  }
+}
+```
+
+### Error Response Format
+
+All API endpoints follow a standardized error format:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": "Optional additional details (development only)"
+  }
+}
+```
+
+**Error Codes:**
+- `VALIDATION_ERROR`: Request validation failed
+- `UNAUTHORIZED`: Authentication required or invalid credentials
+- `NOT_FOUND`: Resource not found
+- `INTERNAL_ERROR`: Server error
+- `BAD_REQUEST`: Invalid request
+
+## Project Structure
+
+```
+zoo/
+├── convex/              # Convex backend functions and schema
+│   ├── animals.ts       # Animal management functions
+│   ├── owners.ts        # Owner management functions
+│   ├── visits.ts        # Visit management functions
+│   ├── invoices.ts      # Invoice management functions
+│   ├── schedule.ts      # Scheduling functions
+│   └── dashboard.ts     # Dashboard queries
+├── src/
+│   ├── app/             # Next.js App Router pages
+│   │   ├── api/         # API routes
+│   │   ├── animals/     # Animal pages
+│   │   ├── owners/      # Owner pages
+│   │   ├── visits/      # Visit pages
+│   │   └── ...
+│   ├── components/      # React components
+│   │   ├── ui/          # shadcn/ui components
+│   │   └── ...
+│   ├── lib/             # Utility functions
+│   │   ├── auth.ts      # Authentication utilities
+│   │   ├── jwt.ts       # JWT handling
+│   │   └── ...
+│   └── hooks/           # Custom React hooks
+├── public/              # Static assets
+└── scripts/             # Utility scripts
+```
+
+## Development
+
+### Available Scripts
+
+- `pnpm dev` - Start development server with Turbopack
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm lint` - Run ESLint
+- `pnpm lint:fix` - Fix ESLint errors
+- `pnpm typecheck` - Run TypeScript type checking
+- `pnpm format:check` - Check code formatting
+- `pnpm format:write` - Format code with Prettier
+- `pnpm check` - Run lint and typecheck
+
+### Code Style
+
+- TypeScript strict mode enabled
+- ESLint with Next.js config
+- Prettier for code formatting
+- Tailwind CSS for styling
+
+## Troubleshooting
+
+### Convex Connection Issues
+
+If you see connection errors:
+1. Verify `NEXT_PUBLIC_CONVEX_URL` is set correctly
+2. Check Convex deployment status
+3. Ensure Convex functions are deployed: `npx convex deploy`
+
+### Authentication Issues
+
+If login fails:
+1. Verify `JWT_SECRET` is set (minimum 32 characters)
+2. Check `SINGLE_USER_EMAIL` matches login email
+3. Ensure password hash is correct (or use dev password)
+
+### Build Errors
+
+If build fails:
+1. Run `pnpm install` to ensure dependencies are installed
+2. Check environment variables are set
+3. Run `pnpm typecheck` to identify TypeScript errors
+
+## License
+
+[Add your license here]
+
+## Support
+
+For issues and questions, please [create an issue](link-to-issues) or contact [your contact information].
