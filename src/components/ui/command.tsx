@@ -72,8 +72,10 @@ function CommandInput({
   icon?: React.ReactNode;
   onIconClick?: () => void;
 }) {
-  const IconComponent = icon ?? <SearchIcon className="size-4 shrink-0 opacity-50" />;
-  
+  const IconComponent = icon ?? (
+    <SearchIcon className="size-4 shrink-0 opacity-50" />
+  );
+
   return (
     <div
       data-slot="command-input-wrapper"
@@ -83,7 +85,7 @@ function CommandInput({
         <button
           type="button"
           onClick={onIconClick}
-          className="flex shrink-0 items-center justify-center focus:outline-none focus:ring-2 focus:ring-ring rounded-sm p-1 -ml-1 hover:bg-accent transition-colors"
+          className="focus:ring-ring hover:bg-accent -ml-1 flex shrink-0 items-center justify-center rounded-sm p-1 transition-colors focus:ring-2 focus:outline-none"
           aria-label="Изчисти търсенето"
         >
           {IconComponent}
@@ -168,7 +170,7 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-3 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 min-h-[44px] sm:min-h-0",
+        "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex min-h-[44px] cursor-pointer items-center gap-2 rounded-sm px-2 py-3 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 sm:min-h-0 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}

@@ -25,7 +25,9 @@ const InvoicePdfButton = dynamic(
 
 export default function InvoiceDetailPage() {
   return (
-    <Suspense fallback={<main className="mx-auto max-w-3xl p-6">Зареждане...</main>}>
+    <Suspense
+      fallback={<main className="mx-auto max-w-3xl p-6">Зареждане...</main>}
+    >
       <InvoiceDetailPageContent />
     </Suspense>
   );
@@ -131,7 +133,8 @@ function InvoiceDetailPageContent() {
                 }}
                 className="min-h-[44px] w-full sm:w-auto sm:flex-none"
               >
-                <CheckCircle className="mr-1 size-4" aria-hidden /> Маркирай платена
+                <CheckCircle className="mr-1 size-4" aria-hidden /> Маркирай
+                платена
               </Button>
             )}
             <InvoicePdfButton
@@ -153,7 +156,10 @@ function InvoiceDetailPageContent() {
           {/* Mobile card view */}
           <div className="space-y-3 md:hidden">
             {(inv.items ?? []).map((it, idx) => (
-              <div key={idx} className="flex flex-col gap-2 rounded-md border p-3">
+              <div
+                key={idx}
+                className="flex flex-col gap-2 rounded-md border p-3"
+              >
                 <div className="font-medium">{it.description}</div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
@@ -203,14 +209,14 @@ function InvoiceDetailPageContent() {
               {(inv.items ?? []).map((it, idx) => (
                 <tr key={idx}>
                   <td className="py-2">{it.description}</td>
-                  <td className="text-right py-2">{it.quantity}</td>
-                  <td className="text-right py-2">
+                  <td className="py-2 text-right">{it.quantity}</td>
+                  <td className="py-2 text-right">
                     {fmtNumberBG(it.price, {
                       style: "currency",
                       currency: "BGN",
                     })}
                   </td>
-                  <td className="text-right py-2">
+                  <td className="py-2 text-right">
                     {fmtNumberBG(it.total, {
                       style: "currency",
                       currency: "BGN",
@@ -221,10 +227,10 @@ function InvoiceDetailPageContent() {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={3} className="text-right font-medium py-2">
+                <td colSpan={3} className="py-2 text-right font-medium">
                   Общо:
                 </td>
-                <td className="text-right font-medium py-2">
+                <td className="py-2 text-right font-medium">
                   {fmtNumberBG(inv.total, {
                     style: "currency",
                     currency: "BGN",

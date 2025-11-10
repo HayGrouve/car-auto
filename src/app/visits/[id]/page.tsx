@@ -537,7 +537,6 @@ export default function VisitDetailPage() {
             </div>
           </SectionCard>
         )}
-
       </section>
       <div className="lg:hidden" aria-hidden>
         <div className="bg-background/95 supports-[backdrop-filter]:bg-background/70 fixed inset-x-0 bottom-0 z-20 border-t p-3 shadow-lg shadow-black/5 backdrop-blur">
