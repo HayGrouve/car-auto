@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+  useDeferredValue,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/../convex/_generated/api";
@@ -11,104 +18,144 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-  CommandShortcut,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { Search, User, PawPrint, CalendarCheck, FileText } from "lucide-react";
+import {
+  Search,
+  User,
+  PawPrint,
+  CalendarCheck,
+  FileText,
+  X,
+  Loader2,
+} from "lucide-react";
 import { fmtDateTimeBG } from "@/lib/format";
-
-// Bulgarian transliteration + normalization helpers (to match both Cyrillic and Latin input)
-const translitMap: Record<string, string> = {
-  А: "A",
-  а: "a",
-  Б: "B",
-  б: "b",
-  В: "V",
-  в: "v",
-  Г: "G",
-  г: "g",
-  Д: "D",
-  д: "d",
-  Е: "E",
-  е: "e",
-  Ж: "Zh",
-  ж: "zh",
-  З: "Z",
-  з: "z",
-  И: "I",
-  и: "i",
-  Й: "Y",
-  й: "y",
-  К: "K",
-  к: "k",
-  Л: "L",
-  л: "l",
-  М: "M",
-  м: "m",
-  Н: "N",
-  н: "n",
-  О: "O",
-  о: "o",
-  П: "P",
-  п: "p",
-  Р: "R",
-  р: "r",
-  С: "S",
-  с: "s",
-  Т: "T",
-  т: "t",
-  У: "U",
-  у: "u",
-  Ф: "F",
-  ф: "f",
-  Х: "H",
-  х: "h",
-  Ц: "Ts",
-  ц: "ts",
-  Ч: "Ch",
-  ч: "ch",
-  Ш: "Sh",
-  ш: "sh",
-  Щ: "Sht",
-  щ: "sht",
-  Ъ: "A",
-  ъ: "a",
-  ь: "",
-  Ю: "Yu",
-  ю: "yu",
-  Я: "Ya",
-  я: "ya",
-};
-const toAscii = (s: string) =>
-  Array.from(String(s))
-    .map((ch) => translitMap[ch] ?? ch)
-    .join("");
-const normalizePair = (s: string) => {
-  const base = String(s)
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("bg")
-    .replace(/["'`„“”]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  const ascii = toAscii(base).toLowerCase();
-  return { base, ascii };
-};
+import { highlightMatch } from "@/lib/search-utils";
+import { Badge } from "@/components/ui/badge";
 
 const HISTORY_STORAGE_KEY = "alisa.searchHistory.v1";
 const HISTORY_LIMIT = 8;
+const MIN_QUERY_LENGTH = 2;
+
+// Type definitions
+interface Owner {
+  _id: string;
+  name: string;
+  phone?: string;
+}
+
+interface Animal {
+  _id: string;
+  name: string;
+  species: string;
+  ownerId?: string | null;
+  ownerName?: string | null;
+  ownerPhone?: string | null;
+}
+
+interface Visit {
+  _id: string;
+  code?: string;
+  createdAt: number;
+  status: string;
+  ownerId?: string;
+  animalId?: string;
+}
+
+interface Invoice {
+  _id: string;
+  code?: string;
+  createdAt: number;
+  total: number;
+  ownerId?: string;
+  visitId?: string;
+}
+
+// Parse query for prefix filters (o:, a:, v:, i:)
+function parseQuery(rawQuery: string): {
+  query: string;
+  filters: {
+    owners: boolean;
+    animals: boolean;
+    visits: boolean;
+    invoices: boolean;
+  };
+} {
+  const trimmed = rawQuery.trim();
+  const filters = {
+    owners: false,
+    animals: false,
+    visits: false,
+    invoices: false,
+  };
+
+  let query = trimmed;
+  const prefixRegex = /^([oavi]):(.+)$/i;
+  const prefixMatch = prefixRegex.exec(trimmed);
+  if (prefixMatch?.[1] && prefixMatch?.[2]) {
+    const prefix = prefixMatch[1].toLowerCase();
+    query = prefixMatch[2].trim();
+    switch (prefix) {
+      case "o":
+        filters.owners = true;
+        break;
+      case "a":
+        filters.animals = true;
+        break;
+      case "v":
+        filters.visits = true;
+        break;
+      case "i":
+        filters.invoices = true;
+        break;
+    }
+  }
+
+  return { query, filters };
+}
+
+// Format currency
+function formatCurrency(amount: number): string {
+  return `${amount.toFixed(2)} BGN`;
+}
+
+// Get status badge variant
+function getStatusVariant(
+  status: string,
+): "default" | "secondary" | "destructive" {
+  switch (status.toLowerCase()) {
+    case "finalized":
+      return "default";
+    case "draft":
+      return "secondary";
+    default:
+      return "default";
+  }
+}
 
 export function GlobalSearch() {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [rawQuery, setRawQuery] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const router = useRouter();
 
+  // Parse query and filters
+  const { query, filters } = useMemo(() => parseQuery(rawQuery), [rawQuery]);
+
+  // Debounce query for API calls
+  const deferredQuery = useDeferredValue(query);
+
+  // Only search if query meets minimum length
+  const searchQuery =
+    deferredQuery.length >= MIN_QUERY_LENGTH ? deferredQuery : "";
+
+  // Skip queries when no search query (unless showing history)
+  const shouldFetch = searchQuery.length > 0;
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const isCtrlB =
-        (e.ctrlKey || e.metaKey) && (e.key === "b" || e.key === "B");
-      if (isCtrlB) {
+      const isCtrlSpace = (e.ctrlKey || e.metaKey) && e.key === " ";
+      if (isCtrlSpace) {
         e.preventDefault();
         setOpen((v) => !v);
       }
@@ -159,15 +206,94 @@ export function GlobalSearch() {
     }
   }, []);
 
-  const owners = useQuery(
+  const clearQuery = useCallback(() => {
+    setRawQuery("");
+  }, []);
+
+  // Determine which types to search
+  const hasAnyFilter =
+    filters.owners || filters.animals || filters.visits || filters.invoices;
+  const shouldSearchOwners = !hasAnyFilter || filters.owners;
+  const shouldSearchAnimals = !hasAnyFilter || filters.animals;
+  const shouldSearchVisits = !hasAnyFilter || filters.visits;
+  const shouldSearchInvoices = !hasAnyFilter || filters.invoices;
+
+  // Queries with loading and error states
+  const ownersQuery = useQuery(
     api.owners.list,
-    useMemo(() => ({ search: query, limit: 10 }), [query]),
-  ) as { _id: string; name: string; phone?: string }[] | undefined;
+    shouldFetch && shouldSearchOwners
+      ? {
+          search: searchQuery,
+          limit: 10,
+        }
+      : "skip",
+  );
+
+  const animalsQuery = useQuery(
+    api.animals.list,
+    shouldFetch && shouldSearchAnimals
+      ? {
+          search: searchQuery,
+          limit: 10,
+        }
+      : "skip",
+  );
+
+  const visitsQuery = useQuery(
+    api.visits.list,
+    shouldFetch && shouldSearchVisits
+      ? {
+          search: searchQuery,
+          limit: 10,
+        }
+      : "skip",
+  );
+
+  const invoicesQuery = useQuery(
+    api.invoices.list,
+    shouldFetch && shouldSearchInvoices
+      ? {
+          search: searchQuery,
+          limit: 10,
+          unpaidOnly: false,
+        }
+      : "skip",
+  );
+
+  // Type-safe results
+  const owners = ownersQuery as Owner[] | undefined;
+  const animals = animalsQuery as Animal[] | undefined;
+  const visits = visitsQuery as Visit[] | undefined;
+  const invoices = invoicesQuery as Invoice[] | undefined;
+
+  // Check loading states - only check queries that are actually being fetched (not skipped)
+  const isLoading =
+    shouldFetch &&
+    ((shouldSearchOwners && ownersQuery === undefined) ||
+      (shouldSearchAnimals && animalsQuery === undefined) ||
+      (shouldSearchVisits && visitsQuery === undefined) ||
+      (shouldSearchInvoices && invoicesQuery === undefined));
+
+  // Check for errors (if query returns null when it shouldn't)
+  const hasError = false; // Convex handles errors internally
+
+  // Build owner map for animal display
+  const ownerMap = useMemo(() => {
+    const map: Record<string, { name: string; phone?: string }> = {};
+    (owners ?? []).forEach((o) => {
+      map[o._id] = { name: o.name, phone: o.phone };
+    });
+    return map;
+  }, [owners]);
 
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const handleInputKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Escape" && !rawQuery) {
+        setOpen(false);
+        return;
+      }
       const list = listRef.current;
       if (!list) return;
       const items = Array.from(
@@ -189,125 +315,8 @@ export function GlobalSearch() {
         items[items.length - 1]?.focus();
       }
     },
-    [],
+    [rawQuery],
   );
-
-  const animals = useQuery(
-    api.animals.list,
-    useMemo(() => ({ search: query, limit: 10 }), [query]),
-  ) as
-    | {
-        _id: string;
-        name: string;
-        species: string;
-        ownerId?: string | null;
-        ownerName?: string | null;
-        ownerPhone?: string | null;
-      }[]
-    | undefined;
-
-  // Build a quick map of owners for disambiguation display
-  const ownerMap = useMemo(() => {
-    const map: Record<string, { name: string; phone?: string }> = {};
-    (owners ?? []).forEach((o) => {
-      map[o._id] = { name: o.name, phone: o.phone };
-    });
-    return map;
-  }, [owners]);
-
-  const visitsRaw = useQuery(
-    api.visits.list,
-    useMemo(() => ({ limit: 50 }), []),
-  ) as
-    | {
-        _id: string;
-        code?: string;
-        createdAt: number;
-        status: string;
-        ownerId?: string;
-        animalId?: string;
-      }[]
-    | undefined;
-
-  const invoicesRaw = useQuery(
-    api.invoices.list,
-    useMemo(() => ({ unpaidOnly: false }), []),
-  ) as
-    | {
-        _id: string;
-        code?: string;
-        createdAt: number;
-        total: number;
-        ownerId?: string;
-        visitId?: string;
-      }[]
-    | undefined;
-
-  const visits = useMemo(() => {
-    const qp = normalizePair(query);
-    if (!qp.base)
-      return [] as {
-        _id: string;
-        code?: string;
-        createdAt: number;
-        status: string;
-        ownerId?: string;
-        animalId?: string;
-      }[];
-    const matchedOwnerIds = new Set((owners ?? []).map((o) => o._id));
-    const matchedAnimalIds = new Set((animals ?? []).map((a) => a._id));
-    return (visitsRaw ?? [])
-      .filter((v) => {
-        const code = String(v.code ?? v._id);
-        const codePair = normalizePair(code);
-        const codeMatch = [
-          codePair.base.includes(qp.base),
-          codePair.ascii.includes(qp.ascii),
-        ].some(Boolean);
-        const relOwner = v.ownerId
-          ? matchedOwnerIds.has(String(v.ownerId))
-          : false;
-        const relAnimal = v.animalId
-          ? matchedAnimalIds.has(String(v.animalId))
-          : false;
-        const relMatch = [relOwner, relAnimal].some(Boolean);
-        return codeMatch ? true : relMatch;
-      })
-      .slice(0, 10);
-  }, [query, owners, animals, visitsRaw]);
-
-  const invoices = useMemo(() => {
-    const qp = normalizePair(query);
-    if (!qp.base)
-      return [] as {
-        _id: string;
-        code?: string;
-        createdAt: number;
-        total: number;
-        ownerId?: string;
-        visitId?: string;
-      }[];
-    const matchedOwnerIds = new Set((owners ?? []).map((o) => o._id));
-    const matchedVisitIds = new Set((visits ?? []).map((v) => v._id));
-    return (invoicesRaw ?? [])
-      .filter((i) => {
-        const code = String(i.code ?? i._id);
-        const codePair = normalizePair(code);
-        const codeMatch = [
-          codePair.base.includes(qp.base),
-          codePair.ascii.includes(qp.ascii),
-        ].some(Boolean);
-        const relOwner = i.ownerId
-          ? matchedOwnerIds.has(String(i.ownerId))
-          : false;
-        const relVisit = i.visitId
-          ? matchedVisitIds.has(String(i.visitId))
-          : false;
-        const relMatch = [relOwner, relVisit].some(Boolean);
-        return codeMatch ? true : relMatch;
-      })
-      .slice(0, 10);
-  }, [query, owners, visits, invoicesRaw]);
 
   const onNavigate = useCallback(
     (href: string, shouldPersist = true) => {
@@ -315,10 +324,48 @@ export function GlobalSearch() {
         persistHistory(query);
       }
       setOpen(false);
+      setRawQuery("");
       router.push(href);
     },
     [router, query, persistHistory],
   );
+
+  // Filter results based on prefix filters
+  const filteredOwners = useMemo(() => {
+    if (!shouldSearchOwners) return [];
+    return owners ?? [];
+  }, [owners, shouldSearchOwners]);
+
+  const filteredAnimals = useMemo(() => {
+    if (!shouldSearchAnimals) return [];
+    return animals ?? [];
+  }, [animals, shouldSearchAnimals]);
+
+  const filteredVisits = useMemo(() => {
+    if (!shouldSearchVisits) return [];
+    return visits ?? [];
+  }, [visits, shouldSearchVisits]);
+
+  const filteredInvoices = useMemo(() => {
+    if (!shouldSearchInvoices) return [];
+    return invoices ?? [];
+  }, [invoices, shouldSearchInvoices]);
+
+  const hasResults =
+    filteredOwners.length > 0 ||
+    filteredAnimals.length > 0 ||
+    filteredVisits.length > 0 ||
+    filteredInvoices.length > 0;
+
+  const showHistory = history.length > 0 && !searchQuery;
+
+  const getPlaceholder = () => {
+    if (filters.owners) return "Търси собственици...";
+    if (filters.animals) return "Търси животни...";
+    if (filters.visits) return "Търси посещения...";
+    if (filters.invoices) return "Търси фактури...";
+    return "Търси по име, код... (o:, a:, v:, i: за филтри)";
+  };
 
   return (
     <>
@@ -331,32 +378,68 @@ export function GlobalSearch() {
         <Search className="size-4" />
         Търсене...
         <span className="text-muted-foreground ml-2 hidden text-xs lg:inline">
-          Ctrl/⌘ B
+          Ctrl/⌘ Space
         </span>
       </Button>
       <CommandDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(isOpen) => {
+          setOpen(isOpen);
+          if (!isOpen) {
+            setRawQuery("");
+          }
+        }}
         title="Търсене"
         description="Намери собственици, животни, посещения, фактури"
       >
-        <CommandInput
-          autoFocus
-          placeholder="Търси по име, код..."
-          onValueChange={setQuery}
-          value={query}
-          onKeyDown={handleInputKeyDown}
-        />
+        <div className="relative">
+          <CommandInput
+            autoFocus
+            placeholder={getPlaceholder()}
+            onValueChange={setRawQuery}
+            value={rawQuery}
+            onKeyDown={handleInputKeyDown}
+            aria-label="Търсене"
+          />
+          {rawQuery && (
+            <button
+              type="button"
+              onClick={clearQuery}
+              className="text-muted-foreground hover:text-foreground focus:ring-ring absolute top-1/2 right-3 -translate-y-1/2 rounded-sm p-1 focus:ring-2 focus:outline-none"
+              aria-label="Изчисти търсенето"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
         <CommandList ref={listRef}>
-          <CommandEmpty>Няма резултати</CommandEmpty>
+          {isLoading && searchQuery ? (
+            <div className="text-muted-foreground flex items-center justify-center py-6 text-sm">
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Търсене...
+            </div>
+          ) : hasError ? (
+            <CommandEmpty>Възникна грешка при търсенето</CommandEmpty>
+          ) : !hasResults && searchQuery ? (
+            <CommandEmpty>
+              <div className="py-6">
+                <p className="mb-2">Няма резултати</p>
+                {query.length < MIN_QUERY_LENGTH && (
+                  <p className="text-muted-foreground text-xs">
+                    Въведете поне {MIN_QUERY_LENGTH} символа
+                  </p>
+                )}
+              </div>
+            </CommandEmpty>
+          ) : null}
 
-          {history.length > 0 && !query ? (
+          {showHistory && (
             <CommandGroup heading="Скорошни заявки">
               {history.map((term) => (
                 <CommandItem
                   key={`history-${term}`}
                   value={`history-${term}`}
-                  onSelect={() => setQuery(term)}
+                  onSelect={() => setRawQuery(term)}
                 >
                   <Search className="mr-2 size-4" aria-hidden />
                   <span>{term}</span>
@@ -366,35 +449,69 @@ export function GlobalSearch() {
                 <span className="text-muted-foreground">Изчисти историята</span>
               </CommandItem>
             </CommandGroup>
-          ) : null}
+          )}
 
-          {(owners ?? []).length > 0 && query ? (
-            <CommandGroup heading="Собственици">
-              {(owners ?? []).slice(0, 10).map((o) => (
-                <CommandItem
-                  key={`owner-${o._id}`}
-                  value={`owner-${o._id}`}
-                  onSelect={() => onNavigate(`/owners/${o._id}`)}
-                >
-                  <User className="mr-2 size-4" aria-hidden />
-                  <span className="font-medium">{o.name}</span>
-                  {o.phone ? (
-                    <span className="text-muted-foreground ml-2">
-                      · {o.phone}
+          {filteredOwners.length > 0 && (
+            <CommandGroup
+              heading={
+                <div className="flex items-center justify-between">
+                  <span>Собственици</span>
+                  <Badge variant="secondary" className="ml-2">
+                    {filteredOwners.length}
+                  </Badge>
+                </div>
+              }
+            >
+              {filteredOwners.map((o) => {
+                const nameParts = highlightMatch(o.name, query);
+                return (
+                  <CommandItem
+                    key={`owner-${o._id}`}
+                    value={`owner-${o._id}`}
+                    onSelect={() => onNavigate(`/owners/${o._id}`)}
+                  >
+                    <User className="mr-2 size-4" aria-hidden />
+                    <span className="font-medium">
+                      {nameParts.map((part, i) =>
+                        part.highlight ? (
+                          <mark
+                            key={i}
+                            className="bg-blue-200 dark:bg-blue-900"
+                          >
+                            {part.text}
+                          </mark>
+                        ) : (
+                          part.text
+                        ),
+                      )}
                     </span>
-                  ) : null}
-                  <CommandShortcut>Owner</CommandShortcut>
-                </CommandItem>
-              ))}
+                    {o.phone ? (
+                      <span className="text-muted-foreground ml-2">
+                        · {o.phone}
+                      </span>
+                    ) : null}
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
-          ) : null}
+          )}
 
-          {(animals ?? []).length > 0 && query ? (
-            <CommandGroup heading="Животни">
-              {(animals ?? []).slice(0, 10).map((a) => {
+          {filteredAnimals.length > 0 && (
+            <CommandGroup
+              heading={
+                <div className="flex items-center justify-between">
+                  <span>Животни</span>
+                  <Badge variant="secondary" className="ml-2">
+                    {filteredAnimals.length}
+                  </Badge>
+                </div>
+              }
+            >
+              {filteredAnimals.map((a) => {
                 const ownerDisplay =
                   a.ownerName ??
                   (a.ownerId ? ownerMap[String(a.ownerId)]?.name : undefined);
+                const nameParts = highlightMatch(a.name, query);
                 return (
                   <CommandItem
                     key={`animal-${a._id}`}
@@ -402,7 +519,20 @@ export function GlobalSearch() {
                     onSelect={() => onNavigate(`/animals/${a._id}`)}
                   >
                     <PawPrint className="mr-2 size-4" aria-hidden />
-                    <span className="font-medium">{a.name}</span>
+                    <span className="font-medium">
+                      {nameParts.map((part, i) =>
+                        part.highlight ? (
+                          <mark
+                            key={i}
+                            className="bg-blue-200 dark:bg-blue-900"
+                          >
+                            {part.text}
+                          </mark>
+                        ) : (
+                          part.text
+                        ),
+                      )}
+                    </span>
                     <span className="text-muted-foreground ml-2">
                       · {a.species}
                     </span>
@@ -411,50 +541,140 @@ export function GlobalSearch() {
                         · {ownerDisplay}
                       </span>
                     ) : null}
-                    <CommandShortcut>Animal</CommandShortcut>
                   </CommandItem>
                 );
               })}
             </CommandGroup>
-          ) : null}
+          )}
 
-          {(visits ?? []).length > 0 && (
-            <CommandGroup heading="Посещения">
-              {(visits ?? []).map((v) => (
-                <CommandItem
-                  key={`visit-${v._id}`}
-                  value={`visit-${v._id}`}
-                  onSelect={() => onNavigate(`/visits/${v._id}`)}
-                >
-                  <CalendarCheck className="mr-2 size-4" aria-hidden />
-                  <span className="font-medium">
-                    {v.code ?? `#${String(v._id)}`}
-                  </span>
-                  <span className="text-muted-foreground ml-2">
-                    · {fmtDateTimeBG(v.createdAt)}
-                  </span>
-                  <CommandShortcut>Visit</CommandShortcut>
-                </CommandItem>
-              ))}
+          {filteredVisits.length > 0 && (
+            <CommandGroup
+              heading={
+                <div className="flex items-center justify-between">
+                  <span>Посещения</span>
+                  <Badge variant="secondary" className="ml-2">
+                    {filteredVisits.length}
+                  </Badge>
+                </div>
+              }
+            >
+              {filteredVisits.map((v) => {
+                const code = v.code ?? `#${String(v._id)}`;
+                const codeParts = highlightMatch(code, query);
+                return (
+                  <CommandItem
+                    key={`visit-${v._id}`}
+                    value={`visit-${v._id}`}
+                    onSelect={() => onNavigate(`/visits/${v._id}`)}
+                  >
+                    <CalendarCheck className="mr-2 size-4" aria-hidden />
+                    <span className="font-medium">
+                      {codeParts.map((part, i) =>
+                        part.highlight ? (
+                          <mark
+                            key={i}
+                            className="bg-blue-200 dark:bg-blue-900"
+                          >
+                            {part.text}
+                          </mark>
+                        ) : (
+                          part.text
+                        ),
+                      )}
+                    </span>
+                    <span className="text-muted-foreground ml-2">
+                      · {fmtDateTimeBG(v.createdAt)}
+                    </span>
+                    <Badge
+                      variant={getStatusVariant(v.status)}
+                      className="ml-2"
+                    >
+                      {v.status === "finalized" ? "Завършено" : "Чернова"}
+                    </Badge>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           )}
 
-          {(invoices ?? []).length > 0 && (
-            <CommandGroup heading="Фактури">
-              {(invoices ?? []).map((inv) => (
+          {filteredInvoices.length > 0 && (
+            <CommandGroup
+              heading={
+                <div className="flex items-center justify-between">
+                  <span>Фактури</span>
+                  <Badge variant="secondary" className="ml-2">
+                    {filteredInvoices.length}
+                  </Badge>
+                </div>
+              }
+            >
+              {filteredInvoices.map((inv) => {
+                const code = inv.code ?? `#${String(inv._id)}`;
+                const codeParts = highlightMatch(code, query);
+                return (
+                  <CommandItem
+                    key={`inv-${inv._id}`}
+                    value={`inv-${inv._id}`}
+                    onSelect={() => onNavigate(`/invoices/${inv._id}`)}
+                  >
+                    <FileText className="mr-2 size-4" aria-hidden />
+                    <span className="font-medium">
+                      {codeParts.map((part, i) =>
+                        part.highlight ? (
+                          <mark
+                            key={i}
+                            className="bg-blue-200 dark:bg-blue-900"
+                          >
+                            {part.text}
+                          </mark>
+                        ) : (
+                          part.text
+                        ),
+                      )}
+                    </span>
+                    <span className="text-muted-foreground ml-2">
+                      · {fmtDateTimeBG(inv.createdAt)}
+                    </span>
+                    <span className="text-muted-foreground ml-2">
+                      · {formatCurrency(inv.total)}
+                    </span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          )}
+
+          {!showHistory && !hasResults && !searchQuery && (
+            <div className="text-muted-foreground py-6 text-center text-sm">
+              <p className="mb-2">Въведете заявка за търсене</p>
+              <div className="mt-4 px-3 text-xs">
+                Използвайте префикси за филтриране:{" "}
+                <div className="mt-1">
+                  <span className="font-bold">o:</span> собственици,
+                </div>
+                <div className="mt-1">
+                  <span className="font-bold">a:</span> животни,
+                </div>
+                <div className="mt-1">
+                  <span className="font-bold">v:</span> посещения,
+                </div>
+                <div className="mt-1">
+                  <span className="font-bold">i:</span> фактури
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showHistory && searchQuery && history.length > 0 && (
+            <CommandGroup heading="Скорошни заявки">
+              {history.slice(0, 3).map((term) => (
                 <CommandItem
-                  key={`inv-${inv._id}`}
-                  value={`inv-${inv._id}`}
-                  onSelect={() => onNavigate(`/invoices/${inv._id}`)}
+                  key={`history-${term}`}
+                  value={`history-${term}`}
+                  onSelect={() => setRawQuery(term)}
                 >
-                  <FileText className="mr-2 size-4" aria-hidden />
-                  <span className="font-medium">
-                    {inv.code ?? `#${String(inv._id)}`}
-                  </span>
-                  <span className="text-muted-foreground ml-2">
-                    · {fmtDateTimeBG(inv.createdAt)}
-                  </span>
-                  <CommandShortcut>Invoice</CommandShortcut>
+                  <Search className="mr-2 size-4" aria-hidden />
+                  <span>{term}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
