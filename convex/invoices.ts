@@ -26,9 +26,99 @@ export const list = query({
       ),
     ),
     includePaid: v.optional(v.boolean()),
+    search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const all = await ctx.db.query("invoices").collect();
+    const translitMap: Record<string, string> = {
+      А: "A",
+      а: "a",
+      Б: "B",
+      б: "b",
+      В: "V",
+      в: "v",
+      Г: "G",
+      г: "g",
+      Д: "D",
+      д: "d",
+      Е: "E",
+      е: "e",
+      Ж: "zh",
+      ж: "zh",
+      З: "Z",
+      з: "z",
+      И: "i",
+      и: "i",
+      Й: "y",
+      й: "y",
+      К: "k",
+      к: "k",
+      Л: "l",
+      л: "l",
+      М: "m",
+      м: "m",
+      Н: "n",
+      н: "n",
+      О: "o",
+      о: "o",
+      П: "p",
+      п: "p",
+      Р: "r",
+      р: "r",
+      С: "s",
+      с: "s",
+      Т: "t",
+      т: "t",
+      У: "u",
+      у: "u",
+      Ф: "f",
+      ф: "f",
+      Х: "h",
+      х: "h",
+      Ц: "ts",
+      ц: "ts",
+      Ч: "ch",
+      ч: "ch",
+      Ш: "sh",
+      ш: "sh",
+      Щ: "sht",
+      щ: "sht",
+      Ъ: "a",
+      ъ: "a",
+      Ь: "",
+      ь: "",
+      Ю: "yu",
+      ю: "yu",
+      Я: "ya",
+      я: "ya",
+    };
+    const toAscii = (s: string) =>
+      Array.from(String(s))
+        .map((ch) => translitMap[ch] ?? ch)
+        .join("");
+    const normalizePair = (s: string) => {
+      const base = String(s ?? "")
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("bg")
+        .replace(/["'`„""]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const ascii = toAscii(base).toLowerCase();
+      return { base, ascii };
+    };
+    const queryPair = normalizePair(args.search ?? "");
+    const matchesSearch = (value: unknown) => {
+      if (!queryPair.base && !queryPair.ascii) return true;
+      const p = normalizePair(String(value ?? ""));
+      return (
+        (p.base && queryPair.base && p.base.includes(queryPair.base)) ||
+        (p.ascii && queryPair.ascii && p.ascii.includes(queryPair.ascii)) ||
+        (p.base && queryPair.ascii && p.base.includes(queryPair.ascii)) ||
+        (p.ascii && queryPair.base && p.ascii.includes(queryPair.base))
+      );
+    };
+
     let filtered = all;
     if (args.unpaidOnly) filtered = filtered.filter((i: any) => !i.paid);
     if (args.includePaid === false)
@@ -41,6 +131,15 @@ export const list = query({
       filtered = filtered.filter((i: any) => i.createdAt >= args.from!);
     if (args.to)
       filtered = filtered.filter((i: any) => i.createdAt <= args.to!);
+    if (queryPair.base || queryPair.ascii) {
+      filtered = filtered.filter((i: any) => {
+        const haystacks = [
+          i.code ?? i._id,
+          ...(i.items ?? []).map((item: any) => item.description ?? ""),
+        ];
+        return haystacks.some((v: any) => matchesSearch(v));
+      });
+    }
     const sorted = filtered.sort((a: any, b: any) => {
       switch (args.sort) {
         case "createdAtAsc":

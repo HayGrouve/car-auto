@@ -1,5 +1,9 @@
-import { NextResponse } from "next/server";
-import { createSuccessResponse, withErrorHandler } from "@/lib/api-errors";
+import type { NextRequest, NextResponse } from "next/server";
+import {
+  createSuccessResponse,
+  withErrorHandler,
+  type ApiResponse,
+} from "@/lib/api-errors";
 
 /**
  * Logout handler - clears JWT authentication cookie
@@ -13,7 +17,9 @@ import { createSuccessResponse, withErrorHandler } from "@/lib/api-errors";
  * Cookie: tm_jwt="" (cleared)
  * ```
  */
-async function handleLogout() {
+async function handleLogout(
+  _req: Request | NextRequest,
+): Promise<NextResponse<ApiResponse<{ ok: boolean }>>> {
   const res = createSuccessResponse({ ok: true });
   res.cookies.set("tm_jwt", "", {
     httpOnly: true,

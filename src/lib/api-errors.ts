@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Standardized error response format
@@ -41,7 +41,7 @@ export const ErrorCodes = {
 export function createErrorResponse(
   code: string,
   message: string,
-  status: number = 400,
+  status = 400,
   details?: unknown,
 ): NextResponse<ApiErrorResponse> {
   return NextResponse.json(
@@ -50,7 +50,7 @@ export function createErrorResponse(
       error: {
         code,
         message,
-        ...(details && { details }),
+        ...(details !== undefined ? { details } : {}),
       },
     },
     { status },
@@ -62,7 +62,7 @@ export function createErrorResponse(
  */
 export function createSuccessResponse<T>(
   data: T,
-  status: number = 200,
+  status = 200,
 ): NextResponse<ApiSuccessResponse<T>> {
   return NextResponse.json(
     {
@@ -77,11 +77,13 @@ export function createSuccessResponse<T>(
  * Wraps an API route handler with error handling
  */
 export function withErrorHandler<T>(
-  handler: (req: Request | import("next/server").NextRequest) => Promise<NextResponse<T>>,
+  handler: (
+    req: Request | NextRequest,
+  ) => Promise<NextResponse<ApiResponse<T>>>,
 ) {
   return async (
-    req: Request | import("next/server").NextRequest,
-  ): Promise<NextResponse> => {
+    req: Request | NextRequest,
+  ): Promise<NextResponse<ApiResponse<T>>> => {
     try {
       return await handler(req);
     } catch (error) {
