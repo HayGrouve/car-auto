@@ -50,8 +50,8 @@ const reviewId: WizardStepId = "review";
 
 const wizardStepTitles: Record<WizardStepId, string> = {
   measurements: "Измервания",
-  "soap-so": "SOAP — Субективно/Обективно",
-  "soap-ap": "SOAP — Оценка/План",
+  "soap-so": "SOAP — Anamnesa vitae/Anamnesa morbi",
+  "soap-ap": "SOAP — Лабораторна диагностика/Diagnosis",
   procedures: "Процедури и медикаменти",
   review: "Преглед и финализиране",
 };
@@ -624,18 +624,18 @@ export default function VisitWizard({
                 ))}
               </div>
               <Textarea
-                aria-label="Субективно"
+                aria-label="Anamnesa vitae"
                 value={s}
                 disabled={isFinalized}
                 onChange={(e) => setS(e.target.value)}
-                placeholder="Субективно"
+                placeholder="Anamnesa vitae"
               />
               <Textarea
-                aria-label="Обективно"
+                aria-label="Anamnesa morbi"
                 value={o}
                 disabled={isFinalized}
                 onChange={(e) => setO(e.target.value)}
-                placeholder="Обективно"
+                placeholder="Anamnesa morbi"
               />
             </div>
           ),
@@ -680,18 +680,18 @@ export default function VisitWizard({
                 ))}
               </div>
               <Textarea
-                aria-label="Оценка"
+                aria-label="Лабораторна диагностика"
                 value={a}
                 disabled={isFinalized}
                 onChange={(e) => setA(e.target.value)}
-                placeholder="Оценка"
+                placeholder="Лабораторна диагностика"
               />
               <Textarea
-                aria-label="План"
+                aria-label="Diagnosis"
                 value={p}
                 disabled={isFinalized}
                 onChange={(e) => setP(e.target.value)}
-                placeholder="План"
+                placeholder="Diagnosis"
               />
             </div>
           ),
@@ -907,39 +907,39 @@ export default function VisitWizard({
                   <div className="text-muted-foreground ml-5 space-y-2">
                     {s.trim() ? (
                       <div>
-                        <span className="font-medium">Субективно:</span>{" "}
+                        <span className="font-medium">Anamnesa vitae:</span>{" "}
                         <span className="whitespace-pre-wrap">{s}</span>
                       </div>
                     ) : (
                       <div className="text-muted-foreground/70">
-                        Субективно: —
+                        Anamnesa vitae: —
                       </div>
                     )}
                     {o.trim() ? (
                       <div>
-                        <span className="font-medium">Обективно:</span>{" "}
+                        <span className="font-medium">Anamnesa morbi:</span>{" "}
                         <span className="whitespace-pre-wrap">{o}</span>
                       </div>
                     ) : (
                       <div className="text-muted-foreground/70">
-                        Обективно: —
+                        Anamnesa morbi: —
                       </div>
                     )}
                     {a.trim() ? (
                       <div>
-                        <span className="font-medium">Оценка:</span>{" "}
+                        <span className="font-medium">Лабораторна диагностика:</span>{" "}
                         <span className="whitespace-pre-wrap">{a}</span>
                       </div>
                     ) : (
-                      <div className="text-muted-foreground/70">Оценка: —</div>
+                      <div className="text-muted-foreground/70">Лабораторна диагностика: —</div>
                     )}
                     {p.trim() ? (
                       <div>
-                        <span className="font-medium">План:</span>{" "}
+                        <span className="font-medium">Diagnosis:</span>{" "}
                         <span className="whitespace-pre-wrap">{p}</span>
                       </div>
                     ) : (
-                      <div className="text-muted-foreground/70">План: —</div>
+                      <div className="text-muted-foreground/70">Diagnosis: —</div>
                     )}
                   </div>
                 </div>

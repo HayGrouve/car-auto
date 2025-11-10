@@ -375,3 +375,13 @@ export const suggestMedications = query({
     }
   },
 });
+
+export const remove = mutation({
+  args: {
+    id: v.id("visits"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+    return { ok: true } as const;
+  },
+});

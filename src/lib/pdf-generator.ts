@@ -350,10 +350,10 @@ export async function generateVisitSummaryPdf(
     doc.text(lines, 25, yPos);
     yPos += lines.length * 7 + 4;
   };
-  addSection("Субективно", data.subjective);
-  addSection("Обективно", data.objective);
-  addSection("Оценка", data.assessment);
-  addSection("План", data.plan);
+  addSection("Anamnesa vitae", data.subjective);
+  addSection("Anamnesa morbi", data.objective);
+  addSection("Лабораторна диагностика", data.assessment);
+  addSection("Diagnosis", data.plan);
 
   // Lists
   const addList = (title: string, items?: string[]) => {

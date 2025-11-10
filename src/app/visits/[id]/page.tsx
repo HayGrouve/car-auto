@@ -6,6 +6,7 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { type VisitDoc } from "@/types/visit";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { Trash, AlertTriangle } from "lucide-react";
 import dynamic from "next/dynamic";
 import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
 import VisitWizard from "./VisitWizard";
@@ -45,6 +47,9 @@ export default function VisitDetailPage() {
     useMemo(() => ({ id }), [id]),
   ) as VisitDoc | null | undefined;
   const finalize = useMutation(api.visits.finalize);
+  const removeVisit = useMutation(api.visits.remove) as unknown as (args: {
+    id: string;
+  }) => Promise<{ ok: boolean }>;
   const router = useRouter();
 
   const [s, setS] = useState("");
@@ -73,6 +78,8 @@ export default function VisitDetailPage() {
     | undefined;
   const [ownerId, setOwnerId] = useState<string>("");
   const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
 
   const visit: VisitDoc | null = visitUnknown ?? null;
 
@@ -114,7 +121,7 @@ export default function VisitDetailPage() {
       setShowFinalizeConfirm(true);
       return;
     }
-    
+
     // Proceed with finalization if invoice exists
     await handleFinalizeConfirm();
   }
@@ -126,6 +133,33 @@ export default function VisitDetailPage() {
       toast.success("Приключено");
       void router.push("/visits");
     }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!visit) return;
+    const expectedText = `изтрии ${visit.code ?? visit._id}`;
+    if (deleteConfirmationText.trim() !== expectedText) {
+      toast.error("Текстът за потвърждение не съвпада");
+      return;
+    }
+    try {
+      const res = await removeVisit({ id });
+      if (res?.ok) {
+        toast.success("Посещението е изтрито");
+        setShowDeleteConfirm(false);
+        setDeleteConfirmationText("");
+        void router.push("/visits");
+      } else {
+        toast.error("Грешка при изтриване на посещението");
+      }
+    } catch {
+      toast.error("Грешка при изтриване на посещението");
+    }
+  }
+
+  function onDelete() {
+    setShowDeleteConfirm(true);
+    setDeleteConfirmationText("");
   }
 
   function downloadBlob(blob: Blob, fileName: string) {
@@ -187,10 +221,10 @@ export default function VisitDetailPage() {
         ? `<tr><td class=\"label\">${esc(label)}</td><td>${html!}</td></tr>`
         : "";
     const soapRows = [
-      row("S - Субективно", s),
-      row("O - Обективно", o),
-      row("A - Оценка", a),
-      row("P - План", p),
+      row("S - Anamnesa vitae", s),
+      row("O - Anamnesa morbi", o),
+      row("A - Лабораторна диагностика", a),
+      row("P - Diagnosis", p),
     ].join("");
     const procedureList = (procedures?.length ? procedures : [])
       .map((pr) => `<li>${esc(pr)}</li>`)
@@ -287,6 +321,8 @@ export default function VisitDetailPage() {
     : null;
   const visitTimestamp =
     (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
+  const visitCode = visit.code ?? String(visit._id);
+  const deleteConfirmationPhrase = `изтрии ${visitCode}`;
 
   const generateVisitPdf = async () => {
     const animal = (animals ?? []).find((a) => a._id === visit.animalId);
@@ -332,13 +368,16 @@ export default function VisitDetailPage() {
               onInvoice={() => {
                 const url = `/invoices/new?visitId=${encodeURIComponent(
                   visit._id,
-                )}&ownerId=${encodeURIComponent(visit.ownerId)}${
-                  visit.animalId
-                    ? `&animalId=${encodeURIComponent(String(visit.animalId))}`
-                    : ""
-                }`;
+                )}&ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(String(visit.animalId))}` : ""}`;
                 void router.push(url);
               }}
+              extraActions={[
+                {
+                  label: "Изтрий",
+                  onSelect: onDelete,
+                  icon: <Trash className="h-4 w-4" aria-hidden="true" />,
+                },
+              ]}
             />
           }
           actionsMenuMobile={
@@ -348,13 +387,16 @@ export default function VisitDetailPage() {
               onInvoice={() => {
                 const url = `/invoices/new?visitId=${encodeURIComponent(
                   visit._id,
-                )}&ownerId=${encodeURIComponent(visit.ownerId)}${
-                  visit.animalId
-                    ? `&animalId=${encodeURIComponent(String(visit.animalId))}`
-                    : ""
-                }`;
+                )}&ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(String(visit.animalId))}` : ""}`;
                 void router.push(url);
               }}
+              extraActions={[
+                {
+                  label: "Изтрий",
+                  onSelect: onDelete,
+                  icon: <Trash className="h-4 w-4" aria-hidden="true" />,
+                },
+              ]}
             />
           }
           owner={{
@@ -567,18 +609,78 @@ export default function VisitDetailPage() {
           </div>
         </div>
       </div>
-      <AlertDialog open={showFinalizeConfirm} onOpenChange={setShowFinalizeConfirm}>
+      <AlertDialog
+        open={showFinalizeConfirm}
+        onOpenChange={setShowFinalizeConfirm}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Няма създадена фактура</AlertDialogTitle>
             <AlertDialogDescription>
-              Това посещение няма свързана фактура. Сигурни ли сте, че искате да го приключите без фактура?
+              Това посещение няма свързана фактура. Сигурни ли сте, че искате да
+              го приключите без фактура?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Отказ</AlertDialogCancel>
             <AlertDialogAction onClick={handleFinalizeConfirm}>
               Да, приключи
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Изтриване на посещение</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle
+                    className="text-destructive mt-0.5 h-6 w-6 flex-shrink-0"
+                    aria-hidden="true"
+                  />
+                  <div>
+                    <span className="font-semibold">Внимание:</span> Посещенията
+                    се записват за всяко животно, за да можем да събираме
+                    исторически данни. Изтриването трябва да се извърши
+                    внимателно.
+                  </div>
+                </div>
+                <div>
+                  За да потвърдите изтриването, моля въведете:{" "}
+                  <strong>{deleteConfirmationPhrase}</strong>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              value={deleteConfirmationText}
+              onChange={(e) => setDeleteConfirmationText(e.target.value)}
+              placeholder={deleteConfirmationPhrase}
+              className="w-full"
+              aria-label="Потвърждение за изтриване"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="cursor-pointer"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeleteConfirmationText("");
+              }}
+            >
+              Отказ
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={
+                deleteConfirmationText.trim() !== deleteConfirmationPhrase
+              }
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-destructive cursor-pointer"
+            >
+              Изтрий
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
