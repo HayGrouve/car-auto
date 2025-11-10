@@ -17,7 +17,7 @@ import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
 import { toast } from "sonner";
 import type { InvoiceDoc } from "@/types/visit";
 import type { Id } from "@/../convex/_generated/dataModel";
-import InvoicePdfButton from "@/components/pdf/InvoicePdfButton";
+import dynamic from "next/dynamic";
 import { EmptyState } from "@/components/EmptyState";
 import { FileText, Printer, CheckCircle, ExternalLink } from "lucide-react";
 import { SkeletonList } from "@/components/SkeletonList";
@@ -31,6 +31,12 @@ import {
 import { SectionCard } from "@/components/ui/section-card";
 import { useRouter } from "next/navigation";
 import { printInvoice } from "@/lib/printInvoice";
+
+// Lazy load PDF button component
+const InvoicePdfButton = dynamic(
+  () => import("@/components/pdf/InvoicePdfButton"),
+  { ssr: false },
+);
 
 const ALL_OWNERS_VALUE = "__all";
 

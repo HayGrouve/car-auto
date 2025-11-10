@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon, X } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -72,7 +72,7 @@ function CommandInput({
   icon?: React.ReactNode;
   onIconClick?: () => void;
 }) {
-  const IconComponent = icon || <SearchIcon className="size-4 shrink-0 opacity-50" />;
+  const IconComponent = icon ?? <SearchIcon className="size-4 shrink-0 opacity-50" />;
   
   return (
     <div

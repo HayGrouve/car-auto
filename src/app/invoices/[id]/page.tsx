@@ -6,7 +6,7 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
-import InvoicePdfButton from "@/components/pdf/InvoicePdfButton";
+import dynamic from "next/dynamic";
 import { Printer, CheckCircle } from "lucide-react";
 // import dynamic from "next/dynamic";
 // const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
@@ -16,6 +16,12 @@ import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
+
+// Lazy load PDF button component
+const InvoicePdfButton = dynamic(
+  () => import("@/components/pdf/InvoicePdfButton"),
+  { ssr: false },
+);
 
 export default function InvoiceDetailPage() {
   return (

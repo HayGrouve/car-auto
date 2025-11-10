@@ -1,17 +1,16 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, Suspense } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { Clock } from "lucide-react";
+import dynamic from "next/dynamic";
 
 import { api } from "@/../convex/_generated/api";
 import { brand } from "@/lib/brand";
 import { formatTimeRange } from "@/lib/format";
 import { SkeletonList } from "@/components/SkeletonList";
-import { TodayInvoicesChart } from "@/components/dashboard/TodayInvoicesChart";
-import { StatusBarChart } from "@/components/dashboard/StatusBarChart";
 import {
   VisitList,
   type VisitListItem,
@@ -23,6 +22,23 @@ import {
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
 import type { Id } from "@/../convex/_generated/dataModel";
+
+// Lazy load heavy chart components
+const TodayInvoicesChart = dynamic(
+  () =>
+    import("@/components/dashboard/TodayInvoicesChart").then((m) => ({
+      default: m.TodayInvoicesChart,
+    })),
+  { ssr: false },
+);
+
+const StatusBarChart = dynamic(
+  () =>
+    import("@/components/dashboard/StatusBarChart").then((m) => ({
+      default: m.StatusBarChart,
+    })),
+  { ssr: false },
+);
 
 type DashboardCounts = {
   owners: number;
@@ -327,16 +343,32 @@ export default function HomePage() {
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="flex flex-col rounded-lg border p-4">
-          <TodayInvoicesChart
-            paid={overview.totals.today.paid ?? 0}
-            unpaid={overview.totals.today.unpaid ?? 0}
-          />
+          <Suspense
+            fallback={
+              <div className="flex h-[300px] items-center justify-center">
+                <SkeletonList rows={1} />
+              </div>
+            }
+          >
+            <TodayInvoicesChart
+              paid={overview.totals.today.paid ?? 0}
+              unpaid={overview.totals.today.unpaid ?? 0}
+            />
+          </Suspense>
         </div>
         <div className="flex flex-col rounded-lg border p-4">
-          <StatusBarChart
-            unpaidInvoices={overview.counts.unpaidInvoices ?? 0}
-            draftVisits={overview.counts.draftVisits ?? 0}
-          />
+          <Suspense
+            fallback={
+              <div className="flex h-[300px] items-center justify-center">
+                <SkeletonList rows={1} />
+              </div>
+            }
+          >
+            <StatusBarChart
+              unpaidInvoices={overview.counts.unpaidInvoices ?? 0}
+              draftVisits={overview.counts.draftVisits ?? 0}
+            />
+          </Suspense>
         </div>
       </section>
     </main>

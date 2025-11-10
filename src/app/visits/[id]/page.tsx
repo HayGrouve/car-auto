@@ -7,7 +7,7 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { type VisitDoc } from "@/types/visit";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
+import dynamic from "next/dynamic";
 import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
 import VisitWizard from "./VisitWizard";
 import {
@@ -21,6 +21,12 @@ import {
   buildDuplicateAction,
 } from "@/components/visits/VisitActionsMenu";
 import { SectionCard } from "@/components/ui/section-card";
+
+// Lazy load PDF button component
+const PdfDownloadButton = dynamic(
+  () => import("@/components/pdf/PdfDownloadButton"),
+  { ssr: false },
+);
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
