@@ -209,12 +209,6 @@ export default function HomePage() {
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium">График днес</h2>
-            <Link
-              href="/schedule"
-              className="text-muted-foreground text-xs underline underline-offset-2"
-            >
-              Към график
-            </Link>
           </div>
           <div className="divide-y rounded-md border">
             {overview.todayScheduleSlots.length === 0 ? (

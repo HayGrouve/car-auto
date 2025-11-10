@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -65,14 +65,32 @@ function CommandDialog({
 
 function CommandInput({
   className,
+  icon,
+  onIconClick,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+}: React.ComponentProps<typeof CommandPrimitive.Input> & {
+  icon?: React.ReactNode;
+  onIconClick?: () => void;
+}) {
+  const IconComponent = icon || <SearchIcon className="size-4 shrink-0 opacity-50" />;
+  
   return (
     <div
       data-slot="command-input-wrapper"
       className="flex h-9 items-center gap-2 border-b px-3"
     >
-      <SearchIcon className="size-4 shrink-0 opacity-50" />
+      {onIconClick ? (
+        <button
+          type="button"
+          onClick={onIconClick}
+          className="flex shrink-0 items-center justify-center focus:outline-none focus:ring-2 focus:ring-ring rounded-sm p-1 -ml-1 hover:bg-accent transition-colors"
+          aria-label="Изчисти търсенето"
+        >
+          {IconComponent}
+        </button>
+      ) : (
+        <div className="shrink-0">{IconComponent}</div>
+      )}
       <CommandPrimitive.Input
         data-slot="command-input"
         className={cn(

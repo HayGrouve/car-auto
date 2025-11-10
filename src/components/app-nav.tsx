@@ -4,9 +4,19 @@ import Image from "next/image";
 import logoJpg from "@/../public/logo.jpg";
 import { usePathname } from "next/navigation";
 import { brand } from "@/lib/brand";
-import { Menu, PawPrint, User, CalendarCheck, FileText, Calendar } from "lucide-react";
+import {
+  Menu,
+  Search,
+  PawPrint,
+  User,
+  CalendarCheck,
+  FileText,
+  Calendar,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const GlobalSearch = dynamic(() => import("@/components/GlobalSearch"), {
   ssr: false,
@@ -15,10 +25,24 @@ const GlobalSearch = dynamic(() => import("@/components/GlobalSearch"), {
 export function AppNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  // Handle keyboard shortcut for global search
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isCtrlSpace = (e.ctrlKey || e.metaKey) && e.key === " ";
+      if (isCtrlSpace) {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const links = [
     { href: "/owners", label: "Собственици", icon: User },
@@ -35,7 +59,7 @@ export function AppNav() {
           key={l.href}
           href={l.href}
           onClick={onClick}
-          className={`inline-flex items-center gap-2 rounded-md px-3 py-2 cursor-pointer min-h-[44px] ${pathname === l.href ? "bg-accent" : "hover:bg-accent"}`}
+          className={`inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-md px-3 py-2 ${pathname === l.href ? "bg-accent" : "hover:bg-accent"}`}
         >
           {l.icon ? <l.icon className="size-4" /> : null}
           {l.label}
@@ -50,7 +74,7 @@ export function AppNav() {
         <div className="flex items-center gap-2">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 font-semibold hover:underline cursor-pointer"
+            className="inline-flex cursor-pointer items-center gap-2 font-semibold hover:underline"
           >
             <Image
               src={logoJpg}
@@ -65,26 +89,53 @@ export function AppNav() {
         </div>
         <div className="hidden items-center gap-2 md:flex">
           <NavLinks />
-          <GlobalSearch />
+          <Button
+            type="button"
+            variant="outline"
+            className="items-center gap-2"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="size-4" />
+            Търсене...
+            <span className="text-muted-foreground ml-2 hidden text-xs lg:inline">
+              Ctrl/⌘ Space
+            </span>
+          </Button>
         </div>
-        <button
-          className="p-2 md:hidden cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
-          aria-label="Меню"
-          onClick={() => setOpen((o) => !o)}
-        >
-          <Menu className="size-5" />
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="relative max-w-[200px] flex-1">
+            <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <Input
+              type="text"
+              placeholder="Търсене..."
+              className="h-9 pr-3 pl-9 text-sm"
+              onClick={() => setSearchOpen(true)}
+              onFocus={() => setSearchOpen(true)}
+              readOnly
+            />
+          </div>
+          <button
+            className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center p-2"
+            aria-label="Меню"
+            onClick={() => setOpen((o) => !o)}
+          >
+            <Menu className="size-5" />
+          </button>
+        </div>
       </div>
       {open && (
         <div className="bg-background border-t md:hidden">
           <div className="mx-auto flex max-w-5xl flex-col gap-2 p-3">
-            <div className="pb-2">
-              <GlobalSearch />
-            </div>
             <NavLinks onClick={() => setOpen(false)} />
           </div>
         </div>
       )}
+      {/* Render GlobalSearch once - dialog only, buttons are rendered separately */}
+      <GlobalSearch
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        showButton={false}
+      />
     </div>
   );
 }

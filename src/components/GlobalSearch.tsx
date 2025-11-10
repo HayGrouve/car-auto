@@ -26,8 +26,8 @@ import {
   PawPrint,
   CalendarCheck,
   FileText,
-  X,
   Loader2,
+  Eraser,
 } from "lucide-react";
 import { fmtDateTimeBG } from "@/lib/format";
 import { highlightMatch } from "@/lib/search-utils";
@@ -133,11 +133,34 @@ function getStatusVariant(
   }
 }
 
-export function GlobalSearch() {
-  const [open, setOpen] = useState(false);
+type GlobalSearchProps = {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showButton?: boolean;
+};
+
+export function GlobalSearch({
+  open: externalOpen,
+  onOpenChange,
+  showButton = true,
+}: GlobalSearchProps = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [rawQuery, setRawQuery] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const router = useRouter();
+
+  // Use external state if provided, otherwise use internal state
+  const open = externalOpen ?? internalOpen;
+  const setOpen = useCallback(
+    (value: boolean) => {
+      if (onOpenChange) {
+        onOpenChange(value);
+      } else {
+        setInternalOpen(value);
+      }
+    },
+    [onOpenChange],
+  );
 
   // Parse query and filters
   const { query, filters } = useMemo(() => parseQuery(rawQuery), [rawQuery]);
@@ -153,16 +176,19 @@ export function GlobalSearch() {
   const shouldFetch = searchQuery.length > 0;
 
   useEffect(() => {
+    // Only register keyboard shortcut if not externally controlled
+    if (onOpenChange) return;
+
     const onKey = (e: KeyboardEvent) => {
       const isCtrlSpace = (e.ctrlKey || e.metaKey) && e.key === " ";
       if (isCtrlSpace) {
         e.preventDefault();
-        setOpen((v) => !v);
+        setOpen(!open);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [open, setOpen, onOpenChange]);
 
   useEffect(() => {
     try {
@@ -315,7 +341,7 @@ export function GlobalSearch() {
         items[items.length - 1]?.focus();
       }
     },
-    [rawQuery],
+    [rawQuery, setOpen],
   );
 
   const onNavigate = useCallback(
@@ -327,7 +353,7 @@ export function GlobalSearch() {
       setRawQuery("");
       router.push(href);
     },
-    [router, query, persistHistory],
+    [router, query, persistHistory, setOpen],
   );
 
   // Filter results based on prefix filters
@@ -369,18 +395,20 @@ export function GlobalSearch() {
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        className="hidden items-center gap-2 md:inline-flex"
-        onClick={() => setOpen(true)}
-      >
-        <Search className="size-4" />
-        Търсене...
-        <span className="text-muted-foreground ml-2 hidden text-xs lg:inline">
-          Ctrl/⌘ Space
-        </span>
-      </Button>
+      {showButton && (
+        <Button
+          type="button"
+          variant="outline"
+          className="hidden items-center gap-2 md:inline-flex"
+          onClick={() => setOpen(true)}
+        >
+          <Search className="size-4" />
+          Търсене...
+          <span className="text-muted-foreground ml-2 hidden text-xs lg:inline">
+            Ctrl/⌘ Space
+          </span>
+        </Button>
+      )}
       <CommandDialog
         open={open}
         onOpenChange={(isOpen) => {
@@ -400,17 +428,15 @@ export function GlobalSearch() {
             value={rawQuery}
             onKeyDown={handleInputKeyDown}
             aria-label="Търсене"
+            icon={
+              rawQuery ? (
+                <Eraser className="size-4 shrink-0 opacity-70" />
+              ) : (
+                <Search className="size-4 shrink-0 opacity-50" />
+              )
+            }
+            onIconClick={rawQuery ? clearQuery : undefined}
           />
-          {rawQuery && (
-            <button
-              type="button"
-              onClick={clearQuery}
-              className="text-muted-foreground hover:text-foreground focus:ring-ring absolute top-1/2 right-3 -translate-y-1/2 rounded-sm p-2 focus:ring-2 focus:outline-none min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label="Изчисти търсенето"
-            >
-              <X className="size-4" />
-            </button>
-          )}
         </div>
         <CommandList ref={listRef}>
           {isLoading && searchQuery ? (
