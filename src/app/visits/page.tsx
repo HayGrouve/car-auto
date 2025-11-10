@@ -152,7 +152,7 @@ function VisitsPageInner() {
         </Button>
       </div>
 
-      <section className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <div className="grid grid-cols-1 gap-3 sm:col-span-2 md:grid-cols-2">
           <div>
             <Label>Собственик</Label>
@@ -160,7 +160,7 @@ function VisitsPageInner() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-10 w-full min-h-[44px] justify-between"
+                  className="h-10 min-h-[44px] w-full justify-between"
                 >
                   {ownerId
                     ? (owners ?? []).find((o) => o._id === ownerId)?.name
@@ -203,7 +203,7 @@ function VisitsPageInner() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-10 w-full min-h-[44px] justify-between"
+                  className="h-10 min-h-[44px] w-full justify-between"
                 >
                   {animalId
                     ? (animals ?? []).find((a) => a._id === animalId)?.name
@@ -257,7 +257,7 @@ function VisitsPageInner() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-10 w-full min-h-[44px] justify-between"
+                  className="h-10 min-h-[44px] w-full justify-between"
                 >
                   {status || "Всички"}
                 </Button>
@@ -329,7 +329,7 @@ function VisitsPageInner() {
                 setPage(0);
               }}
             >
-              <SelectTrigger className="h-10 w-full min-h-[44px]">
+              <SelectTrigger className="h-10 min-h-[44px] w-full">
                 <SelectValue placeholder="Подредба" />
               </SelectTrigger>
               <SelectContent>
@@ -425,11 +425,6 @@ function VisitsPageInner() {
             icon={CalendarCheck}
             title="Няма посещения"
             description="Създайте ново посещение от тази страница."
-            action={
-              <Button type="submit" variant="secondary">
-                Ново посещение
-              </Button>
-            }
           />
         ) : (
           (visits ?? []).map((v) => (
@@ -440,7 +435,7 @@ function VisitsPageInner() {
               <div className="min-w-0 flex-1 space-y-1">
                 <a
                   href={`/visits/${v._id}`}
-                  className="mr-2 inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline min-h-[44px]"
+                  className="mr-2 inline-flex min-h-[44px] items-center gap-1 font-medium underline-offset-2 hover:underline"
                   aria-label={`Преглед на посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                 >
                   <CalendarCheck className="size-4 flex-shrink-0" aria-hidden />
@@ -467,12 +462,16 @@ function VisitsPageInner() {
                       if (r?.ok) toast.success("Приключено");
                     }}
                   >
-                    <CheckCircle className="mr-1 size-4 flex-shrink-0" aria-hidden /> Приключи
+                    <CheckCircle
+                      className="mr-1 size-4 flex-shrink-0"
+                      aria-hidden
+                    />{" "}
+                    Приключи
                   </Button>
                 ) : null}
                 {v.status === "draft" ? (
                   <a
-                    className="hover:bg-accent inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm min-h-[44px] flex-1 sm:flex-none"
+                    className="hover:bg-accent inline-flex min-h-[44px] flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm sm:flex-none"
                     href={`/visits/${v._id}?step=1`}
                     aria-label={`Стартирай ръководство за ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                   >
@@ -480,7 +479,7 @@ function VisitsPageInner() {
                   </a>
                 ) : null}
                 <a
-                  className="hover:bg-accent inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm min-h-[44px] flex-1 sm:flex-none"
+                  className="hover:bg-accent inline-flex min-h-[44px] flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm sm:flex-none"
                   href={`/invoices/new?ownerId=${encodeURIComponent(String(v.ownerId))}${v.animalId ? `&animalId=${encodeURIComponent(String(v.animalId))}` : ""}&visitId=${encodeURIComponent(String(v._id))}`}
                   aria-label={`Нова фактура за посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                 >
