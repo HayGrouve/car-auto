@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -42,6 +41,10 @@ import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
+import { Form, getFormFieldProps } from "@/components/ui/form";
+import { FormField } from "@/components/ui/form-field";
+import { animalFormSchema, type AnimalFormData } from "@/lib/validation/animal";
+import type { UseFormReturn } from "react-hook-form";
 export default function AnimalsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -60,10 +63,6 @@ export default function AnimalsPage() {
   const createAnimal = useMutation(api.animals.create);
   const [ownerId, setOwnerId] = useState("");
   const [ownerSearch, setOwnerSearch] = useState("");
-  const [newSex, setNewSex] = useState<"male" | "female" | "unknown">(
-    "unknown",
-  );
-  const [newNeutered, setNewNeutered] = useState(false);
   const owners = useQuery(
     api.owners.list,
     useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
@@ -78,37 +77,43 @@ export default function AnimalsPage() {
     return map;
   }, [owners]);
 
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    const name = (fd.get("name") ?? "") as string;
-    const species = (fd.get("species") ?? "") as string;
-    const breed = (fd.get("breed") ?? undefined) as string | undefined;
-    const microchip = (fd.get("microchip") ?? undefined) as string | undefined;
-    const birthdateRaw = fd.get("birthdate") as string | null;
-    const parsedDob = birthdateRaw ? Date.parse(birthdateRaw) : undefined;
-    const dob = parsedDob && !Number.isNaN(parsedDob) ? parsedDob : undefined;
+  async function handleCreate(
+    data: AnimalFormData,
+    methods: UseFormReturn<AnimalFormData>,
+  ) {
+    const microchipCleaned = data.microchip?.replace(/\s+/g, "") ?? undefined;
+    const dobParsed = data.dob ? Date.parse(data.dob) : undefined;
+    const dob = dobParsed && !Number.isNaN(dobParsed) ? dobParsed : undefined;
+
     const res = (await createAnimal({
-      name,
-      species,
-      breed,
-      microchip,
+      name: data.name.trim(),
+      species: data.species.trim(),
+      breed: data.breed?.trim() ?? undefined,
+      color: data.color?.trim() ?? undefined,
+      microchip: microchipCleaned,
       dob,
-      sex: newSex,
-      neutered: newNeutered,
+      sex: data.sex,
+      neutered: data.neutered,
       ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
     })) as { ok: true; id: string } | { ok: false; reason: "microchip" };
     if (!res?.ok) {
       toast.error("Съществува животно с този микрочип");
       return;
     }
-    toast.success("Животното е добавено успешно");
-    form.reset();
+    methods.reset({
+      name: "",
+      species: "",
+      breed: "",
+      color: "",
+      sex: "unknown",
+      neutered: false,
+      microchip: "",
+      dob: "",
+      ownerId: "",
+    });
     setOwnerId("");
     setOwnerSearch("");
-    setNewSex("unknown");
-    setNewNeutered(false);
+    toast.success("Животното е добавено успешно");
   }
 
   useBreadcrumbRegistration([
@@ -303,144 +308,220 @@ export default function AnimalsPage() {
                 Затвори
               </Button>
             </div>
-            <form
+            <Form
+              schema={animalFormSchema}
+              defaultValues={{
+                name: "",
+                species: "",
+                breed: "",
+                color: "",
+                sex: "unknown",
+                neutered: false,
+                microchip: "",
+                dob: "",
+                ownerId: "",
+              }}
               onSubmit={handleCreate}
               className="grid grid-cols-1 gap-4 md:gap-3"
             >
-              <div>
-                <Label htmlFor="aname">Име</Label>
-                <Input
-                  id="aname"
-                  name="name"
-                  type="text"
-                  autoCapitalize="words"
-                  pattern="[A-Za-zА-Яа-я ]+"
-                  title="Въведете само букви"
-                  placeholder="Шаро"
-                  required
-                  aria-label="Име на животно"
-                />
-              </div>
-              <div>
-                <Label htmlFor="species">Вид</Label>
-                <Input
-                  id="species"
-                  name="species"
-                  type="text"
-                  autoCapitalize="words"
-                  pattern="[A-Za-zА-Яа-я ]+"
-                  title="Въведете само букви"
-                  placeholder="Куче"
-                  required
-                  aria-label="Вид на животно"
-                />
-              </div>
-              <div>
-                <Label htmlFor="breed">Порода</Label>
-                <Input
-                  id="breed"
-                  name="breed"
-                  type="text"
-                  autoCapitalize="words"
-                  pattern="[A-Za-zА-Яа-я ]+"
-                  title="Въведете само букви"
-                  placeholder="Лабрадор"
-                  aria-label="Порода на животно"
-                />
-              </div>
-              <div>
-                <Label htmlFor="sex">Пол</Label>
-                <Select
-                  value={newSex}
-                  onValueChange={(value: "male" | "female" | "unknown") =>
-                    setNewSex(value)
-                  }
-                >
-                  <SelectTrigger id="sex" className="h-9 w-full">
-                    <SelectValue placeholder="Пол" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Мъжки</SelectItem>
-                    <SelectItem value="female">Женски</SelectItem>
-                    <SelectItem value="unknown">Неизвестен</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2.5">
-                <Label htmlFor="neutered">Стерилизиран</Label>
-                <label className="flex items-center gap-2">
-                  <Checkbox
-                    id="neutered"
-                    checked={newNeutered}
-                    onCheckedChange={(checked) =>
-                      setNewNeutered(Boolean(checked))
-                    }
-                  />
-                  <span className="text-sm">Кастриран/а</span>
-                </label>
-              </div>
-              <div>
-                <Label htmlFor="microchip">Микрочип</Label>
-                <Input
-                  id="microchip"
-                  name="microchip"
-                  type="text"
-                  placeholder="напр. 985112003178000"
-                  aria-label="Микрочип на животно"
-                />
-              </div>
-              <div>
-                <Label htmlFor="birthdate">Дата на раждане</Label>
-                <Input id="birthdate" name="birthdate" type="date" />
-              </div>
-              <div>
-                <Label>Собственик</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-between"
+              {(methods: UseFormReturn<AnimalFormData>) => {
+                const nameField = getFormFieldProps(methods, "name");
+                const speciesField = getFormFieldProps(methods, "species");
+                const breedField = getFormFieldProps(methods, "breed");
+                const colorField = getFormFieldProps(methods, "color");
+                const microchipField = getFormFieldProps(methods, "microchip");
+                const dobField = getFormFieldProps(methods, "dob");
+                return (
+                  <>
+                    <FormField
+                      label="Име"
+                      htmlFor="aname"
+                      required
+                      error={methods.formState.errors.name?.message}
+                      hint="Въведете име на животното"
                     >
-                      {ownerId
-                        ? (owners ?? []).find((o) => o._id === ownerId)?.name
-                        : "Без собственик"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command>
-                      <CommandInput
-                        placeholder="Търси собственик..."
-                        value={ownerSearch}
-                        onValueChange={setOwnerSearch}
+                      <Input
+                        id="aname"
+                        type="text"
+                        autoCapitalize="words"
+                        placeholder="Шаро"
+                        aria-label="Име на животно"
+                        {...nameField}
                       />
-                      <CommandList>
-                        <CommandEmpty>Няма резултати</CommandEmpty>
-                        {(owners ?? []).map((o) => (
-                          <CommandItem
-                            key={o._id}
-                            value={o._id}
-                            onSelect={(v) => {
-                              setOwnerId(v);
-                            }}
+                    </FormField>
+
+                    <FormField
+                      label="Вид"
+                      htmlFor="species"
+                      required
+                      error={methods.formState.errors.species?.message}
+                      hint="Въведете вида на животното"
+                    >
+                      <Input
+                        id="species"
+                        type="text"
+                        autoCapitalize="words"
+                        placeholder="Куче"
+                        aria-label="Вид на животно"
+                        {...speciesField}
+                      />
+                    </FormField>
+
+                    <FormField
+                      label="Порода"
+                      htmlFor="breed"
+                      error={methods.formState.errors.breed?.message}
+                    >
+                      <Input
+                        id="breed"
+                        type="text"
+                        autoCapitalize="words"
+                        placeholder="Лабрадор"
+                        aria-label="Порода на животно"
+                        {...breedField}
+                      />
+                    </FormField>
+
+                    <FormField
+                      label="Цвят"
+                      htmlFor="color"
+                      error={methods.formState.errors.color?.message}
+                    >
+                      <Input
+                        id="color"
+                        type="text"
+                        autoCapitalize="words"
+                        placeholder="напр. Кафяв"
+                        aria-label="Цвят на животно"
+                        {...colorField}
+                      />
+                    </FormField>
+
+                    <FormField
+                      label="Пол"
+                      htmlFor="sex"
+                      error={methods.formState.errors.sex?.message}
+                    >
+                      <Select
+                        value={methods.watch("sex") ?? "unknown"}
+                        onValueChange={(value: "male" | "female" | "unknown") =>
+                          methods.setValue("sex", value)
+                        }
+                      >
+                        <SelectTrigger id="sex" className="h-9 w-full">
+                          <SelectValue placeholder="Пол" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Мъжки</SelectItem>
+                          <SelectItem value="female">Женски</SelectItem>
+                          <SelectItem value="unknown">Неизвестен</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+
+                    <FormField
+                      label="Стерилизиран"
+                      htmlFor="neutered"
+                      error={methods.formState.errors.neutered?.message}
+                    >
+                      <label className="flex items-center gap-2">
+                        <Checkbox
+                          id="neutered"
+                          checked={methods.watch("neutered") ?? false}
+                          onCheckedChange={(checked) =>
+                            methods.setValue("neutered", checked === true)
+                          }
+                          aria-invalid={!!methods.formState.errors.neutered}
+                        />
+                        <span className="text-sm">Кастриран/а</span>
+                      </label>
+                    </FormField>
+
+                    <FormField
+                      label="Микрочип"
+                      htmlFor="microchip"
+                      error={methods.formState.errors.microchip?.message}
+                      hint="ISO формат: 15 цифри (опционално)"
+                    >
+                      <Input
+                        id="microchip"
+                        type="text"
+                        placeholder="напр. 985112003178000"
+                        aria-label="Микрочип на животно"
+                        {...microchipField}
+                      />
+                    </FormField>
+
+                    <FormField
+                      label="Дата на раждане"
+                      htmlFor="birthdate"
+                      error={methods.formState.errors.dob?.message}
+                      hint="Датата на раждане не може да бъде в бъдещето"
+                    >
+                      <Input
+                        id="birthdate"
+                        type="date"
+                        max={new Date().toISOString().split("T")[0]}
+                        {...dobField}
+                      />
+                    </FormField>
+
+                    <FormField label="Собственик">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-between"
                           >
-                            {o.name}
-                            {o.phone ? ` · ${o.phone}` : ""}
-                          </CommandItem>
-                        ))}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div>
-                <Button
-                  type="submit"
-                  className="min-h-[44px] w-full md:min-h-0 md:w-auto"
-                >
-                  Добави животно
-                </Button>
-              </div>
-            </form>
+                            {ownerId
+                              ? (owners ?? []).find((o) => o._id === ownerId)
+                                  ?.name
+                              : "Без собственик"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder="Търси собственик..."
+                              value={ownerSearch}
+                              onValueChange={setOwnerSearch}
+                            />
+                            <CommandList>
+                              <CommandEmpty>Няма резултати</CommandEmpty>
+                              {(owners ?? []).map((o) => (
+                                <CommandItem
+                                  key={o._id}
+                                  value={o._id}
+                                  onSelect={(v) => {
+                                    setOwnerId(v);
+                                    methods.setValue("ownerId", v);
+                                  }}
+                                >
+                                  {o.name}
+                                  {o.phone ? ` · ${o.phone}` : ""}
+                                </CommandItem>
+                              ))}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </FormField>
+
+                    <div>
+                      <Button
+                        type="submit"
+                        disabled={methods.formState.isSubmitting}
+                        className="min-h-[44px] w-full md:min-h-0 md:w-auto"
+                      >
+                        {methods.formState.isSubmitting
+                          ? "Добавяне..."
+                          : "Добави животно"}
+                      </Button>
+                    </div>
+                  </>
+                );
+              }}
+            </Form>
           </div>
         </aside>
       </div>

@@ -37,6 +37,8 @@ import {
 } from "@/lib/schedule";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { Id } from "@/../convex/_generated/dataModel";
+import { FormField } from "@/components/ui/form-field";
+import { FormError } from "@/components/ui/form-error";
 import { cn } from "@/lib/utils";
 
 type ScheduleSlotFormProps = {
@@ -107,7 +109,8 @@ export function ScheduleSlotForm({
   }, [initialData]);
 
   const [title, setTitle] = useState(
-    initialData?.title ?? (generateSlotId ? `Преглед ${generateSlotId}` : "Преглед"),
+    initialData?.title ??
+      (generateSlotId ? `Преглед ${generateSlotId}` : "Преглед"),
   );
   const [description, setDescription] = useState(
     initialData?.description ?? "",
@@ -122,6 +125,7 @@ export function ScheduleSlotForm({
   const [animalSearch, setAnimalSearch] = useState("");
   const [visitSearch, setVisitSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
   const [animalPopoverOpen, setAnimalPopoverOpen] = useState(false);
   const isInitialMount = useRef(true);
@@ -231,8 +235,21 @@ export function ScheduleSlotForm({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setValidationError(null);
 
     try {
+      if (!title.trim()) {
+        setValidationError("Заглавието е задължително");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (title.length > 100) {
+        setValidationError("Заглавието не може да надвишава 100 символа");
+        setIsSubmitting(false);
+        return;
+      }
+
       const dayStart = startOfDay(date);
       const startTimestamp = setMinutes(
         setHours(dayStart, startHour),
@@ -245,7 +262,9 @@ export function ScheduleSlotForm({
 
       const validation = validateSlotTime(date, startTimestamp, endTimestamp);
       if (!validation.valid) {
-        throw new Error(validation.error);
+        setValidationError(validation.error ?? "Невалидно време за слот");
+        setIsSubmitting(false);
+        return;
       }
 
       await onSubmit({
@@ -276,7 +295,9 @@ export function ScheduleSlotForm({
         setEndMinute(0);
       }
     } catch (error) {
-      throw error;
+      setValidationError(
+        error instanceof Error ? error.message : "Възникна грешка",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -370,10 +391,16 @@ export function ScheduleSlotForm({
   const minuteOptions = [0, 15, 30, 45];
 
   // Check if editing a past slot (readonly mode)
-  const isEditingPastSlot = initialData ? isPastDate(new Date(initialData.date)) : false;
+  const isEditingPastSlot = initialData
+    ? isPastDate(new Date(initialData.date))
+    : false;
 
   return (
     <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-3">
+      {validationError && (
+        <FormError message={validationError} className="mb-2" />
+      )}
+
       {!hideDatePicker && (
         <div>
           <Label>Дата</Label>
@@ -483,19 +510,32 @@ export function ScheduleSlotForm({
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="title">Заглавие *</Label>
+      <FormField
+        label="Заглавие"
+        htmlFor="title"
+        required
+        error={
+          title.trim() && title.length > 100
+            ? "Заглавието не може да надвишава 100 символа"
+            : undefined
+        }
+        hint="Въведете кратко описание"
+      >
         <Input
           id="title"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            setValidationError(null);
+          }}
           placeholder="напр. Преглед"
           required
+          maxLength={100}
+          aria-invalid={title.trim() && title.length > 100 ? true : undefined}
         />
-      </div>
+      </FormField>
 
-      <div>
-        <Label htmlFor="description">Описание</Label>
+      <FormField label="Описание" htmlFor="description">
         <Textarea
           id="description"
           value={description}
@@ -503,7 +543,7 @@ export function ScheduleSlotForm({
           placeholder="Допълнителна информация..."
           rows={3}
         />
-      </div>
+      </FormField>
 
       <div>
         <Label>Посещение</Label>
@@ -511,7 +551,7 @@ export function ScheduleSlotForm({
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               {visitId
-                ? visits.find((v) => v._id === visitId)?.code ?? "Избрано"
+                ? (visits.find((v) => v._id === visitId)?.code ?? "Избрано")
                 : "Без посещение"}
             </Button>
           </PopoverTrigger>
@@ -632,7 +672,12 @@ export function ScheduleSlotForm({
       {initialData && (
         <div>
           <Label>Статус</Label>
-          <Select value={status} onValueChange={(v) => setStatus(v as "scheduled" | "completed" | "cancelled")}>
+          <Select
+            value={status}
+            onValueChange={(v) =>
+              setStatus(v as "scheduled" | "completed" | "cancelled")
+            }
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

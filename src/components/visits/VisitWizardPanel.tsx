@@ -2,12 +2,6 @@
 
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 
 type BaseStep = {
@@ -15,7 +9,6 @@ type BaseStep = {
   label: string;
   description?: string;
   summary?: string | ReactNode;
-  hints?: ReactNode;
   content: ReactNode;
   completed?: boolean;
 };
@@ -79,12 +72,13 @@ export function VisitWizardPanel({
         </div>
       </header>
       <div className="px-4 pb-4 sm:px-6 sm:pb-6">
-        <Tabs
-          value={currentStepId}
-          onValueChange={onStepChange}
-        >
+        <Tabs value={currentStepId} onValueChange={onStepChange}>
           {steps.map((step) => (
-            <TabsContent key={step.id} value={step.id} className="mt-0 space-y-4">
+            <TabsContent
+              key={step.id}
+              value={step.id}
+              className="mt-0 space-y-4"
+            >
               <div
                 ref={
                   step.id === currentStepId
@@ -104,22 +98,6 @@ export function VisitWizardPanel({
                     {step.description}
                   </p>
                 ) : null}
-                {step.hints ? (
-                  <Accordion
-                    type="single"
-                    collapsible
-                    className="bg-muted/40 mt-17 rounded-lg border"
-                  >
-                    <AccordionItem value="hints">
-                      <AccordionTrigger className="px-3 text-sm font-medium">
-                        Съвети и помощ
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-3 px-3 py-3 text-sm">
-                        {step.hints}
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                ) : null}
                 <div className="bg-background rounded-lg border p-3 shadow-sm sm:p-4">
                   {step.content}
                 </div>
@@ -133,7 +111,9 @@ export function VisitWizardPanel({
           {stepIndicator ? (
             <div className="border-b px-4 py-2 sm:px-6">{stepIndicator}</div>
           ) : null}
-          {footer ? <div className="px-4 py-3 sm:px-6 sm:py-4">{footer}</div> : null}
+          {footer ? (
+            <div className="px-4 py-3 sm:px-6 sm:py-4">{footer}</div>
+          ) : null}
         </div>
       ) : null}
     </section>

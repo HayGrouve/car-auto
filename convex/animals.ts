@@ -177,6 +177,7 @@ export const create = mutation({
     name: v.string(),
     species: v.string(),
     breed: v.optional(v.string()),
+    color: v.optional(v.string()),
     sex: v.optional(v.string()),
     neutered: v.optional(v.boolean()),
     dob: v.optional(v.number()),
@@ -199,6 +200,7 @@ export const create = mutation({
       name: args.name,
       species: args.species,
       breed: args.breed ?? null,
+      color: args.color ?? null,
       sex: args.sex ?? null,
       neutered: args.neutered ?? false,
       dob: args.dob ?? null,
@@ -223,6 +225,7 @@ export const update = mutation({
     name: v.optional(v.string()),
     species: v.optional(v.string()),
     breed: v.optional(v.union(v.string(), v.null())),
+    color: v.optional(v.union(v.string(), v.null())),
     sex: v.optional(v.union(v.string(), v.null())),
     neutered: v.optional(v.boolean()),
     dob: v.optional(v.union(v.number(), v.null())),
@@ -234,6 +237,7 @@ export const update = mutation({
     if (args.name !== undefined) patch.name = args.name;
     if (args.species !== undefined) patch.species = args.species;
     if (args.breed !== undefined) patch.breed = args.breed;
+    if (args.color !== undefined) patch.color = args.color;
     if (args.sex !== undefined) patch.sex = args.sex;
     if (args.neutered !== undefined) patch.neutered = args.neutered;
     if (args.dob !== undefined) patch.dob = args.dob;

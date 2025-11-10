@@ -469,23 +469,27 @@ function VisitsPageInner() {
                     Приключи
                   </Button>
                 ) : null}
-                {v.status === "draft" ? (
+                {v.invoiceCode ? (
                   <a
                     className="hover:bg-accent inline-flex min-h-[44px] flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm sm:flex-none"
-                    href={`/visits/${v._id}?step=1`}
-                    aria-label={`Стартирай ръководство за ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
+                    href={`/invoices/${encodeURIComponent(v.invoiceCode)}`}
+                    aria-label={`Отвори фактура ${v.invoiceCode} за посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                   >
-                    <span className="truncate">Ръководство</span>
+                    <span className="truncate">Виж фактура</span>
                   </a>
-                ) : null}
-                <a
-                  className="hover:bg-accent inline-flex min-h-[44px] flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm sm:flex-none"
-                  href={`/invoices/new?ownerId=${encodeURIComponent(String(v.ownerId))}${v.animalId ? `&animalId=${encodeURIComponent(String(v.animalId))}` : ""}&visitId=${encodeURIComponent(String(v._id))}`}
-                  aria-label={`Нова фактура за посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
-                >
-                  <FilePlus className="mr-1 size-4 flex-shrink-0" aria-hidden />{" "}
-                  <span className="truncate">Нова фактура</span>
-                </a>
+                ) : (
+                  <a
+                    className="hover:bg-accent inline-flex min-h-[44px] flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm sm:flex-none"
+                    href={`/invoices/new?ownerId=${encodeURIComponent(String(v.ownerId))}${v.animalId ? `&animalId=${encodeURIComponent(String(v.animalId))}` : ""}&visitId=${encodeURIComponent(String(v._id))}`}
+                    aria-label={`Нова фактура за посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
+                  >
+                    <FilePlus
+                      className="mr-1 size-4 flex-shrink-0"
+                      aria-hidden
+                    />{" "}
+                    <span className="truncate">Нова фактура</span>
+                  </a>
+                )}
               </div>
             </div>
           ))

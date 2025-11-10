@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { FilePlus, FileText, MoreHorizontal, Printer } from "lucide-react";
+import { FileText, MoreHorizontal, Printer } from "lucide-react";
 import type { ReactNode } from "react";
 
 export type VisitAction = {
@@ -147,12 +147,4 @@ export function VisitActionsMenuMobile({
       <SecondaryDropdown actions={secondary} triggerClassName="grow" />
     </div>
   );
-}
-
-export function buildDuplicateAction(onDuplicate: () => void): VisitAction {
-  return {
-    label: "Дубл. посещение",
-    onSelect: onDuplicate,
-    icon: <FilePlus className="h-4 w-4" aria-hidden="true" />,
-  };
 }

@@ -5,6 +5,7 @@ import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import {
   Popover,
   PopoverContent,
@@ -21,6 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { fmtNumberBG } from "@/lib/format";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { invoiceFormSchema } from "@/lib/validation/invoice";
 import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
@@ -162,10 +164,8 @@ function NewInvoicePageInner() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!ownerId) {
-      toast.error("Моля, изберете собственик");
-      return;
-    }
+    
+    // Validate invoice data
     const payloadItems = items
       .filter((it) => it.description.trim())
       .map((it) => ({
@@ -174,17 +174,30 @@ function NewInvoicePageInner() {
         price: parseFloat(it.price || "0"),
         total: it.total,
       }));
-    if (payloadItems.length === 0) {
-      toast.error("Добавете поне един ред към фактурата");
+    
+    const invoiceData = {
+      ownerId: ownerId || "",
+      animalId: animalId || "",
+      visitId: visitId || "",
+      items: payloadItems,
+    };
+    
+    // Validate using schema
+    const validationResult = invoiceFormSchema.safeParse(invoiceData);
+    
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
+      toast.error(firstError?.message ?? "Моля, попълнете всички задължителни полета");
       return;
     }
+    
     try {
       setSubmitting(true);
       const res = (await create({
-        ownerId,
-        animalId: animalId || undefined,
-        visitId: visitId || undefined,
-        items: payloadItems,
+        ownerId: validationResult.data.ownerId,
+        animalId: validationResult.data.animalId ?? undefined,
+        visitId: validationResult.data.visitId ?? undefined,
+        items: validationResult.data.items,
       })) as { ok: boolean; id: string; code?: string };
       if (res?.ok && res.id) {
         if (markPaidNow) {
@@ -286,43 +299,71 @@ function NewInvoicePageInner() {
         </div>
 
         <div className="divide-y rounded-md border">
-          {items.map((it, idx) => (
-            <div key={idx} className="grid items-end gap-2 p-3 md:grid-cols-5">
-              <div className="md:col-span-2">
-                <Label htmlFor={`desc-${idx}`}>Описание</Label>
-                <Input
-                  id={`desc-${idx}`}
-                  value={it.description}
-                  onChange={(e) =>
-                    recalcTotal(idx, { description: e.target.value })
-                  }
-                />
+          {items.map((it, idx) => {
+            const qtyNum = parseFloat(it.quantity || "0");
+            const priceNum = parseFloat(it.price || "0");
+            const hasQtyError = it.quantity && (isNaN(qtyNum) || qtyNum <= 0 || !Number.isInteger(qtyNum) || qtyNum > 9999);
+            const hasPriceError = it.price && (isNaN(priceNum) || priceNum < 0 || priceNum > 999999.99);
+            
+            return (
+              <div key={idx} className="grid items-end gap-2 p-3 md:grid-cols-5">
+                <div className="md:col-span-2">
+                  <FormField
+                    label="Описание"
+                    htmlFor={`desc-${idx}`}
+                    error={it.description.trim() && it.description.length > 200 ? "Описанието не може да надвишава 200 символа" : undefined}
+                    hint={idx === 0 ? "Въведете описание на услугата или продукта" : undefined}
+                  >
+                    <Input
+                      id={`desc-${idx}`}
+                      value={it.description}
+                      onChange={(e) =>
+                        recalcTotal(idx, { description: e.target.value })
+                      }
+                      aria-invalid={it.description.trim() && it.description.length > 200 ? true : undefined}
+                    />
+                  </FormField>
+                </div>
+                <div>
+                  <FormField
+                    label="Кол-во"
+                    htmlFor={`qty-${idx}`}
+                    error={hasQtyError ? "Количеството трябва да е положително цяло число (макс. 9999)" : undefined}
+                    hint="Въведете количество"
+                  >
+                    <Input
+                      id={`qty-${idx}`}
+                      inputMode="decimal"
+                      value={it.quantity}
+                      onChange={(e) =>
+                        recalcTotal(idx, { quantity: e.target.value })
+                      }
+                      aria-invalid={!!hasQtyError}
+                    />
+                  </FormField>
+                </div>
+                <div>
+                  <FormField
+                    label="Цена"
+                    htmlFor={`price-${idx}`}
+                    error={hasPriceError ? "Цената трябва да е неотрицателно число (макс. 999999.99)" : undefined}
+                    hint="Въведете цена в BGN"
+                  >
+                    <Input
+                      id={`price-${idx}`}
+                      inputMode="decimal"
+                      value={it.price}
+                      onChange={(e) => recalcTotal(idx, { price: e.target.value })}
+                      aria-invalid={!!hasPriceError}
+                    />
+                  </FormField>
+                </div>
+                <div className="text-right">
+                  {Number.isFinite(it.total) ? it.total.toFixed(2) : "0.00"} BGN
+                </div>
               </div>
-              <div>
-                <Label htmlFor={`qty-${idx}`}>Кол-во</Label>
-                <Input
-                  id={`qty-${idx}`}
-                  inputMode="decimal"
-                  value={it.quantity}
-                  onChange={(e) =>
-                    recalcTotal(idx, { quantity: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor={`price-${idx}`}>Цена</Label>
-                <Input
-                  id={`price-${idx}`}
-                  inputMode="decimal"
-                  value={it.price}
-                  onChange={(e) => recalcTotal(idx, { price: e.target.value })}
-                />
-              </div>
-              <div className="text-right">
-                {Number.isFinite(it.total) ? it.total.toFixed(2) : "0.00"} BGN
-              </div>
-            </div>
-          ))}
+            );
+          })}
           <div className="flex flex-wrap items-center gap-2 p-3">
             <Button
               type="button"

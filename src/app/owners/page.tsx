@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -29,6 +28,10 @@ import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
+import { Form, getFormFieldProps } from "@/components/ui/form";
+import { FormField } from "@/components/ui/form-field";
+import { ownerFormSchema, type OwnerFormData } from "@/lib/validation/owner";
+import type { UseFormReturn } from "react-hook-form";
 export default function OwnersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
@@ -46,21 +49,17 @@ export default function OwnersPage() {
   ) as OwnerDoc[] | undefined;
   const createOwner = useMutation(api.owners.create);
 
-  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const fd = new FormData(form);
-    const name = (fd.get("name") ?? "") as string;
-    const phone = (fd.get("phone") ?? "") as string;
-    const email = (fd.get("email") ?? undefined) as string | undefined;
-    const address = (fd.get("address") ?? undefined) as string | undefined;
-    const gdprConsent = (fd.get("gdpr") ?? "") === "on";
+  async function handleCreate(data: OwnerFormData, reset?: () => void) {
+    const phoneCleaned = data.phone.replace(/\s+/g, "");
+    const emailCleaned = data.email?.trim() ?? undefined;
+    const addressCleaned = data.address?.trim() ?? undefined;
+
     const res = (await createOwner({
-      name,
-      phone,
-      email,
-      address,
-      gdprConsent,
+      name: data.name.trim(),
+      phone: phoneCleaned,
+      email: emailCleaned,
+      address: addressCleaned,
+      gdprConsent: data.gdprConsent,
     })) as { ok: true; id: string } | { ok: false; reason: "phone" | "email" };
     if (!res?.ok) {
       toast.error(
@@ -70,7 +69,7 @@ export default function OwnersPage() {
       );
       return;
     }
-    form.reset();
+    reset?.();
     toast.success("Собственикът е добавен успешно");
   }
 
@@ -97,7 +96,10 @@ export default function OwnersPage() {
             setTimeout(() => {
               const createSection = document.getElementById("create");
               if (createSection) {
-                createSection.scrollIntoView({ behavior: "smooth", block: "start" });
+                createSection.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
               }
             }, 100);
           }}
@@ -162,11 +164,14 @@ export default function OwnersPage() {
                   className="hover:bg-accent flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <UserIcon className="text-primary size-5 flex-shrink-0" aria-hidden />
+                    <UserIcon
+                      className="text-primary size-5 flex-shrink-0"
+                      aria-hidden
+                    />
                     <div className="min-w-0 flex-1">
                       <Link
                         href={`/owners/${o._id}`}
-                        className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline min-h-[44px]"
+                        className="inline-flex min-h-[44px] items-center gap-1 font-medium underline-offset-2 hover:underline"
                         aria-label={`Преглед на ${o.name}`}
                       >
                         <span className="truncate">{o.name}</span>
@@ -233,7 +238,7 @@ export default function OwnersPage() {
             <div className="flex items-center justify-between">
               <h2 className="font-medium">Нов собственик</h2>
               <Button
-                className="md:hidden min-h-[44px] min-w-[44px]"
+                className="min-h-[44px] min-w-[44px] md:hidden"
                 variant="outline"
                 size="sm"
                 onClick={() => setShowCreatePanel(false)}
@@ -242,71 +247,125 @@ export default function OwnersPage() {
                 Затвори
               </Button>
             </div>
-            <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 md:gap-3">
-              <div>
-                <Label htmlFor="name">Име</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  type="text"
-                  autoCapitalize="words"
-                  autoComplete="name"
-                  pattern="[A-Za-zА-Яа-я ]+"
-                  title="Въведете само букви"
-                  placeholder="Иван Иванов"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="phone">Телефон</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  pattern="[0-9]{10}"
-                  title="Въведете телефонния номер във формат 08xx xxx xxx"
-                  placeholder="08xx xxx xxx"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Имейл</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="ivan@example.com"
-                  title="Въведете валиден имейл адрес"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="address">Адрес</Label>
-                <Input
-                  id="address"
-                  name="address"
-                  placeholder="ул. Иван Иванов 123"
-                />
-              </div>
-              <label className="flex items-center gap-2">
-                <Checkbox name="gdpr" />
-                <span className="inline-flex items-center gap-1 text-sm">
-                  Съгласие (GDPR)
-                </span>
-                <Link
-                  href="/privacy"
-                  className="text-muted-foreground text-xs underline underline-offset-2"
-                >
-                  Политика
-                </Link>
-              </label>
-              <div>
-                <Button type="submit" className="w-full min-h-[44px] md:w-auto md:min-h-0">
-                  Добави собственик
-                </Button>
-              </div>
-            </form>
+            <Form
+              schema={ownerFormSchema}
+              defaultValues={{
+                name: "",
+                phone: "",
+                email: "",
+                address: "",
+                gdprConsent: true,
+              }}
+              onSubmit={async (data, methods) => {
+                await handleCreate(data, () => {
+                  methods.reset({
+                    name: "",
+                    phone: "",
+                    email: "",
+                    address: "",
+                    gdprConsent: true,
+                  });
+                });
+              }}
+              className="grid grid-cols-1 gap-4 md:gap-3"
+            >
+              {(methods: UseFormReturn<OwnerFormData>) => (
+                <>
+                  <FormField
+                    label="Име"
+                    htmlFor="name"
+                    required
+                    error={methods.formState.errors.name?.message}
+                    hint="Въведете пълното име на собственика"
+                  >
+                    <Input
+                      id="name"
+                      type="text"
+                      autoCapitalize="words"
+                      autoComplete="name"
+                      placeholder="Иван Иванов"
+                      {...getFormFieldProps(methods, "name")}
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="Телефон"
+                    htmlFor="phone"
+                    required
+                    error={methods.formState.errors.phone?.message}
+                    hint="Въведете телефон във формат 08xx xxx xxx или 08xxxxxxxx"
+                  >
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="08xx xxx xxx"
+                      {...getFormFieldProps(methods, "phone")}
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="Имейл"
+                    htmlFor="email"
+                    error={methods.formState.errors.email?.message}
+                  >
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="ivan@example.com"
+                      {...getFormFieldProps(methods, "email")}
+                    />
+                  </FormField>
+
+                  <FormField
+                    label="Адрес"
+                    htmlFor="address"
+                    error={methods.formState.errors.address?.message}
+                  >
+                    <Input
+                      id="address"
+                      placeholder="ул. Иван Иванов 123"
+                      {...getFormFieldProps(methods, "address")}
+                    />
+                  </FormField>
+
+                  <FormField
+                    error={methods.formState.errors.gdprConsent?.message}
+                  >
+                    <label className="flex items-center gap-2">
+                      <Checkbox
+                        checked={methods.watch("gdprConsent")}
+                        onCheckedChange={(checked) =>
+                          methods.setValue("gdprConsent", checked === true)
+                        }
+                        aria-invalid={!!methods.formState.errors.gdprConsent}
+                      />
+                      <span className="inline-flex items-center gap-1 text-sm">
+                        Съгласие (GDPR) *
+                      </span>
+                      <Link
+                        href="/privacy"
+                        className="text-muted-foreground text-xs underline underline-offset-2"
+                      >
+                        Политика
+                      </Link>
+                    </label>
+                  </FormField>
+
+                  <div>
+                    <Button
+                      type="submit"
+                      disabled={methods.formState.isSubmitting}
+                      className="min-h-[44px] w-full md:min-h-0 md:w-auto"
+                    >
+                      {methods.formState.isSubmitting
+                        ? "Добавяне..."
+                        : "Добави собственик"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </Form>
           </div>
         </aside>
       </div>

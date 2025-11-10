@@ -5,6 +5,7 @@ export const AnimalDocSchema = z.object({
   name: z.string(),
   species: z.string(),
   breed: z.string().nullable().optional(),
+  color: z.string().nullable().optional(),
   microchip: z.string().nullable().optional(),
   sex: z.string().nullable().optional(),
   neutered: z.boolean().optional(),

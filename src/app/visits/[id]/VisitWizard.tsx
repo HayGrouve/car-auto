@@ -1,21 +1,18 @@
 "use client";
 
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { Check, X } from "lucide-react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
+import { FormField } from "@/components/ui/form-field";
+import { FormError } from "@/components/ui/form-error";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   VisitWizardPanel,
   type VisitWizardStep,
@@ -82,51 +79,6 @@ const soapPlanOptions = [
   "Обезпаразитяване",
   "Контролен преглед след 3 дни",
 ];
-
-const hintsByStep: Record<WizardStepId, ReactNode | undefined> = {
-  measurements: (
-    <div className="space-y-2">
-      <p>
-        Използвайте бързите бутони за типични стойности или въведете точните
-        измервания.
-      </p>
-      <p>Нормалната телесна температура на куче е 38.3–39.2°C.</p>
-    </div>
-  ),
-  "soap-so": (
-    <div className="space-y-2">
-      <p>
-        <strong>Субективно (S)</strong>: Информацията, предадена от собственика.
-      </p>
-      <p>
-        <strong>Обективно (O)</strong>: Наблюдения и измервания по време на
-        прегледа.
-      </p>
-    </div>
-  ),
-  "soap-ap": (
-    <div className="space-y-2">
-      <p>
-        <strong>Оценка (A)</strong>: Диагноза или списък с проблеми.
-      </p>
-      <p>
-        <strong>План (P)</strong>: Терапия и последващи действия.
-      </p>
-    </div>
-  ),
-  procedures: (
-    <div className="space-y-2">
-      <p>Добавете проведените процедури и приложените медикаменти.</p>
-      <p>Използвайте предложенията за бързо попълване.</p>
-    </div>
-  ),
-  review: (
-    <div className="space-y-2">
-      <p>Проверете въведените данни преди финализиране.</p>
-      <p>Финализираното посещение става само за четене.</p>
-    </div>
-  ),
-};
 
 function isWizardStepId(value: string | null): value is WizardStepId {
   return wizardStepOrder.includes(value as WizardStepId);
@@ -431,6 +383,21 @@ export default function VisitWizard({
   }
 
   async function handleNext() {
+    // Validate procedures step - check if there's text in inputs that hasn't been added
+    if (activeStep === "procedures") {
+      const procError = procInput.trim()
+        ? "Моля, натиснете 'Добави' за да добавите процедурата"
+        : undefined;
+      const medError = medInput.trim()
+        ? "Моля, натиснете 'Добави' за да добавите медикамента"
+        : undefined;
+
+      if (procError || medError) {
+        toast.error(procError ?? medError);
+        return;
+      }
+    }
+
     switch (activeStep) {
       case "measurements":
         await saveMeasurements();
@@ -473,7 +440,6 @@ export default function VisitWizard({
                 ? `Последно тегло: ${latestWeightText}`
                 : undefined,
           completed: Boolean(weight || temperature || pulse),
-          hints: hintsByStep.measurements,
           content: (
             <div className="space-y-4">
               <p className="text-muted-foreground text-sm">
@@ -481,9 +447,24 @@ export default function VisitWizard({
                 точните измервания.
               </p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <div>
-                  <label className="text-sm font-medium">Килограми</label>
+                <FormField
+                  label="Килограми"
+                  htmlFor="weight"
+                  error={
+                    weight
+                      ? (() => {
+                          const num = parseFloat(weight);
+                          if (isNaN(num) || num < 0.1 || num > 200) {
+                            return "Теглото трябва да е между 0.1 и 200 кг";
+                          }
+                          return undefined;
+                        })()
+                      : undefined
+                  }
+                  hint={`Последно тегло: ${latestWeightText}`}
+                >
                   <Input
+                    id="weight"
                     value={weight}
                     inputMode="decimal"
                     disabled={isFinalized}
@@ -494,18 +475,37 @@ export default function VisitWizard({
                         ? cleaned.replace(",", ".")
                         : cleaned;
                       setWeight(normalized);
+                      // Trigger validation immediately
                     }}
                     placeholder="напр. 12.4"
+                    aria-invalid={
+                      weight
+                        ? (() => {
+                            const num = parseFloat(weight);
+                            return isNaN(num) || num < 0.1 || num > 200;
+                          })()
+                        : false
+                    }
                   />
-                  <div className="text-muted-foreground mt-1 text-xs">
-                    Последно тегло: {latestWeightText}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">
-                    Температура (°C)
-                  </label>
+                </FormField>
+                <FormField
+                  label="Температура (°C)"
+                  htmlFor="temperature"
+                  error={
+                    temperature
+                      ? (() => {
+                          const num = parseFloat(temperature);
+                          if (isNaN(num) || num < 30 || num > 45) {
+                            return "Температурата трябва да е между 30 и 45°C";
+                          }
+                          return undefined;
+                        })()
+                      : undefined
+                  }
+                  hint="Норм. куче ~ 38.3–39.2 °C"
+                >
                   <Input
+                    id="temperature"
                     value={temperature}
                     inputMode="decimal"
                     disabled={isFinalized}
@@ -516,16 +516,42 @@ export default function VisitWizard({
                         ? cleaned.replace(",", ".")
                         : cleaned;
                       setTemperature(normalized);
+                      // Trigger validation immediately
                     }}
                     placeholder="напр. 38.6"
+                    aria-invalid={
+                      temperature
+                        ? (() => {
+                            const num = parseFloat(temperature);
+                            return isNaN(num) || num < 30 || num > 45;
+                          })()
+                        : false
+                    }
                   />
-                  <div className="text-muted-foreground mt-1 text-xs">
-                    Норм. куче ~ 38.3–39.2 °C
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Пулс</label>
+                </FormField>
+                <FormField
+                  label="Пулс"
+                  htmlFor="pulse"
+                  error={
+                    pulse
+                      ? (() => {
+                          const num = parseInt(pulse, 10);
+                          if (
+                            isNaN(num) ||
+                            !Number.isInteger(num) ||
+                            num < 30 ||
+                            num > 300
+                          ) {
+                            return "Пулсът трябва да е цяло число между 30 и 300 удара/мин";
+                          }
+                          return undefined;
+                        })()
+                      : undefined
+                  }
+                  hint="Норм. диапазон зависи от вид/възраст"
+                >
                   <Input
+                    id="pulse"
                     value={pulse}
                     inputMode="numeric"
                     disabled={isFinalized}
@@ -533,13 +559,24 @@ export default function VisitWizard({
                       const raw = e.target.value;
                       const cleaned = raw.replace(/[^0-9]/g, "");
                       setPulse(cleaned);
+                      // Trigger validation immediately
                     }}
                     placeholder="напр. 80"
+                    aria-invalid={
+                      pulse
+                        ? (() => {
+                            const num = parseInt(pulse, 10);
+                            return (
+                              isNaN(num) ||
+                              !Number.isInteger(num) ||
+                              num < 30 ||
+                              num > 300
+                            );
+                          })()
+                        : false
+                    }
                   />
-                  <div className="text-muted-foreground mt-1 text-xs">
-                    Норм. диапазон зависи от вид/възраст
-                  </div>
-                </div>
+                </FormField>
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
                 <button
@@ -569,7 +606,6 @@ export default function VisitWizard({
             ? "Въведени бележки"
             : undefined,
           completed: [s, o].some((val) => (val ?? "").trim()),
-          hints: hintsByStep[soapSoId],
           content: (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2 text-xs">
@@ -611,7 +647,6 @@ export default function VisitWizard({
             ? "Добавени A/P бележки"
             : undefined,
           completed: [a, p].some((val) => (val ?? "").trim()),
-          hints: hintsByStep[soapApId],
           content: (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2 text-xs">
@@ -672,18 +707,24 @@ export default function VisitWizard({
               </span>
             ) : undefined,
           completed: Boolean(procedures.length || medications.length),
-          hints: hintsByStep[proceduresId],
           content: (
             <div className="space-y-6">
               <div className="space-y-2">
                 <div className="text-sm font-medium">Процедури</div>
                 <div className="flex flex-col gap-2">
-                  <Input
-                    value={procInput}
-                    disabled={isFinalized}
-                    onChange={(e) => setProcInput(e.target.value)}
-                    placeholder="Добави процедура"
-                  />
+                  <div className="space-y-1.5">
+                    <Input
+                      value={procInput}
+                      disabled={isFinalized}
+                      onChange={(e) => setProcInput(e.target.value)}
+                      placeholder="Добави процедура"
+                      aria-invalid={procInput.trim() ? true : undefined}
+                      className={cn(procInput.trim() && "border-destructive")}
+                    />
+                    {procInput.trim() && (
+                      <FormError message="Моля, натиснете 'Добави' за да добавите процедурата" />
+                    )}
+                  </div>
                   <Button
                     type="button"
                     disabled={isFinalized}
@@ -693,7 +734,7 @@ export default function VisitWizard({
                       setProcedures((arr) => [...arr, name]);
                       setProcInput("");
                     }}
-                    className="w-full sm:w-auto min-h-[44px]"
+                    className="min-h-[44px] w-full sm:w-auto"
                   >
                     Добави
                   </Button>
@@ -756,12 +797,19 @@ export default function VisitWizard({
               <div className="space-y-2">
                 <div className="text-sm font-medium">Медикаменти</div>
                 <div className="flex flex-col gap-2">
-                  <Input
-                    value={medInput}
-                    disabled={isFinalized}
-                    onChange={(e) => setMedInput(e.target.value)}
-                    placeholder="Добави медикамент"
-                  />
+                  <div className="space-y-1.5">
+                    <Input
+                      value={medInput}
+                      disabled={isFinalized}
+                      onChange={(e) => setMedInput(e.target.value)}
+                      placeholder="Добави медикамент"
+                      aria-invalid={medInput.trim() ? true : undefined}
+                      className={cn(medInput.trim() && "border-destructive")}
+                    />
+                    {medInput.trim() && (
+                      <FormError message="Моля, натиснете 'Добави' за да добавите медикамента" />
+                    )}
+                  </div>
                   <Button
                     type="button"
                     disabled={isFinalized}
@@ -771,7 +819,7 @@ export default function VisitWizard({
                       setMedications((arr) => [...arr, name]);
                       setMedInput("");
                     }}
-                    className="w-full sm:w-auto min-h-[44px]"
+                    className="min-h-[44px] w-full sm:w-auto"
                   >
                     Добави
                   </Button>
@@ -838,7 +886,6 @@ export default function VisitWizard({
           label: wizardStepTitles.review,
           summary: isFinalized ? "Посещението е приключено" : undefined,
           completed: isFinalized,
-          hints: hintsByStep.review,
           content: (
             <div className="space-y-4">
               <div className="space-y-3 text-sm">
@@ -949,7 +996,7 @@ export default function VisitWizard({
                           `/invoices/new?ownerId=${encodeURIComponent(String(visit.ownerId))}${visit?.animalId ? `&animalId=${encodeURIComponent(String(visit.animalId))}` : ""}&visitId=${encodeURIComponent(String(visit._id))}`,
                         );
                       }}
-                      className="w-full sm:w-auto min-h-[44px]"
+                      className="min-h-[44px] w-full sm:w-auto"
                     >
                       Създай фактура
                     </Button>
@@ -986,17 +1033,16 @@ export default function VisitWizard({
             handleStepChange(step.id);
           };
           return (
-            <button
+            <Button
               key={step.id}
               type="button"
               onClick={handleStepClick}
               disabled={isFinalized}
+              variant={isActive ? "outline" : "outline"}
+              size="sm"
               className={cn(
-                "flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition min-h-[32px] sm:min-h-[36px]",
-                "disabled:cursor-not-allowed disabled:opacity-50",
-                isActive
-                  ? "border-ring bg-background shadow-sm font-medium"
-                  : "border-transparent hover:bg-muted/50",
+                "flex min-h-[32px] items-center gap-1 sm:min-h-[36px]",
+                isActive && "bg-accent border-accent-foreground/20 font-medium",
               )}
               aria-label={`Стъпка ${index + 1}: ${step.label}`}
               aria-current={isActive ? "step" : undefined}
@@ -1010,7 +1056,7 @@ export default function VisitWizard({
                 )}
               </span>
               <span className="hidden sm:inline">{step.label}</span>
-            </button>
+            </Button>
           );
         })}
       </div>

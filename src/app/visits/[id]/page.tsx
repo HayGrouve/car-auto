@@ -6,6 +6,16 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { type VisitDoc } from "@/types/visit";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
@@ -18,7 +28,6 @@ import { VisitHero } from "@/components/visits/VisitHero";
 import {
   VisitActionsMenuDesktop,
   VisitActionsMenuMobile,
-  buildDuplicateAction,
 } from "@/components/visits/VisitActionsMenu";
 import { SectionCard } from "@/components/ui/section-card";
 
@@ -36,14 +45,6 @@ export default function VisitDetailPage() {
     useMemo(() => ({ id }), [id]),
   ) as VisitDoc | null | undefined;
   const finalize = useMutation(api.visits.finalize);
-  const createVisit = useMutation(api.visits.create) as unknown as (args: {
-    ownerId: string;
-    animalId?: string | null;
-    datetime?: number;
-    soap: { s?: string; o?: string; a?: string; p?: string };
-    procedures?: string[];
-    medications?: string[];
-  }) => Promise<{ ok: boolean; id: string }>;
   const router = useRouter();
 
   const [s, setS] = useState("");
@@ -71,6 +72,7 @@ export default function VisitDetailPage() {
       }[]
     | undefined;
   const [ownerId, setOwnerId] = useState<string>("");
+  const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
 
   const visit: VisitDoc | null = visitUnknown ?? null;
 
@@ -107,26 +109,22 @@ export default function VisitDetailPage() {
   }, [visit, hydrated]);
 
   async function onFinalize() {
+    // Check if visit has an invoice
+    if (!visit?.invoiceCode) {
+      setShowFinalizeConfirm(true);
+      return;
+    }
+    
+    // Proceed with finalization if invoice exists
+    await handleFinalizeConfirm();
+  }
+
+  async function handleFinalizeConfirm() {
+    setShowFinalizeConfirm(false);
     const res = await finalize({ id });
     if (res?.ok) {
       toast.success("Приключено");
       void router.push("/visits");
-    }
-  }
-
-  async function onDuplicate() {
-    if (!visit) return;
-    const res = await createVisit({
-      ownerId: visit.ownerId,
-      animalId: visit.animalId ?? undefined,
-      datetime: Date.now(),
-      soap: { s, o, a, p },
-      procedures,
-      medications,
-    });
-    if (res?.ok && res.id) {
-      toast.success("Дублирано посещение");
-      void router.push(`/visits/${res.id}`);
     }
   }
 
@@ -341,11 +339,6 @@ export default function VisitDetailPage() {
                 }`;
                 void router.push(url);
               }}
-              extraActions={[
-                buildDuplicateAction(() => {
-                  void onDuplicate();
-                }),
-              ]}
             />
           }
           actionsMenuMobile={
@@ -362,11 +355,6 @@ export default function VisitDetailPage() {
                 }`;
                 void router.push(url);
               }}
-              extraActions={[
-                buildDuplicateAction(() => {
-                  void onDuplicate();
-                }),
-              ]}
             />
           }
           owner={{
@@ -579,6 +567,22 @@ export default function VisitDetailPage() {
           </div>
         </div>
       </div>
+      <AlertDialog open={showFinalizeConfirm} onOpenChange={setShowFinalizeConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Няма създадена фактура</AlertDialogTitle>
+            <AlertDialogDescription>
+              Това посещение няма свързана фактура. Сигурни ли сте, че искате да го приключите без фактура?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отказ</AlertDialogCancel>
+            <AlertDialogAction onClick={handleFinalizeConfirm}>
+              Да, приключи
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }

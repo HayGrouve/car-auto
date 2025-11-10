@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { AnimalDocSchema } from "@/types/animal";
+import { animalFormSchema } from "@/lib/validation/animal";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -113,6 +114,7 @@ export default function AnimalDetailPage() {
     name: "",
     species: "",
     breed: "",
+    color: "",
     microchip: "",
     neutered: false,
     sex: "unknown" as "male" | "female" | "unknown",
@@ -167,6 +169,7 @@ export default function AnimalDetailPage() {
         name: base.name ?? "",
         species: base.species ?? "",
         breed: base.breed ?? "",
+        color: base.color ?? "",
         microchip: base.microchip ?? "",
         neutered: Boolean(base.neutered),
         sex: normalizeSex(base.sex),
@@ -178,8 +181,24 @@ export default function AnimalDetailPage() {
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim()) {
-      toast.error("Името е задължително");
+    
+    // Validate form data
+    const formData = {
+      name: form.name.trim(),
+      species: form.species.trim(),
+      breed: form.breed.trim() || "",
+      color: form.color.trim() || "",
+      sex: form.sex,
+      neutered: form.neutered,
+      microchip: form.microchip.trim() || "",
+      dob: form.dob || "",
+      ownerId: form.ownerId || "",
+    };
+    
+    const validationResult = animalFormSchema.safeParse(formData);
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
+      toast.error(firstError?.message ?? "Моля, попълнете всички задължителни полета");
       return;
     }
 
@@ -190,6 +209,7 @@ export default function AnimalDetailPage() {
       name: form.name,
       species: form.species,
       breed: form.breed || null,
+      color: form.color || null,
       microchip: form.microchip || null,
       neutered: form.neutered,
       sex: form.sex,
@@ -612,6 +632,17 @@ export default function AnimalDetailPage() {
                 setForm((f) => ({ ...f, breed: e.target.value }))
               }
               placeholder="напр. Лабрадор"
+            />
+          </div>
+          <div className="space-y-2.5">
+            <Label htmlFor="color">Цвят</Label>
+            <Input
+              id="color"
+              value={form.color}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, color: e.target.value }))
+              }
+              placeholder="напр. Кафяв"
             />
           </div>
           <div className="space-y-2.5">
