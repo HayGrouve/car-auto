@@ -7,7 +7,6 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { type VisitDoc } from "@/types/visit";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { fmtDateTimeBG } from "@/lib/format";
 import PdfDownloadButton from "@/components/pdf/PdfDownloadButton";
 import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
 import VisitWizard from "./VisitWizard";
@@ -284,41 +283,6 @@ export default function VisitDetailPage() {
     : null;
   const visitTimestamp =
     (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
-  const quickFacts = [
-    {
-      label: "Статус",
-      value:
-        visit.status === "draft"
-          ? "Чернова"
-          : visit.status === "finalized"
-            ? "Приключено"
-            : visit.status,
-    },
-    {
-      label: "Дата",
-      value: fmtDateTimeBG(visitTimestamp),
-    },
-
-    {
-      label: "Телефон",
-      value: ownerInfo?.phone ?? "",
-    },
-    {
-      label: "Пол",
-      value:
-        animalInfo?.sex === "male"
-          ? "Мъжки"
-          : animalInfo?.sex === "female"
-            ? "Женски"
-            : animalInfo?.sex
-              ? "Неизвестен"
-              : "",
-    },
-    {
-      label: "Пациент",
-      value: animalInfo?.name ?? visit.animalName ?? "",
-    },
-  ].filter((fact) => fact.value && fact.value.trim().length > 0);
 
   const generateVisitPdf = async () => {
     const animal = (animals ?? []).find((a) => a._id === visit.animalId);
@@ -404,6 +368,7 @@ export default function VisitDetailPage() {
             phone: ownerInfo?.phone,
           }}
           animal={{
+            id: visit.animalId ? String(visit.animalId) : undefined,
             name: animalInfo?.name ?? visit.animalName ?? undefined,
             species: animalInfo?.species ?? visit.animalSpecies ?? undefined,
             alerts: visit.alerts ?? [],
@@ -415,64 +380,6 @@ export default function VisitDetailPage() {
           }}
         />
       </section>
-      {quickFacts.length ? (
-        <section className="bg-muted/40 flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3 lg:hidden">
-          <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs font-medium">
-            {quickFacts.slice(0, 3).map((fact) => (
-              <span key={fact.label} className="inline-flex items-center gap-1">
-                <span className="text-foreground font-semibold">
-                  {fact.value}
-                </span>
-                <span className="tracking-wide uppercase">{fact.label}</span>
-              </span>
-            ))}
-          </div>
-          {ownerInfo?.phone ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-xs"
-              onClick={() => {
-                window.location.href = `tel:${ownerInfo.phone}`;
-              }}
-            >
-              Обади се
-            </Button>
-          ) : null}
-        </section>
-      ) : null}
-      {quickFacts.length ? (
-        <section className="lg:hidden">
-          <div className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-2 text-xs">
-            {quickFacts.map((fact) => (
-              <div
-                key={fact.label}
-                className="bg-muted flex w-max items-center gap-2 rounded-full border px-3 py-2 shadow-sm"
-              >
-                <span className="text-foreground font-semibold">
-                  {fact.value}
-                </span>
-                <span className="text-muted-foreground uppercase">
-                  {fact.label}
-                </span>
-              </div>
-            ))}
-            {ownerInfo?.phone ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-max rounded-full border px-3 py-2"
-                onClick={() => {
-                  window.location.href = `tel:${ownerInfo.phone}`;
-                }}
-              >
-                Обади се
-              </Button>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
       <section className="space-y-6 pb-20 lg:pb-0">
         {!isFinalized ? (
           <SectionCard

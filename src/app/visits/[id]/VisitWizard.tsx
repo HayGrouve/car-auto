@@ -9,11 +9,13 @@ import React, {
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
+import { Check, X } from "lucide-react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import {
   VisitWizardPanel,
   type VisitWizardStep,
@@ -478,7 +480,7 @@ export default function VisitWizard({
                 Използвайте бързите бутони за типични стойности или въведете
                 точните измервания.
               </p>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                 <div>
                   <label className="text-sm font-medium">Килограми</label>
                   <Input
@@ -675,7 +677,7 @@ export default function VisitWizard({
             <div className="space-y-6">
               <div className="space-y-2">
                 <div className="text-sm font-medium">Процедури</div>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2">
                   <Input
                     value={procInput}
                     disabled={isFinalized}
@@ -691,6 +693,7 @@ export default function VisitWizard({
                       setProcedures((arr) => [...arr, name]);
                       setProcInput("");
                     }}
+                    className="w-full sm:w-auto min-h-[44px]"
                   >
                     Добави
                   </Button>
@@ -752,7 +755,7 @@ export default function VisitWizard({
 
               <div className="space-y-2">
                 <div className="text-sm font-medium">Медикаменти</div>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2">
                   <Input
                     value={medInput}
                     disabled={isFinalized}
@@ -768,6 +771,7 @@ export default function VisitWizard({
                       setMedications((arr) => [...arr, name]);
                       setMedInput("");
                     }}
+                    className="w-full sm:w-auto min-h-[44px]"
                   >
                     Добави
                   </Button>
@@ -945,6 +949,7 @@ export default function VisitWizard({
                           `/invoices/new?ownerId=${encodeURIComponent(String(visit.ownerId))}${visit?.animalId ? `&animalId=${encodeURIComponent(String(visit.animalId))}` : ""}&visitId=${encodeURIComponent(String(visit._id))}`,
                         );
                       }}
+                      className="w-full sm:w-auto min-h-[44px]"
                     >
                       Създай фактура
                     </Button>
@@ -967,6 +972,51 @@ export default function VisitWizard({
 
   const progressLabel = `Стъпка ${currentIndex + 1} от ${wizardStepOrder.length}`;
 
+  const stepIndicator = (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-muted-foreground text-xs font-medium sm:text-sm">
+        Стъпки:
+      </span>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {steps.map((step, index) => {
+          const isActive = step.id === activeStep;
+          const isCompleted = Boolean(step.completed);
+          const handleStepClick = () => {
+            if (isFinalized) return;
+            handleStepChange(step.id);
+          };
+          return (
+            <button
+              key={step.id}
+              type="button"
+              onClick={handleStepClick}
+              disabled={isFinalized}
+              className={cn(
+                "flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition min-h-[32px] sm:min-h-[36px]",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+                isActive
+                  ? "border-ring bg-background shadow-sm font-medium"
+                  : "border-transparent hover:bg-muted/50",
+              )}
+              aria-label={`Стъпка ${index + 1}: ${step.label}`}
+              aria-current={isActive ? "step" : undefined}
+            >
+              <span className="text-muted-foreground flex items-center gap-1">
+                {index + 1}
+                {isCompleted ? (
+                  <Check className="size-3 text-emerald-600" />
+                ) : (
+                  <X className="size-3 text-red-600" />
+                )}
+              </span>
+              <span className="hidden sm:inline">{step.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <VisitWizardPanel
       steps={steps}
@@ -976,8 +1026,9 @@ export default function VisitWizard({
       announcement={announceText}
       className="space-y-4"
       contentRef={contentRef}
+      stepIndicator={stepIndicator}
       footer={
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3">
+        <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
           <div className="text-muted-foreground text-sm">{progressLabel}</div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -985,6 +1036,7 @@ export default function VisitWizard({
               size="sm"
               onClick={handlePrev}
               disabled={activeStep === wizardStepOrder[0] || isFinalized}
+              className="min-h-[44px] w-full sm:w-auto"
             >
               Назад
             </Button>
@@ -992,6 +1044,7 @@ export default function VisitWizard({
               size="sm"
               onClick={() => void handleNext()}
               disabled={isFinalized}
+              className="min-h-[44px] w-full sm:w-auto"
             >
               Напред
             </Button>

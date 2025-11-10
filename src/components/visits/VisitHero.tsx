@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarCheck, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,7 @@ type VisitHeroProps = {
     balance?: string | null;
   } | null;
   animal?: {
+    id?: string | null;
     name?: string | null;
     species?: string | null;
     sex?: string | null;
@@ -83,9 +85,19 @@ export function VisitHero({
           <div className="grid gap-6 md:grid-cols-3">
             <InfoBlock title="Пациент" fallback="Няма данни">
               <div className="space-y-1">
-                <p className="font-medium">
-                  {animal?.name ?? visit.animalName ?? "Неизвестно животно"}
-                </p>
+                {animal?.id && (animal?.name ?? visit.animalName) ? (
+                  <Link
+                    href={`/animals/${animal.id}`}
+                    className="font-medium hover:underline inline-block"
+                    aria-label={`Преглед на животно ${animal.name ?? visit.animalName ?? ""}`}
+                  >
+                    {animal.name ?? visit.animalName ?? "Неизвестно животно"}
+                  </Link>
+                ) : (
+                  <p className="font-medium">
+                    {animal?.name ?? visit.animalName ?? "Неизвестно животно"}
+                  </p>
+                )}
                 <p className="text-muted-foreground text-sm">
                   {speciesWithGender}
                 </p>
@@ -104,10 +116,14 @@ export function VisitHero({
               <div className="space-y-1">
                 <p className="font-medium">{owner?.name ?? "Неизвестен"}</p>
                 {owner?.phone ? (
-                  <p className="inline-flex items-center gap-1 text-sm">
+                  <a
+                    href={`tel:${owner.phone}`}
+                    className="inline-flex items-center gap-1 text-sm hover:underline cursor-pointer"
+                    aria-label={`Обади се на ${owner.phone}`}
+                  >
                     <Phone className="h-3.5 w-3.5" aria-hidden="true" />
                     {owner.phone}
-                  </p>
+                  </a>
                 ) : null}
                 {owner?.balance ? (
                   <p className="text-muted-foreground text-xs">
@@ -119,7 +135,13 @@ export function VisitHero({
             <InfoBlock title="Фактуриране" fallback="Няма издадена фактура">
               <div className="space-y-1">
                 {billing?.invoiceCode ? (
-                  <p className="font-medium">Фактура {billing.invoiceCode}</p>
+                  <Link
+                    href={`/invoices/${encodeURIComponent(billing.invoiceCode)}`}
+                    className="font-medium hover:underline inline-block"
+                    aria-label={`Преглед на фактура ${billing.invoiceCode}`}
+                  >
+                    Фактура {billing.invoiceCode}
+                  </Link>
                 ) : null}
                 {billing?.outstanding ? (
                   <p className="text-muted-foreground text-sm">

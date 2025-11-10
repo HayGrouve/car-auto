@@ -405,7 +405,7 @@ export function GlobalSearch() {
             <button
               type="button"
               onClick={clearQuery}
-              className="text-muted-foreground hover:text-foreground focus:ring-ring absolute top-1/2 right-3 -translate-y-1/2 rounded-sm p-1 focus:ring-2 focus:outline-none"
+              className="text-muted-foreground hover:text-foreground focus:ring-ring absolute top-1/2 right-3 -translate-y-1/2 rounded-sm p-2 focus:ring-2 focus:outline-none min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Изчисти търсенето"
             >
               <X className="size-4" />

@@ -159,7 +159,7 @@ export default function InvoicesPage() {
           </div>
         </div>
       </SectionCard>
-      <div className="grid items-end gap-2 md:grid-cols-5">
+      <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 md:grid-cols-5">
         <div>
           <Label>Собственик</Label>
           <Select
@@ -169,7 +169,7 @@ export default function InvoicesPage() {
               setPage(0);
             }}
           >
-            <SelectTrigger className="h-9 w-full">
+            <SelectTrigger className="h-10 w-full min-h-[44px]">
               <SelectValue placeholder="Всички" />
             </SelectTrigger>
             <SelectContent>
@@ -192,7 +192,7 @@ export default function InvoicesPage() {
               setFrom(e.target.value);
               setPage(0);
             }}
-            className="h-9"
+            className="h-10 min-h-[44px]"
           />
         </div>
         <div>
@@ -205,7 +205,7 @@ export default function InvoicesPage() {
               setTo(e.target.value);
               setPage(0);
             }}
-            className="h-9"
+            className="h-10 min-h-[44px]"
           />
         </div>
         <div>
@@ -217,7 +217,7 @@ export default function InvoicesPage() {
               setPage(0);
             }}
           >
-            <SelectTrigger className="h-9 w-full">
+            <SelectTrigger className="h-10 w-full min-h-[44px]">
               <SelectValue placeholder="Подредба" />
             </SelectTrigger>
             <SelectContent>
@@ -226,7 +226,7 @@ export default function InvoicesPage() {
             </SelectContent>
           </Select>
         </div>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex min-h-[44px] items-center gap-2 text-sm">
           <Checkbox
             checked={unpaidOnly}
             onCheckedChange={(checked) => {
@@ -316,34 +316,35 @@ export default function InvoicesPage() {
           (invoices ?? []).map((inv) => (
             <div
               key={inv._id}
-              className="hover:bg-accent grid gap-3 p-3 text-sm md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,1.6fr)]"
+              className="hover:bg-accent flex flex-col gap-3 p-3 text-sm sm:grid sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,1.6fr)]"
             >
-              <div>
+              <div className="min-w-0 flex-1">
                 <a
                   href={`/invoices/${inv._id}`}
-                  className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
+                  className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline min-h-[44px]"
                   aria-label={`Преглед на фактура ${inv.code ?? String(inv._id)}`}
                 >
-                  <FileText className="size-4" aria-hidden />{" "}
-                  {inv.code ?? `#${String(inv._id)}`} ·{" "}
-                  {fmtDateTimeBG(inv.createdAt)}
+                  <FileText className="size-4 flex-shrink-0" aria-hidden />
+                  <span className="truncate">
+                    {inv.code ?? `#${String(inv._id)}`} · {fmtDateTimeBG(inv.createdAt)}
+                  </span>
                 </a>
-                <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
                   <InvoiceStatusBadge paid={inv.paid} paidAt={inv.paidAt} />
                   {inv.visitId ? (
                     <a
-                      className="inline-flex items-center gap-1 underline underline-offset-2"
+                      className="inline-flex items-center gap-1 underline underline-offset-2 min-h-[44px]"
                       href={`/visits/${inv.visitId}`}
                       aria-label="Към посещение"
                     >
-                      <ExternalLink className="size-3" aria-hidden /> Към
+                      <ExternalLink className="size-3 flex-shrink-0" aria-hidden /> Към
                       посещение
                     </a>
                   ) : null}
                 </div>
                 <ul className="text-muted-foreground ml-5 list-disc">
                   {inv.items.map((it, idx) => (
-                    <li key={idx}>
+                    <li key={idx} className="truncate">
                       {it.description} × {it.quantity} —{" "}
                       {fmtNumberBG(it.total, {
                         style: "currency",
@@ -353,18 +354,19 @@ export default function InvoicesPage() {
                   ))}
                 </ul>
               </div>
-              <div className="text-right font-medium">
+              <div className="text-left font-medium sm:text-right">
                 Общо:{" "}
                 {fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}
               </div>
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-end">
-                <div className="flex flex-1 justify-end gap-2 md:flex-none">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                <div className="flex flex-wrap justify-start gap-2 sm:flex-1 sm:justify-end md:flex-none">
                   {inv.paid ? null : (
                     <Button
                       size="sm"
                       variant="outline"
                       disabled={paidLoading === inv._id}
                       aria-label="Маркирай фактура като платена"
+                      className="min-h-[44px] flex-1 sm:flex-none"
                       onClick={async () => {
                         setPaidLoading(inv._id);
                         await markPaid({ id: inv._id });
@@ -381,11 +383,13 @@ export default function InvoicesPage() {
                     inv={inv}
                     fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
                     size="sm"
+                    className="min-h-[44px] flex-1 sm:flex-none"
                   />
                   <Button
                     size="sm"
                     variant="outline"
                     aria-label={`Печат за фактура ${inv.code ?? String(inv._id)}`}
+                    className="min-h-[44px] flex-1 sm:flex-none"
                     onClick={() => {
                       printInvoice(inv);
                     }}

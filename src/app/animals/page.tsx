@@ -119,11 +119,21 @@ export default function AnimalsPage() {
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">Животни: {animals?.length}</h1>
+        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">
+          Животни: {animals?.length}
+        </h1>
         <Button
           className="md:hidden"
           variant="outline"
-          onClick={() => setShowCreatePanel(true)}
+          onClick={() => {
+            setShowCreatePanel(true);
+            setTimeout(() => {
+              const createSection = document.getElementById("create");
+              if (createSection) {
+                createSection.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            }, 100);
+          }}
           aria-label="Ново животно"
         >
           Ново животно
@@ -131,17 +141,9 @@ export default function AnimalsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_380px]">
-        <nav className="text-muted-foreground mb-2 inline-flex items-center gap-3 text-xs md:hidden">
-          <a href="#search" className="underline underline-offset-2 cursor-pointer">
-            Търсене
-          </a>
-          <a href="#create" className="underline underline-offset-2 cursor-pointer">
-            Създаване
-          </a>
-        </nav>
         {/* Left: Search/List */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
+        <section id="search" className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               placeholder="Търсене по име, вид, порода, микрочип"
               className="h-10 w-full"
@@ -159,7 +161,7 @@ export default function AnimalsPage() {
                 setPage(0);
               }}
             >
-              <SelectTrigger className="h-10 min-w-[160px]">
+              <SelectTrigger className="h-10 w-full sm:min-w-[160px]">
                 <SelectValue placeholder="Подреждане" />
               </SelectTrigger>
               <SelectContent>
@@ -186,24 +188,24 @@ export default function AnimalsPage() {
                 return (
                   <div
                     key={a._id}
-                    className="hover:bg-accent flex items-center justify-between p-3 text-sm"
+                    className="hover:bg-accent flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div className="flex items-center gap-3">
-                      <PawPrint className="text-primary size-5" aria-hidden />
-                      <div>
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <PawPrint className="text-primary size-5 flex-shrink-0" aria-hidden />
+                      <div className="min-w-0 flex-1">
                         <Link
                           href={`/animals/${a._id}`}
-                          className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
+                          className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline min-h-[44px]"
                           aria-label={`Преглед на ${a.name}`}
                         >
-                          {a.name} ({a.species})
+                          <span className="truncate">{a.name} ({a.species})</span>
                         </Link>
-                        <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
-                          <span>{a.breed ?? ""}</span>
+                        <div className="text-muted-foreground flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
+                          {a.breed && <span className="truncate">{a.breed}</span>}
                           {a.microchip ? (
                             <span className="inline-flex items-center gap-1">
-                              <Hash className="size-4" />
-                              {a.microchip}
+                              <Hash className="size-4 flex-shrink-0" />
+                              <span className="truncate">{a.microchip}</span>
                             </span>
                           ) : null}
                           {a.neutered ? (
@@ -212,19 +214,19 @@ export default function AnimalsPage() {
                             </span>
                           ) : null}
                           {owner ? (
-                            <span className="inline-flex items-center gap-2">
+                            <span className="inline-flex flex-wrap items-center gap-2">
                               <Link
                                 href={`/owners/${owner._id}`}
-                                className="inline-flex items-center gap-1 underline-offset-2 hover:underline"
+                                className="inline-flex items-center gap-1 underline-offset-2 hover:underline min-h-[44px]"
                                 aria-label={`Собственик ${owner.name}`}
                               >
-                                <UserIcon className="size-4" aria-hidden />{" "}
-                                {owner.name}
+                                <UserIcon className="size-4 flex-shrink-0" aria-hidden />
+                                <span className="truncate">{owner.name}</span>
                               </Link>
                               {owner.phone ? (
                                 <span className="text-muted-foreground inline-flex items-center gap-1">
-                                  <PhoneIcon className="size-4" />
-                                  {owner.phone}
+                                  <PhoneIcon className="size-4 flex-shrink-0" />
+                                  <span className="truncate">{owner.phone}</span>
                                 </span>
                               ) : null}
                             </span>
@@ -232,7 +234,7 @@ export default function AnimalsPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="text-muted-foreground">
+                    <div className="text-muted-foreground text-xs sm:text-sm sm:flex-shrink-0">
                       {fmtDateTimeBG(a.createdAt)}
                     </div>
                   </div>
@@ -265,12 +267,12 @@ export default function AnimalsPage() {
         </section>
 
         {/* Right: Create Panel */}
-        <aside className={`${showCreatePanel ? "block" : "hidden"} md:block`}>
-          <div className="space-y-3 rounded-md border p-4">
+        <aside id="create" className={`${showCreatePanel ? "block" : "hidden"} md:block`}>
+          <div className="space-y-4 rounded-md border p-4 md:space-y-3 md:p-4">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">Ново животно</h2>
               <Button
-                className="md:hidden"
+                className="md:hidden min-h-[44px] min-w-[44px]"
                 variant="outline"
                 size="sm"
                 onClick={() => setShowCreatePanel(false)}
@@ -279,7 +281,7 @@ export default function AnimalsPage() {
                 Затвори
               </Button>
             </div>
-            <form onSubmit={handleCreate} className="grid grid-cols-1 gap-3">
+            <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 md:gap-3">
               <div>
                 <Label htmlFor="aname">Име</Label>
                 <Input
@@ -393,7 +395,7 @@ export default function AnimalsPage() {
                 </Popover>
               </div>
               <div>
-                <Button type="submit" className="w-full md:w-auto">
+                <Button type="submit" className="w-full min-h-[44px] md:w-auto md:min-h-0">
                   Добави животно
                 </Button>
               </div>

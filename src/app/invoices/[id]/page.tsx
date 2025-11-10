@@ -7,6 +7,7 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
 import InvoicePdfButton from "@/components/pdf/InvoicePdfButton";
+import { Printer, CheckCircle } from "lucide-react";
 // import dynamic from "next/dynamic";
 // const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
 import type { InvoiceDoc } from "@/types/visit";
@@ -99,8 +100,8 @@ function InvoiceDetailPageContent() {
         </div>
       </div>
       <div className="divide-y rounded-md border">
-        <div className="flex items-center justify-between p-3 text-sm">
-          <div>
+        <div className="flex flex-col gap-4 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
             <div className="font-medium">
               {inv.code ?? `#${String(inv._id)}`} ·{" "}
               {fmtDateTimeBG(inv.createdAt)}
@@ -111,7 +112,7 @@ function InvoiceDetailPageContent() {
                 : "Неплатена"}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             {inv.paid ? null : (
               <Button
                 variant="outline"
@@ -122,21 +123,68 @@ function InvoiceDetailPageContent() {
                   setLoading(false);
                   router.push("/");
                 }}
+                className="min-h-[44px] w-full sm:w-auto sm:flex-none"
               >
-                Маркирай платена
+                <CheckCircle className="mr-1 size-4" aria-hidden /> Маркирай платена
               </Button>
             )}
             <InvoicePdfButton
               inv={inv}
               fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
+              size="default"
+              className="min-h-[44px] w-full sm:w-auto sm:flex-none"
             />
-            <Button variant="outline" onClick={onPrint}>
-              Печат
+            <Button
+              variant="outline"
+              onClick={onPrint}
+              className="min-h-[44px] w-full sm:w-auto sm:flex-none"
+            >
+              <Printer className="mr-1 size-4" aria-hidden /> Печат
             </Button>
           </div>
         </div>
         <div className="p-3">
-          <table className="w-full text-sm">
+          {/* Mobile card view */}
+          <div className="space-y-3 md:hidden">
+            {(inv.items ?? []).map((it, idx) => (
+              <div key={idx} className="flex flex-col gap-2 rounded-md border p-3">
+                <div className="font-medium">{it.description}</div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Кол-во: {it.quantity}
+                  </span>
+                  <span className="text-muted-foreground">
+                    Цена:{" "}
+                    {fmtNumberBG(it.price, {
+                      style: "currency",
+                      currency: "BGN",
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t pt-2 font-medium">
+                  <span>Сума:</span>
+                  <span>
+                    {fmtNumberBG(it.total, {
+                      style: "currency",
+                      currency: "BGN",
+                    })}
+                  </span>
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center justify-between border-t pt-3 font-medium">
+              <span>Общо:</span>
+              <span>
+                {fmtNumberBG(inv.total, {
+                  style: "currency",
+                  currency: "BGN",
+                })}
+              </span>
+            </div>
+          </div>
+
+          {/* Desktop table view */}
+          <table className="hidden w-full text-sm md:table">
             <thead>
               <tr>
                 <th className="text-left">Описание</th>
@@ -148,15 +196,15 @@ function InvoiceDetailPageContent() {
             <tbody>
               {(inv.items ?? []).map((it, idx) => (
                 <tr key={idx}>
-                  <td>{it.description}</td>
-                  <td className="text-right">{it.quantity}</td>
-                  <td className="text-right">
+                  <td className="py-2">{it.description}</td>
+                  <td className="text-right py-2">{it.quantity}</td>
+                  <td className="text-right py-2">
                     {fmtNumberBG(it.price, {
                       style: "currency",
                       currency: "BGN",
                     })}
                   </td>
-                  <td className="text-right">
+                  <td className="text-right py-2">
                     {fmtNumberBG(it.total, {
                       style: "currency",
                       currency: "BGN",
@@ -167,10 +215,10 @@ function InvoiceDetailPageContent() {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={3} className="text-right font-medium">
-                  Общо
+                <td colSpan={3} className="text-right font-medium py-2">
+                  Общо:
                 </td>
-                <td className="text-right font-medium">
+                <td className="text-right font-medium py-2">
                   {fmtNumberBG(inv.total, {
                     style: "currency",
                     currency: "BGN",

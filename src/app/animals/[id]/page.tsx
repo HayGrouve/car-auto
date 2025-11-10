@@ -581,9 +581,9 @@ export default function AnimalDetailPage() {
         <form
           ref={formRef}
           onSubmit={onSave}
-          className="grid gap-4 md:grid-cols-2"
+          className="grid gap-6 md:grid-cols-2"
         >
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <Label htmlFor="name">Име *</Label>
             <Input
               id="name"
@@ -592,7 +592,7 @@ export default function AnimalDetailPage() {
               required
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <Label htmlFor="species">Вид</Label>
             <Input
               id="species"
@@ -603,7 +603,7 @@ export default function AnimalDetailPage() {
               placeholder="напр. Куче"
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <Label htmlFor="breed">Порода</Label>
             <Input
               id="breed"
@@ -614,7 +614,7 @@ export default function AnimalDetailPage() {
               placeholder="напр. Лабрадор"
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <Label>Собственик</Label>
             <div className="flex items-start gap-2">
               <Dialog open={ownerSheetOpen} onOpenChange={setOwnerSheetOpen}>
@@ -707,7 +707,7 @@ export default function AnimalDetailPage() {
               </p>
             )}
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <Label htmlFor="dob">Дата на раждане</Label>
             <Input
               id="dob"
@@ -716,7 +716,7 @@ export default function AnimalDetailPage() {
               onChange={(e) => setForm((f) => ({ ...f, dob: e.target.value }))}
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <Label htmlFor="microchip">Микрочип</Label>
             <Input
               id="microchip"
@@ -727,7 +727,7 @@ export default function AnimalDetailPage() {
               placeholder="напр. 985112003178000"
             />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <Label htmlFor="sex">Пол</Label>
             <Select
               key={`sex-${form.sex ?? "unknown"}`}
@@ -746,7 +746,7 @@ export default function AnimalDetailPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <Label htmlFor="neutered">Стерилизиран</Label>
             <label className="flex items-center gap-2">
               <Checkbox

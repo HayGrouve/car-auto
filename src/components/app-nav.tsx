@@ -35,7 +35,7 @@ export function AppNav() {
           key={l.href}
           href={l.href}
           onClick={onClick}
-          className={`inline-flex items-center gap-2 rounded-md px-3 py-1 cursor-pointer ${pathname === l.href ? "bg-accent" : "hover:bg-accent"}`}
+          className={`inline-flex items-center gap-2 rounded-md px-3 py-2 cursor-pointer min-h-[44px] ${pathname === l.href ? "bg-accent" : "hover:bg-accent"}`}
         >
           {l.icon ? <l.icon className="size-4" /> : null}
           {l.label}
@@ -68,7 +68,7 @@ export function AppNav() {
           <GlobalSearch />
         </div>
         <button
-          className="p-2 md:hidden cursor-pointer"
+          className="p-2 md:hidden cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label="Меню"
           onClick={() => setOpen((o) => !o)}
         >
@@ -77,7 +77,10 @@ export function AppNav() {
       </div>
       {open && (
         <div className="bg-background border-t md:hidden">
-          <div className="mx-auto flex max-w-5xl flex-col gap-1 p-2">
+          <div className="mx-auto flex max-w-5xl flex-col gap-2 p-3">
+            <div className="pb-2">
+              <GlobalSearch />
+            </div>
             <NavLinks onClick={() => setOpen(false)} />
           </div>
         </div>

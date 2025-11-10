@@ -83,42 +83,42 @@ export function ScheduleList({
         return (
           <div
             key={slot._id}
-            className={`flex items-center justify-between p-3 text-sm ${isSlotPast ? "" : "hover:bg-accent"}`}
+            className={`flex flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${isSlotPast ? "" : "hover:bg-accent"}`}
           >
-            <div className="flex items-center gap-3 flex-1">
-              <Clock className="text-primary size-5" />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium">{slot.title}</div>
-                <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
-                  <span>{formatTimeRange(slot.startTime, slot.endTime)}</span>
-                  {slot.description && (
-                    <span className="truncate">{slot.description}</span>
-                  )}
-                  {slot.visitId && (
-                    <Link
-                      href={`/visits/${slot.visitId}`}
-                      className="underline-offset-2 hover:underline cursor-pointer"
-                    >
-                      {visitMap?.get(slot.visitId) ?? "Посещение"}
-                    </Link>
-                  )}
-                  {slot.animalId && (
-                    <Link
-                      href={`/animals/${slot.animalId}`}
-                      className="underline-offset-2 hover:underline cursor-pointer"
-                    >
-                      {animalMap?.get(slot.animalId) ?? "Животно"}
-                    </Link>
-                  )}
-                </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Clock className="text-primary size-4 flex-shrink-0" />
+                <div className="font-medium truncate">{slot.title}</div>
+              </div>
+              <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="flex-shrink-0">{formatTimeRange(slot.startTime, slot.endTime)}</span>
+                {slot.description && (
+                  <span className="truncate">{slot.description}</span>
+                )}
+                {slot.visitId && (
+                  <Link
+                    href={`/visits/${slot.visitId}`}
+                    className="underline-offset-2 hover:underline cursor-pointer min-h-[44px] flex items-center"
+                  >
+                    {visitMap?.get(slot.visitId) ?? "Посещение"}
+                  </Link>
+                )}
+                {slot.animalId && (
+                  <Link
+                    href={`/animals/${slot.animalId}`}
+                    className="underline-offset-2 hover:underline cursor-pointer min-h-[44px] flex items-center"
+                  >
+                    {animalMap?.get(slot.animalId) ?? "Животно"}
+                  </Link>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
               <ScheduleStatusBadge status={slot.status} />
               {!isSlotPast && onEdit && (
                 <button
                   onClick={() => onEdit(slot)}
-                  className="text-primary hover:underline text-xs cursor-pointer"
+                  className="text-primary hover:underline text-xs cursor-pointer min-h-[44px] px-2 flex items-center"
                 >
                   Редактирай
                 </button>
@@ -126,13 +126,13 @@ export function ScheduleList({
               {!isSlotPast && onDelete && (
                 <button
                   onClick={() => onDelete(slot._id)}
-                  className="text-destructive hover:underline text-xs cursor-pointer"
+                  className="text-destructive hover:underline text-xs cursor-pointer min-h-[44px] px-2 flex items-center"
                 >
                   Изтрий
                 </button>
               )}
               {isSlotPast && (
-                <span className="text-muted-foreground text-xs">
+                <span className="text-muted-foreground text-xs min-h-[44px] flex items-center">
                   Само за преглед
                 </span>
               )}

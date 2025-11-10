@@ -12,7 +12,6 @@ const config = {
   reactStrictMode: true,
 
   // Production optimizations
-  swcMinify: true,
   compress: true,
 
   // Security headers

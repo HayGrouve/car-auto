@@ -86,13 +86,21 @@ export default function OwnersPage() {
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">
+        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">
           Собственици: {owners?.length}
         </h1>
         <Button
           className="md:hidden"
           variant="outline"
-          onClick={() => setShowCreatePanel(true)}
+          onClick={() => {
+            setShowCreatePanel(true);
+            setTimeout(() => {
+              const createSection = document.getElementById("create");
+              if (createSection) {
+                createSection.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            }, 100);
+          }}
           aria-label="Нов собственик"
         >
           Нов собственик
@@ -100,23 +108,9 @@ export default function OwnersPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_380px]">
-        <nav className="text-muted-foreground mb-2 inline-flex items-center gap-3 text-xs md:hidden">
-          <a
-            href="#search"
-            className="cursor-pointer underline underline-offset-2"
-          >
-            Търсене
-          </a>
-          <a
-            href="#create"
-            className="cursor-pointer underline underline-offset-2"
-          >
-            Създаване
-          </a>
-        </nav>
         {/* Left: Search/List */}
         <section id="search" className="space-y-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
               placeholder="Търсене по име, телефон, имейл"
               className="h-10 w-full"
@@ -134,7 +128,7 @@ export default function OwnersPage() {
                 setPage(0);
               }}
             >
-              <SelectTrigger className="h-10 min-w-[160px]">
+              <SelectTrigger className="h-10 w-full sm:min-w-[160px]">
                 <SelectValue placeholder="Подреждане" />
               </SelectTrigger>
               <SelectContent>
@@ -165,40 +159,40 @@ export default function OwnersPage() {
               (owners ?? []).map((o) => (
                 <div
                   key={o._id}
-                  className="hover:bg-accent flex items-center justify-between p-3 text-sm"
+                  className="hover:bg-accent flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex items-center gap-3">
-                    <UserIcon className="text-primary size-5" aria-hidden />
-                    <div>
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <UserIcon className="text-primary size-5 flex-shrink-0" aria-hidden />
+                    <div className="min-w-0 flex-1">
                       <Link
                         href={`/owners/${o._id}`}
-                        className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
+                        className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline min-h-[44px]"
                         aria-label={`Преглед на ${o.name}`}
                       >
-                        {o.name}
+                        <span className="truncate">{o.name}</span>
                       </Link>
-                      <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                      <div className="text-muted-foreground flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-3 sm:gap-y-1">
                         <span className="inline-flex items-center gap-1">
-                          <PhoneIcon className="size-4" />
-                          {o.phone}
+                          <PhoneIcon className="size-4 flex-shrink-0" />
+                          <span className="truncate">{o.phone}</span>
                         </span>
                         {o.email ? (
                           <span className="inline-flex items-center gap-1">
-                            <MailIcon className="size-4" />
-                            {o.email}
+                            <MailIcon className="size-4 flex-shrink-0" />
+                            <span className="truncate">{o.email}</span>
                           </span>
                         ) : null}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 sm:flex-shrink-0">
                     {o.gdprConsent ? (
                       <ShieldCheck
-                        className="text-secondary size-4"
+                        className="text-secondary size-4 flex-shrink-0"
                         aria-label="GDPR"
                       />
                     ) : null}
-                    <span className="text-muted-foreground">
+                    <span className="text-muted-foreground text-xs sm:text-sm">
                       {fmtDateTimeBG(o.createdAt)}
                     </span>
                   </div>
@@ -235,11 +229,11 @@ export default function OwnersPage() {
           id="create"
           className={`${showCreatePanel ? "block" : "hidden"} md:block`}
         >
-          <div className="space-y-3 rounded-md border p-4">
+          <div className="space-y-4 rounded-md border p-4 md:space-y-3 md:p-4">
             <div className="flex items-center justify-between">
               <h2 className="font-medium">Нов собственик</h2>
               <Button
-                className="md:hidden"
+                className="md:hidden min-h-[44px] min-w-[44px]"
                 variant="outline"
                 size="sm"
                 onClick={() => setShowCreatePanel(false)}
@@ -248,7 +242,7 @@ export default function OwnersPage() {
                 Затвори
               </Button>
             </div>
-            <form onSubmit={handleCreate} className="grid grid-cols-1 gap-3">
+            <form onSubmit={handleCreate} className="grid grid-cols-1 gap-4 md:gap-3">
               <div>
                 <Label htmlFor="name">Име</Label>
                 <Input
@@ -308,7 +302,7 @@ export default function OwnersPage() {
                 </Link>
               </label>
               <div>
-                <Button type="submit" className="w-full md:w-auto">
+                <Button type="submit" className="w-full min-h-[44px] md:w-auto md:min-h-0">
                   Добави собственик
                 </Button>
               </div>

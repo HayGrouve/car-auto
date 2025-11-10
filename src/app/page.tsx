@@ -225,18 +225,18 @@ export default function HomePage() {
               overview.todayScheduleSlots.map((slot) => (
                 <div
                   key={slot._id}
-                  className="flex min-h-[72px] items-center justify-between gap-3 p-3 text-sm"
+                  className="flex min-h-[72px] flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Clock className="text-primary size-4 flex-shrink-0" />
                       <Link
                         href={`/schedule?date=${new Date(slot.startTime).toISOString().split("T")[0]}`}
-                        className="cursor-pointer font-medium hover:underline"
+                        className="flex min-h-[44px] cursor-pointer items-center font-medium hover:underline"
                       >
-                        {slot.title}
+                        <span className="truncate">{slot.title}</span>
                       </Link>
-                      <span className="text-muted-foreground text-xs">
+                      <span className="text-muted-foreground flex-shrink-0 text-xs">
                         {formatTimeRange(slot.startTime, slot.endTime)}
                       </span>
                     </div>
@@ -248,41 +248,75 @@ export default function HomePage() {
                             : slot.description}
                         </span>
                       )}
-                      {slot.ownerName && <span>· {slot.ownerName}</span>}
-                      {slot.animalName && <span>· {slot.animalName}</span>}
+                      {slot.ownerName && (
+                        <span className="truncate">· {slot.ownerName}</span>
+                      )}
+                      {slot.animalName && (
+                        <span className="truncate">· {slot.animalName}</span>
+                      )}
                     </div>
                   </div>
-                  {slot.visitId ? (
-                    <Link href={`/visits/${slot.visitId}`}>
-                      <Button size="sm" variant="outline">
-                        Отвори посещение
-                      </Button>
-                    </Link>
-                  ) : slot.animalId &&
-                    animalDraftVisitMap.has(slot.animalId) ? (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        const draftVisitId = animalDraftVisitMap.get(
-                          slot.animalId!,
-                        );
-                        if (draftVisitId) {
-                          router.push(`/visits/${draftVisitId}`);
-                        }
-                      }}
-                      disabled={!slot.ownerId || !slot.animalId}
-                    >
-                      Продължи посещение
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => handleStartVisit(slot)}
-                      disabled={!slot.ownerId || !slot.animalId}
-                    >
-                      Започни посещение
-                    </Button>
-                  )}
+                  <div className="flex-shrink-0">
+                    {slot.visitId ? (
+                      <Link href={`/visits/${slot.visitId}`}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="min-h-[44px] w-full sm:min-h-0 sm:w-auto"
+                        >
+                          Отвори посещение
+                        </Button>
+                      </Link>
+                    ) : slot.animalId &&
+                      animalDraftVisitMap.has(slot.animalId) ? (
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          size="sm"
+                          className="min-h-[44px] w-full sm:min-h-0 sm:w-auto"
+                          onClick={() => {
+                            const draftVisitId = animalDraftVisitMap.get(
+                              slot.animalId!,
+                            );
+                            if (draftVisitId) {
+                              router.push(`/visits/${draftVisitId}`);
+                            }
+                          }}
+                          disabled={!slot.ownerId || !slot.animalId}
+                        >
+                          Продължи посещение
+                        </Button>
+                        {(!slot.ownerId || !slot.animalId) && (
+                          <p className="text-muted-foreground text-center text-xs sm:text-left">
+                            {!slot.ownerId && !slot.animalId
+                              ? "Добавете собственик и животно в графика"
+                              : !slot.ownerId
+                                ? "Добавете собственик в графика"
+                                : "Добавете животно в графика"}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          size="sm"
+                          className="min-h-[44px] w-full sm:min-h-0 sm:w-auto"
+                          onClick={() => handleStartVisit(slot)}
+                          disabled={!slot.ownerId || !slot.animalId}
+                        >
+                          Започни посещение
+                        </Button>
+                        {(!slot.ownerId || !slot.animalId) && (
+                          <p className="text-muted-foreground text-center text-xs sm:text-left">
+                            {!slot.ownerId && !slot.animalId
+                              ? "Добавете собственик и животно в графика"
+                              : !slot.ownerId
+                                ? "Добавете собственик в графика"
+                                : "Добавете животно в графика"}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))
             )}

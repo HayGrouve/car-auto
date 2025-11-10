@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
-import { Check, X } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Accordion,
   AccordionContent,
@@ -32,17 +31,19 @@ type VisitWizardPanelProps = {
   className?: string;
   contentRef?: RefObject<HTMLDivElement | null>;
   footer?: ReactNode;
+  stepIndicator?: ReactNode;
 };
 
 export function VisitWizardPanel({
   steps,
   activeStep,
   onStepChange,
-  isFinalized = false,
+  isFinalized: _isFinalized = false,
   announcement,
   className,
   contentRef,
   footer,
+  stepIndicator,
 }: VisitWizardPanelProps) {
   const fallbackStepId = steps[0]?.id ?? "";
   const currentStepId = steps.some((step) => step.id === activeStep)
@@ -69,7 +70,7 @@ export function VisitWizardPanel({
           {announcement}
         </div>
       ) : null}
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b px-6 py-4">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-3 sm:px-6 sm:py-4">
         <div>
           <h2 className="text-xl font-semibold">Ръководен режим</h2>
           <p className="text-muted-foreground text-sm">
@@ -77,64 +78,13 @@ export function VisitWizardPanel({
           </p>
         </div>
       </header>
-      <div className="space-y-4 px-6 py-6">
+      <div className="px-4 pb-4 sm:px-6 sm:pb-6">
         <Tabs
           value={currentStepId}
           onValueChange={onStepChange}
-          className="space-y-4"
         >
-          <TabsList className="grid w-full items-start gap-3 bg-transparent p-0 sm:grid-cols-2 lg:grid-cols-5">
-            {steps.map((step, index) => {
-              const isCompleted = Boolean(step.completed);
-              const handleTriggerClick = () => {
-                if (isFinalized) return;
-                onStepChange?.(step.id);
-              };
-              return (
-                <TabsTrigger
-                  key={step.id}
-                  value={step.id}
-                  className={cn(
-                    "flex min-h-[116px] flex-col items-start justify-start gap-1 rounded-lg border px-3 py-3 text-left transition",
-                    "cursor-pointer break-words whitespace-normal",
-                    "data-[state=active]:border-ring data-[state=active]:bg-background data-[state=active]:shadow",
-                  )}
-                  disabled={isFinalized}
-                  onClick={handleTriggerClick}
-                >
-                  <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] tracking-wide uppercase">
-                    Стъпка {index + 1}
-                    {isCompleted ? (
-                      <Check className="size-3 text-emerald-600" />
-                    ) : (
-                      <X className="size-3 text-red-600" />
-                    )}
-                  </span>
-                  <span
-                    className="cursor-pointer text-sm leading-snug font-medium"
-                    onClick={handleTriggerClick}
-                  >
-                    {step.label}
-                  </span>
-                  {step.summary ? (
-                    <span
-                      className="text-muted-foreground cursor-pointer text-xs"
-                      onClick={handleTriggerClick}
-                    >
-                      {typeof step.summary === "string" ? (
-                        step.summary
-                      ) : (
-                        <span className="flex flex-col">{step.summary}</span>
-                      )}
-                    </span>
-                  ) : null}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-
           {steps.map((step) => (
-            <TabsContent key={step.id} value={step.id} className="space-y-4">
+            <TabsContent key={step.id} value={step.id} className="mt-0 space-y-4">
               <div
                 ref={
                   step.id === currentStepId
@@ -170,7 +120,7 @@ export function VisitWizardPanel({
                     </AccordionItem>
                   </Accordion>
                 ) : null}
-                <div className="bg-background rounded-lg border p-4 shadow-sm">
+                <div className="bg-background rounded-lg border p-3 shadow-sm sm:p-4">
                   {step.content}
                 </div>
               </div>
@@ -178,8 +128,13 @@ export function VisitWizardPanel({
           ))}
         </Tabs>
       </div>
-      {footer ? (
-        <div className="bg-muted/20 border-t px-6 py-4">{footer}</div>
+      {footer || stepIndicator ? (
+        <div className="bg-muted/20 border-t">
+          {stepIndicator ? (
+            <div className="border-b px-4 py-2 sm:px-6">{stepIndicator}</div>
+          ) : null}
+          {footer ? <div className="px-4 py-3 sm:px-6 sm:py-4">{footer}</div> : null}
+        </div>
       ) : null}
     </section>
   );

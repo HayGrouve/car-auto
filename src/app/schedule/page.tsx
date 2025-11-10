@@ -284,15 +284,6 @@ function SchedulePageContent() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_380px]">
-        <nav className="text-muted-foreground mb-2 inline-flex items-center gap-3 text-xs md:hidden">
-          <a href="#list" className="underline underline-offset-2 cursor-pointer">
-            Списък
-          </a>
-          <a href="#calendar" className="underline underline-offset-2 cursor-pointer">
-            Календар
-          </a>
-        </nav>
-
         {/* Left: Schedule List */}
         <section id="list" className="space-y-4">
           <ScheduleList

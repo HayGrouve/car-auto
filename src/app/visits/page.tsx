@@ -152,15 +152,15 @@ function VisitsPageInner() {
         </Button>
       </div>
 
-      <section className="grid gap-2 md:grid-cols-4">
-        <div className="grid grid-cols-1 gap-2 md:col-span-2 md:grid-cols-2">
+      <section className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:col-span-2 md:grid-cols-2">
           <div>
             <Label>Собственик</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-9 w-full justify-between"
+                  className="h-10 w-full min-h-[44px] justify-between"
                 >
                   {ownerId
                     ? (owners ?? []).find((o) => o._id === ownerId)?.name
@@ -203,7 +203,7 @@ function VisitsPageInner() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-9 w-full justify-between"
+                  className="h-10 w-full min-h-[44px] justify-between"
                 >
                   {animalId
                     ? (animals ?? []).find((a) => a._id === animalId)?.name
@@ -250,14 +250,14 @@ function VisitsPageInner() {
             </Popover>
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-2 md:col-span-2 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:col-span-2 md:grid-cols-4">
           <div>
             <Label>Статус</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="h-9 w-full justify-between"
+                  className="h-10 w-full min-h-[44px] justify-between"
                 >
                   {status || "Всички"}
                 </Button>
@@ -304,7 +304,7 @@ function VisitsPageInner() {
                 setFrom(e.target.value);
                 setPage(0);
               }}
-              className="h-9"
+              className="h-10 min-h-[44px]"
             />
           </div>
           <div>
@@ -317,7 +317,7 @@ function VisitsPageInner() {
                 setTo(e.target.value);
                 setPage(0);
               }}
-              className="h-9"
+              className="h-10 min-h-[44px]"
             />
           </div>
           <div>
@@ -329,7 +329,7 @@ function VisitsPageInner() {
                 setPage(0);
               }}
             >
-              <SelectTrigger className="h-9 w-full">
+              <SelectTrigger className="h-10 w-full min-h-[44px]">
                 <SelectValue placeholder="Подредба" />
               </SelectTrigger>
               <SelectContent>
@@ -435,53 +435,57 @@ function VisitsPageInner() {
           (visits ?? []).map((v) => (
             <div
               key={v._id}
-              className="flex items-center justify-between p-3 text-sm"
+              className="flex flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
             >
-              <div className="space-y-1">
+              <div className="min-w-0 flex-1 space-y-1">
                 <a
                   href={`/visits/${v._id}`}
-                  className="mr-2 inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline"
+                  className="mr-2 inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline min-h-[44px]"
                   aria-label={`Преглед на посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                 >
-                  <CalendarCheck className="size-4" aria-hidden />{" "}
-                  {(v as VisitDoc & { code?: string }).code ??
-                    `#${String(v._id)}`}{" "}
-                  -{" "}
-                  {fmtDateTimeBG(
-                    (v as VisitDoc & { datetime?: number }).datetime ??
-                      v.createdAt,
-                  )}
+                  <CalendarCheck className="size-4 flex-shrink-0" aria-hidden />
+                  <span className="truncate">
+                    {(v as VisitDoc & { code?: string }).code ??
+                      `#${String(v._id)}`}{" "}
+                    -{" "}
+                    {fmtDateTimeBG(
+                      (v as VisitDoc & { datetime?: number }).datetime ??
+                        v.createdAt,
+                    )}
+                  </span>
                 </a>
                 <VisitStatusBadge status={v.status} />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap gap-2 sm:flex-shrink-0 sm:flex-nowrap">
                 {v.status === "draft" ? (
                   <Button
                     variant="outline"
+                    className="min-h-[44px] flex-1 sm:flex-none"
                     aria-label={`Приключи посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                     onClick={async () => {
                       const r = await finalizeVisit({ id: v._id });
                       if (r?.ok) toast.success("Приключено");
                     }}
                   >
-                    <CheckCircle className="mr-1 size-4" aria-hidden /> Приключи
+                    <CheckCircle className="mr-1 size-4 flex-shrink-0" aria-hidden /> Приключи
                   </Button>
                 ) : null}
                 {v.status === "draft" ? (
                   <a
-                    className="hover:bg-accent inline-flex items-center rounded-md border px-3 py-1.5 text-sm"
+                    className="hover:bg-accent inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm min-h-[44px] flex-1 sm:flex-none"
                     href={`/visits/${v._id}?step=1`}
                     aria-label={`Стартирай ръководство за ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                   >
-                    Ръководство
+                    <span className="truncate">Ръководство</span>
                   </a>
                 ) : null}
                 <a
-                  className="hover:bg-accent inline-flex items-center rounded-md border px-3 py-1.5 text-sm"
+                  className="hover:bg-accent inline-flex items-center justify-center rounded-md border px-3 py-2 text-sm min-h-[44px] flex-1 sm:flex-none"
                   href={`/invoices/new?ownerId=${encodeURIComponent(String(v.ownerId))}${v.animalId ? `&animalId=${encodeURIComponent(String(v.animalId))}` : ""}&visitId=${encodeURIComponent(String(v._id))}`}
                   aria-label={`Нова фактура за посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                 >
-                  <FilePlus className="mr-1 size-4" aria-hidden /> Нова фактура
+                  <FilePlus className="mr-1 size-4 flex-shrink-0" aria-hidden />{" "}
+                  <span className="truncate">Нова фактура</span>
                 </a>
               </div>
             </div>
