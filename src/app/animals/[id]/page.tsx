@@ -77,7 +77,11 @@ export default function AnimalDetailPage() {
     useMemo(() => ({ search: "" }), []),
   );
   const ownersResult = ownersQuery as
-    | { items: { _id: string; name: string; phone?: string }[]; total: number; hasMore: boolean }
+    | {
+        items: { _id: string; name: string; phone?: string }[];
+        total: number;
+        hasMore: boolean;
+      }
     | undefined;
   const owners = ownersResult?.items;
   const visitsQuery = useQuery(
@@ -197,7 +201,7 @@ export default function AnimalDetailPage() {
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
-    
+
     // Validate form data
     const formData = {
       name: form.name.trim(),
@@ -210,11 +214,13 @@ export default function AnimalDetailPage() {
       dob: form.dob || "",
       ownerId: form.ownerId || "",
     };
-    
+
     const validationResult = animalFormSchema.safeParse(formData);
     if (!validationResult.success) {
       const firstError = validationResult.error.errors[0];
-      toast.error(firstError?.message ?? "Моля, попълнете всички задължителни полета");
+      toast.error(
+        firstError?.message ?? "Моля, попълнете всички задължителни полета",
+      );
       return;
     }
 
@@ -588,7 +594,7 @@ export default function AnimalDetailPage() {
                     href={`/visits/${visit._id}`}
                     className="text-primary text-xs font-medium underline underline-offset-2"
                   >
-                    Детайli
+                    Детайли
                   </Link>
                 </div>
               ))
