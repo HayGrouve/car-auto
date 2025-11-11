@@ -143,7 +143,7 @@ export default function AnimalsPage() {
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">
+        <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
           Животни: {animals?.total ?? 0}
         </h1>
         <Button
@@ -243,7 +243,7 @@ export default function AnimalsPage() {
                             </span>
                           ) : null}
                           {a.neutered ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs">
+                            <span className="inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-xs">
                               {a.sex === "male"
                                 ? "Кастриран"
                                 : a.sex === "female"
@@ -296,7 +296,8 @@ export default function AnimalsPage() {
               Назад
             </Button>
             <div className="text-muted-foreground text-sm">
-              Страница {page + 1} от {totalPages}
+              <span className="sm:hidden">{page + 1}/{totalPages}</span>
+              <span className="hidden sm:inline">Страница {page + 1} от {totalPages}</span>
             </div>
             <Button
               variant="outline"

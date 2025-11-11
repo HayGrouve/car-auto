@@ -96,7 +96,7 @@ export default function OwnersPage() {
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">
+        <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
           Собственици: {owners?.total ?? 0}
         </h1>
         <Button
@@ -227,7 +227,8 @@ export default function OwnersPage() {
               Назад
             </Button>
             <div className="text-muted-foreground text-sm">
-              Страница {page + 1} от {totalPages}
+              <span className="sm:hidden">{page + 1}/{totalPages}</span>
+              <span className="hidden sm:inline">Страница {page + 1} от {totalPages}</span>
             </div>
             <Button
               variant="outline"

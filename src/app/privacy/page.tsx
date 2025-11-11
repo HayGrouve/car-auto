@@ -1,7 +1,7 @@
 export default function PrivacyPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">Политика за поверителност</h1>
+      <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">Политика за поверителност</h1>
       <p className="text-muted-foreground text-sm">
         Тази страница описва как събираме и обработваме лични данни съгласно
         GDPR.

@@ -290,7 +290,7 @@ function SchedulePageContent() {
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-semibold">График</h1>
+          <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">График</h1>
           {selectedDate && (
             <p className="text-muted-foreground text-sm">
               {formatScheduleDate(selectedDate)}

@@ -190,7 +190,7 @@ export default function HomePage() {
     return (
       <main className="mx-auto max-w-5xl space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Табло на {brand.nameBg}</h1>
+          <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">Табло на {brand.nameBg}</h1>
           <div className="w-72">
             <SkeletonList rows={1} />
           </div>
@@ -216,7 +216,7 @@ export default function HomePage() {
     <main className="mx-auto max-w-5xl space-y-6 p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <h1 className="text-2xl font-semibold">Основно табло</h1>
+          <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">Основно табло</h1>
           <p className="text-muted-foreground text-sm">
             Дневен преглед на пациенти, посещения, фактури и важни събития за
             клиниката.

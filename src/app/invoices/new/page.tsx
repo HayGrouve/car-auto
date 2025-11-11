@@ -259,7 +259,7 @@ function NewInvoicePageInner() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
-      <h1 className="text-2xl font-semibold">Нова фактура</h1>
+      <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">Нова фактура</h1>
       <form onSubmit={onSubmit} className="grid gap-3">
         <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
           <div>

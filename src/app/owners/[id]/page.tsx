@@ -21,20 +21,31 @@ import Link from "next/link";
 import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
 import { InvoiceStatusBadge } from "@/components/StatusBadge";
 import {
+  FileText,
+  Printer,
+  CheckCircle,
+  ExternalLink,
+  MoreHorizontal,
+  FileJson,
+  Trash2,
+  Undo2,
+} from "lucide-react";
+import dynamic from "next/dynamic";
+import { printInvoice } from "@/lib/printInvoice";
+import type { InvoiceDoc } from "@/types/visit";
+
+// Lazy load PDF button component
+const InvoicePdfButton = dynamic(
+  () => import("@/components/pdf/InvoicePdfButton"),
+  { ssr: false },
+);
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  MoreHorizontal,
-  FileJson,
-  FileText,
-  Printer,
-  Trash2,
-  Undo2,
-} from "lucide-react";
 import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
@@ -92,21 +103,6 @@ export default function OwnerDetailPage() {
     ].filter(Boolean) as BreadcrumbItem[],
   );
 
-  useBreadcrumbRegistration(
-    [
-      { label: "Начало", href: "/" } satisfies BreadcrumbItem,
-      { label: "Собственици", href: "/owners" } satisfies BreadcrumbItem,
-      owner?.name
-        ? ({
-            id: String(id),
-            label: owner.name,
-            href: `/owners/${id}`,
-            current: true,
-          } satisfies BreadcrumbItem)
-        : ({ label: "Собственик", current: true } satisfies BreadcrumbItem),
-    ].filter(Boolean) as BreadcrumbItem[],
-  );
-
   useEffect(() => {
     if (!hydrated && owner) {
       setForm({
@@ -143,7 +139,9 @@ export default function OwnerDetailPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold">Собственик: {owner.name}</h1>
+        <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
+          Собственик: {owner.name}
+        </h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="outline" size="icon">
@@ -261,7 +259,10 @@ export default function OwnerDetailPage() {
       </div>
       <p className="text-muted-foreground text-sm">
         Прочетете нашата{" "}
-        <Link className="underline underline-offset-2 cursor-pointer" href="/privacy">
+        <Link
+          className="cursor-pointer underline underline-offset-2"
+          href="/privacy"
+        >
           политика за поверителност
         </Link>
         .
@@ -493,14 +494,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
   );
   const invoicesResult = invoicesQuery as
     | {
-        items: {
-          _id: string;
-          code?: string;
-          total: number;
-          paid?: boolean;
-          paidAt?: number | null;
-          createdAt: number;
-        }[];
+        items: InvoiceDoc[];
         total: number;
         hasMore: boolean;
       }
@@ -509,7 +503,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
   const markPaid = useMutation(api.invoices.markPaid) as unknown as (args: {
     id: string;
   }) => Promise<{ ok: boolean }>;
-  const [loading, setLoading] = useState<string | null>(null);
+  const [paidLoading, setPaidLoading] = useState<string | null>(null);
   const totals = (invoices ?? []).reduce(
     (acc, inv) => {
       if (inv.paid) acc.paid += inv.total;
@@ -547,47 +541,111 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
           (invoices ?? []).map((inv) => (
             <div
               key={inv._id}
-              className="grid items-center gap-3 p-3 text-sm md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_auto]"
+              className="hover:bg-accent flex flex-col gap-3 p-3 text-sm sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]"
             >
-              <div>
-                <div className="font-medium">
+              <div className="min-w-0 flex-1">
+                <div className="flex min-h-[44px] items-center justify-between gap-2 sm:justify-start sm:gap-3">
                   <a
                     href={`/invoices/${inv._id}`}
-                    className="underline underline-offset-2 hover:underline"
+                    className="inline-flex min-w-0 flex-1 items-center gap-1 font-medium underline-offset-2 hover:underline sm:flex-initial"
+                    aria-label={`Преглед на фактура ${inv.code ?? String(inv._id)}`}
                   >
-                    {inv.code ?? `#${String(inv._id)}`}
-                  </a>{" "}
-                  · {fmtDateTimeBG(inv.createdAt)}
+                    <FileText className="size-4 flex-shrink-0" aria-hidden />
+                    <span className="truncate">
+                      {inv.code ?? `#${String(inv._id)}`} ·{" "}
+                      {fmtDateTimeBG(inv.createdAt)}
+                    </span>
+                  </a>
+                  <div className="flex-shrink-0 text-right text-xs font-medium sm:hidden">
+                    Общо:{" "}
+                    {fmtNumberBG(inv.total, {
+                      style: "currency",
+                      currency: "BGN",
+                    })}
+                  </div>
                 </div>
-                <div className="text-muted-foreground text-xs">
-                  <InvoiceStatusBadge
-                    paid={inv.paid}
-                    paidAt={inv.paidAt ?? null}
-                  />
+                <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+                  <InvoiceStatusBadge paid={inv.paid} paidAt={inv.paidAt} />
+                  {inv.visitId ? (
+                    <a
+                      className="inline-flex min-h-[44px] items-center gap-1 underline underline-offset-2"
+                      href={`/visits/${inv.visitId}`}
+                      aria-label="Към посещение"
+                    >
+                      <ExternalLink
+                        className="size-3 flex-shrink-0"
+                        aria-hidden
+                      />{" "}
+                      Към посещение
+                    </a>
+                  ) : null}
                 </div>
+                <ul className="text-muted-foreground ml-5 list-disc">
+                  {inv.items.map((it, idx) => (
+                    <li key={idx} className="truncate">
+                      {it.description} × {it.quantity} —{" "}
+                      {fmtNumberBG(it.total, {
+                        style: "currency",
+                        currency: "BGN",
+                      })}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <div className="text-right font-medium md:text-right">
-                {fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}
-              </div>
-              <div className="text-right md:justify-self-end">
-                {inv.paid ? null : (
-                  <Button
-                    variant="outline"
-                    disabled={loading === inv._id}
-                    className="whitespace-nowrap"
-                    onClick={async () => {
-                      setLoading(inv._id);
-                      const r = await markPaid({ id: inv._id });
-                      setLoading(null);
-                      if (r?.ok) {
-                        toast.success("Фактура маркирана като платена");
-                        router.push("/");
-                      }
-                    }}
-                  >
-                    Маркирай платена
-                  </Button>
-                )}
+              <div className="flex flex-col gap-2 sm:flex sm:flex-col sm:items-end sm:justify-between">
+                <div className="hidden min-h-[44px] items-center text-right font-medium sm:flex sm:text-right">
+                  Общо:{" "}
+                  {fmtNumberBG(inv.total, {
+                    style: "currency",
+                    currency: "BGN",
+                  })}
+                </div>
+                <div className="mt-2 flex flex-col gap-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-end">
+                  <div className="flex flex-wrap justify-start gap-2 sm:flex-1 sm:justify-end md:flex-none">
+                    {inv.paid ? null : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={paidLoading === inv._id}
+                        aria-label="Маркирай фактура като платена"
+                        className="min-h-[36px] flex-1 sm:min-h-[44px] sm:flex-none"
+                        onClick={async () => {
+                          setPaidLoading(inv._id);
+                          const r = await markPaid({ id: inv._id });
+                          setPaidLoading(null);
+                          if (r?.ok) {
+                            toast.success("Фактура маркирана като платена");
+                            router.push("/");
+                          }
+                        }}
+                      >
+                        <CheckCircle
+                          className="mr-1 size-3 sm:size-4"
+                          aria-hidden
+                        />{" "}
+                        Маркирай платена
+                      </Button>
+                    )}
+                    <InvoicePdfButton
+                      inv={inv}
+                      fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
+                      size="sm"
+                      className="min-h-[36px] flex-1 sm:min-h-[44px] sm:flex-none"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      aria-label={`Печат за фактура ${inv.code ?? String(inv._id)}`}
+                      className="min-h-[36px] flex-1 sm:min-h-[44px] sm:flex-none"
+                      onClick={() => {
+                        printInvoice(inv);
+                      }}
+                    >
+                      <Printer className="mr-1 size-3 sm:size-4" aria-hidden />{" "}
+                      Печат
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           ))

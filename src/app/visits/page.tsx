@@ -158,7 +158,7 @@ function VisitsPageInner() {
       <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
         <div className="flex w-full items-center gap-2 md:w-auto">
           <CalendarCheck className="text-primary size-5" />
-          <h1 className="text-2xl font-semibold">
+          <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
             Посещения: {visits?.total ?? 0}
           </h1>
         </div>
@@ -527,7 +527,10 @@ function VisitsPageInner() {
           <ChevronLeft className="mr-1 size-4" aria-hidden />
           Назад
         </Button>
-        <div className="text-muted-foreground text-sm">Страница {page + 1} от {totalPages}</div>
+        <div className="text-muted-foreground text-sm">
+          <span className="sm:hidden">{page + 1}/{totalPages}</span>
+          <span className="hidden sm:inline">Страница {page + 1} от {totalPages}</span>
+        </div>
         <Button
           variant="outline"
           onClick={() =>

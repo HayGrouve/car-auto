@@ -104,7 +104,7 @@ function InvoiceDetailPageContent() {
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Фактура: {inv.code}</h1>
+        <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">Фактура: {inv.code}</h1>
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" onClick={() => router.back()}>
             Назад
