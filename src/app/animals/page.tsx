@@ -19,6 +19,8 @@ import {
   Hash,
   User as UserIcon,
   Phone as PhoneIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { fmtDateTimeBG } from "@/lib/format";
 import {
@@ -48,25 +50,38 @@ import type { UseFormReturn } from "react-hook-form";
 export default function AnimalsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const pageSize = 20;
+  const pageSize = 10;
   const [sort, setSort] = useState<"createdAtDesc" | "createdAtAsc">(
     "createdAtDesc",
   );
   const [showCreatePanel, setShowCreatePanel] = useState(false);
-  const animals = useQuery(
+  const animalsQuery = useQuery(
     api.animals.list,
     useMemo(
       () => ({ search, limit: pageSize, offset: page * pageSize, sort }),
       [search, page, sort],
     ),
-  ) as AnimalDoc[] | undefined;
+  );
+  const animals = animalsQuery as
+    | { items: AnimalDoc[]; total: number; hasMore: boolean }
+    | undefined;
+  const animalsList = animals?.items ?? undefined;
   const createAnimal = useMutation(api.animals.create);
   const [ownerId, setOwnerId] = useState("");
   const [ownerSearch, setOwnerSearch] = useState("");
-  const owners = useQuery(
+
+  const totalPages = useMemo(() => {
+    const total = animals?.total ?? 0;
+    return total > 0 ? Math.ceil(total / pageSize) : 1;
+  }, [animals?.total, pageSize]);
+  const ownersQuery = useQuery(
     api.owners.list,
     useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
-  ) as { _id: string; name: string; phone?: string }[] | undefined;
+  );
+  const ownersResult = ownersQuery as
+    | { items: { _id: string; name: string; phone?: string }[]; total: number; hasMore: boolean }
+    | undefined;
+  const owners = ownersResult?.items;
 
   const ownersById = useMemo(() => {
     const map: Record<string, { _id: string; name: string; phone?: string }> =
@@ -129,7 +144,7 @@ export default function AnimalsPage() {
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">
-          Животни: {animals?.length}
+          Животни: {animals?.total ?? 0}
         </h1>
         <Button
           className="md:hidden"
@@ -186,14 +201,14 @@ export default function AnimalsPage() {
           <div className="divide-y rounded-md border">
             {animals === undefined ? (
               <SkeletonList rows={6} />
-            ) : (animals ?? []).length === 0 ? (
+            ) : (animalsList ?? []).length === 0 ? (
               <EmptyState
                 icon={PawPrint}
                 title="Няма животни"
                 description="Добавете животно към собственик."
               />
             ) : (
-              (animals ?? []).map((a) => {
+              (animalsList ?? []).map((a) => {
                 const owner = a.ownerId
                   ? ownersById[String(a.ownerId)]
                   : undefined;
@@ -273,19 +288,21 @@ export default function AnimalsPage() {
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
             >
+              <ChevronLeft className="mr-1 size-4" aria-hidden />
               Назад
             </Button>
             <div className="text-muted-foreground text-sm">
-              Страница {page + 1}
+              Страница {page + 1} от {totalPages}
             </div>
             <Button
               variant="outline"
               onClick={() =>
-                setPage((p) => ((animals ?? []).length < pageSize ? p : p + 1))
+                setPage((p) => (animals?.hasMore ? p + 1 : p))
               }
-              disabled={(animals ?? []).length < pageSize}
+              disabled={!animals?.hasMore}
             >
               Напред
+              <ChevronRight className="ml-1 size-4" aria-hidden />
             </Button>
           </div>
         </section>

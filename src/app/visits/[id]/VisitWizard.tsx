@@ -143,7 +143,7 @@ export default function VisitWizard({
         status?: string;
       }
     | undefined;
-  const lastWeights = useQuery(
+  const lastWeightsQuery = useQuery(
     api.visits.list,
     useMemo(
       () =>
@@ -156,7 +156,11 @@ export default function VisitWizard({
           : { sort: "datetimeDesc", limit: 0 },
       [visit?.animalId],
     ),
-  ) as { weight?: number | null }[] | undefined;
+  );
+  const lastWeightsResult = lastWeightsQuery as
+    | { items: { weight?: number | null }[]; total: number; hasMore: boolean }
+    | undefined;
+  const lastWeights = lastWeightsResult?.items;
   const update = useMutation(api.visits.update);
   const [activeStep, setActiveStep] = useState<WizardStepId>("measurements");
   const contentRef = useRef<HTMLDivElement>(null);

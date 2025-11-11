@@ -54,10 +54,14 @@ export default function OwnerDetailPage() {
     api.animals.listByOwner,
     useMemo(() => ({ ownerId: id }), [id]),
   ) as { _id: string; name: string; species: string }[] | undefined;
-  const ownerUnpaid = useQuery(
+  const ownerUnpaidQuery = useQuery(
     api.invoices.list,
     useMemo(() => ({ ownerId: id, unpaidOnly: true }), [id]),
-  ) as { total: number }[] | undefined;
+  );
+  const ownerUnpaidResult = ownerUnpaidQuery as
+    | { items: { total: number }[]; total: number; hasMore: boolean }
+    | undefined;
+  const ownerUnpaid = ownerUnpaidResult?.items;
   const router = useRouter();
   const [showDelete, setShowDelete] = useState(false);
 
@@ -483,19 +487,25 @@ function OwnerAuditLog({ ownerId }: { ownerId: Id<"owners"> }) {
 function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
   const [unpaidOnly, setUnpaidOnly] = useState(false);
   const router = useRouter();
-  const invoices = useQuery(
+  const invoicesQuery = useQuery(
     api.invoices.list,
     useMemo(() => ({ ownerId, unpaidOnly }), [ownerId, unpaidOnly]),
-  ) as
+  );
+  const invoicesResult = invoicesQuery as
     | {
-        _id: string;
-        code?: string;
+        items: {
+          _id: string;
+          code?: string;
+          total: number;
+          paid?: boolean;
+          paidAt?: number | null;
+          createdAt: number;
+        }[];
         total: number;
-        paid?: boolean;
-        paidAt?: number | null;
-        createdAt: number;
-      }[]
+        hasMore: boolean;
+      }
     | undefined;
+  const invoices = invoicesResult?.items;
   const markPaid = useMutation(api.invoices.markPaid) as unknown as (args: {
     id: string;
   }) => Promise<{ ok: boolean }>;

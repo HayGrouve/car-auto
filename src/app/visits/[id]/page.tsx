@@ -60,22 +60,32 @@ export default function VisitDetailPage() {
   const [procedures, setProcedures] = useState<string[]>([]);
   const [medications, setMedications] = useState<string[]>([]);
   const [animalId, setAnimalId] = useState<string | null>(null);
-  const owners = useQuery(
+  const ownersQuery = useQuery(
     api.owners.list,
     useMemo(() => ({ search: "" }), []),
-  ) as { _id: string; name: string; phone?: string }[] | undefined;
-  const animals = useQuery(
+  );
+  const ownersResult = ownersQuery as
+    | { items: { _id: string; name: string; phone?: string }[]; total: number; hasMore: boolean }
+    | undefined;
+  const owners = ownersResult?.items;
+  const animalsQuery = useQuery(
     api.animals.list,
     useMemo(() => ({ search: "" }), []),
-  ) as
+  );
+  const animalsResult = animalsQuery as
     | {
-        _id: string;
-        name: string;
-        species: string;
-        ownerId?: string | null;
-        sex?: string | null;
-      }[]
+        items: {
+          _id: string;
+          name: string;
+          species: string;
+          ownerId?: string | null;
+          sex?: string | null;
+        }[];
+        total: number;
+        hasMore: boolean;
+      }
     | undefined;
+  const animals = animalsResult?.items;
   const [ownerId, setOwnerId] = useState<string>("");
   const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

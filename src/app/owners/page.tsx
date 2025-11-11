@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   Phone as PhoneIcon,
   Mail as MailIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { OwnerDoc } from "@/types/owner";
@@ -35,19 +37,28 @@ import type { UseFormReturn } from "react-hook-form";
 export default function OwnersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
-  const pageSize = 20;
+  const pageSize = 10;
   const [sort, setSort] = useState<"createdAtDesc" | "createdAtAsc">(
     "createdAtDesc",
   );
   const [showCreatePanel, setShowCreatePanel] = useState(false);
-  const owners = useQuery(
+  const ownersQuery = useQuery(
     api.owners.list,
     useMemo(
       () => ({ search, limit: pageSize, offset: page * pageSize, sort }),
       [search, page, sort],
     ),
-  ) as OwnerDoc[] | undefined;
+  );
+  const owners = ownersQuery as
+    | { items: OwnerDoc[]; total: number; hasMore: boolean }
+    | undefined;
+  const ownersList = owners?.items ?? undefined;
   const createOwner = useMutation(api.owners.create);
+
+  const totalPages = useMemo(() => {
+    const total = owners?.total ?? 0;
+    return total > 0 ? Math.ceil(total / pageSize) : 1;
+  }, [owners?.total, pageSize]);
 
   async function handleCreate(data: OwnerFormData, reset?: () => void) {
     const phoneCleaned = data.phone.replace(/\s+/g, "");
@@ -86,7 +97,7 @@ export default function OwnersPage() {
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-lg font-semibold sm:text-xl md:text-2xl">
-          Собственици: {owners?.length}
+          Собственици: {owners?.total ?? 0}
         </h1>
         <Button
           className="md:hidden"
@@ -143,7 +154,7 @@ export default function OwnersPage() {
           <div className="divide-y rounded-md border">
             {owners === undefined ? (
               <SkeletonList rows={6} />
-            ) : (owners ?? []).length === 0 ? (
+            ) : (ownersList ?? []).length === 0 ? (
               <EmptyState
                 icon={UserIcon}
                 title="Няма собственици"
@@ -158,7 +169,7 @@ export default function OwnersPage() {
                 }
               />
             ) : (
-              (owners ?? []).map((o) => (
+              (ownersList ?? []).map((o) => (
                 <div
                   key={o._id}
                   className="hover:bg-accent flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
@@ -212,19 +223,21 @@ export default function OwnersPage() {
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
             >
+              <ChevronLeft className="mr-1 size-4" aria-hidden />
               Назад
             </Button>
             <div className="text-muted-foreground text-sm">
-              Страница {page + 1}
+              Страница {page + 1} от {totalPages}
             </div>
             <Button
               variant="outline"
               onClick={() =>
-                setPage((p) => ((owners ?? []).length < pageSize ? p : p + 1))
+                setPage((p) => (owners?.hasMore ? p + 1 : p))
               }
-              disabled={(owners ?? []).length < pageSize}
+              disabled={!owners?.hasMore}
             >
               Напред
+              <ChevronRight className="ml-1 size-4" aria-hidden />
             </Button>
           </div>
         </section>

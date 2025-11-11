@@ -115,46 +115,49 @@ export const list = query({
     const q = normalizePair(args.search ?? "");
     const byDateDesc = (a: any, b: any) => b.createdAt - a.createdAt;
     const byDateAsc = (a: any, b: any) => a.createdAt - b.createdAt;
-    const sliceWithOwner = (rows: any[]) => {
-      const start = Math.max(0, args.offset ?? 0);
-      const end = (args.limit ?? rows.length) + start;
-      return rows.slice(start, end).map((doc: any) => {
-        const ownerInfo = doc.ownerId
-          ? ownerMap.get(String(doc.ownerId))
-          : undefined;
-        return {
-          ...doc,
-          ownerName: ownerInfo?.name ?? null,
-          ownerPhone: ownerInfo?.phone ?? null,
-        };
-      });
-    };
+    let sorted: any[];
     if (!q.base && !q.ascii) {
-      const sorted =
+      sorted =
         args.sort === "createdAtAsc"
           ? filtered.sort(byDateAsc)
           : filtered.sort(byDateDesc);
-      return sliceWithOwner(sorted);
-    }
-    const matches = (value: unknown) => {
-      const p = normalizePair(String(value ?? ""));
-      return (
-        (p.base && q.base && p.base.includes(q.base)) ||
-        (p.ascii && q.ascii && p.ascii.includes(q.ascii)) ||
-        (p.base && q.ascii && p.base.includes(q.ascii)) ||
-        (p.ascii && q.base && p.ascii.includes(q.base))
+    } else {
+      const matches = (value: unknown) => {
+        const p = normalizePair(String(value ?? ""));
+        return (
+          (p.base && q.base && p.base.includes(q.base)) ||
+          (p.ascii && q.ascii && p.ascii.includes(q.ascii)) ||
+          (p.base && q.ascii && p.base.includes(q.ascii)) ||
+          (p.ascii && q.base && p.ascii.includes(q.base))
+        );
+      };
+      const matched = filtered.filter((a: any) =>
+        [a.name, a.species, a.breed, a.microchip]
+          .filter(Boolean)
+          .some((v: string) => matches(v)),
       );
-    };
-    const matched = filtered.filter((a: any) =>
-      [a.name, a.species, a.breed, a.microchip]
-        .filter(Boolean)
-        .some((v: string) => matches(v)),
-    );
-    const sorted =
-      args.sort === "createdAtAsc"
-        ? matched.sort(byDateAsc)
-        : matched.sort(byDateDesc);
-    return sliceWithOwner(sorted);
+      sorted =
+        args.sort === "createdAtAsc"
+          ? matched.sort(byDateAsc)
+          : matched.sort(byDateDesc);
+    }
+    const total = sorted.length;
+    const start = Math.max(0, args.offset ?? 0);
+    const limit = args.limit ?? total;
+    const end = limit + start;
+    const sliced = sorted.slice(start, end);
+    const items = sliced.map((doc: any) => {
+      const ownerInfo = doc.ownerId
+        ? ownerMap.get(String(doc.ownerId))
+        : undefined;
+      return {
+        ...doc,
+        ownerName: ownerInfo?.name ?? null,
+        ownerPhone: ownerInfo?.phone ?? null,
+      };
+    });
+    const hasMore = end < total;
+    return { items, total, hasMore };
   },
 });
 

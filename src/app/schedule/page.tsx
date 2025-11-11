@@ -98,28 +98,54 @@ function SchedulePageContent() {
   }, [allSlots]);
 
   // Fetch related data for form
-  const owners = useQuery(
+  const ownersQuery = useQuery(
     api.owners.list,
     useMemo(() => ({ search: "" }), []),
-  ) as { _id: string; name: string; phone?: string }[] | undefined;
+  );
+  const ownersResult = ownersQuery as
+    | { items: { _id: string; name: string; phone?: string }[]; total: number; hasMore: boolean }
+    | undefined;
+  const owners = ownersResult?.items;
 
-  const animals = useQuery(
+  const animalsQuery = useQuery(
     api.animals.list,
     useMemo(() => ({ search: "", limit: 1000, sort: "createdAtDesc" }), []),
-  ) as
-    | { _id: string; name: string; species: string; ownerId?: string | null }[]
+  );
+  const animalsResult = animalsQuery as
+    | {
+        items: { _id: string; name: string; species: string; ownerId?: string | null }[];
+        total: number;
+        hasMore: boolean;
+      }
     | undefined;
+  const animals = animalsResult?.items;
 
-  const visits = useQuery(
+  const visitsQuery = useQuery(
     api.visits.list,
     useMemo(() => ({ limit: 1000, sort: "datetimeDesc" }), []),
-  ) as { _id: string; code?: string | null; animalId?: string | null; status?: string }[] | undefined;
+  );
+  const visitsResult = visitsQuery as
+    | {
+        items: { _id: string; code?: string | null; animalId?: string | null; status?: string }[];
+        total: number;
+        hasMore: boolean;
+      }
+    | undefined;
+  const visits = visitsResult?.items;
 
   // Query for draft visits to create animal -> draft visit map
-  const draftVisits = useQuery(
+  const draftVisitsQuery = useQuery(
     api.visits.list,
     useMemo(() => ({ status: "draft", limit: 1000 }), []),
-  ) as { _id: string; animalId?: string | null }[] | undefined;
+  );
+  const draftVisitsResult = draftVisitsQuery as
+    | {
+        items: { _id: string; animalId?: string | null }[];
+        total: number;
+        hasMore: boolean;
+      }
+    | undefined;
+  const draftVisits = draftVisitsResult?.items;
 
   // Create a map of animalId -> draft visit ID
   const animalDraftVisitMap = useMemo(() => {

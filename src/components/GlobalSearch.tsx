@@ -287,10 +287,23 @@ export function GlobalSearch({
   );
 
   // Type-safe results
-  const owners = ownersQuery as Owner[] | undefined;
-  const animals = animalsQuery as Animal[] | undefined;
-  const visits = visitsQuery as Visit[] | undefined;
-  const invoices = invoicesQuery as Invoice[] | undefined;
+  const ownersResult = ownersQuery as
+    | { items: Owner[]; total: number; hasMore: boolean }
+    | undefined;
+  const animalsResult = animalsQuery as
+    | { items: Animal[]; total: number; hasMore: boolean }
+    | undefined;
+  const visitsResult = visitsQuery as
+    | { items: Visit[]; total: number; hasMore: boolean }
+    | undefined;
+  const invoicesResult = invoicesQuery as
+    | { items: Invoice[]; total: number; hasMore: boolean }
+    | undefined;
+
+  const owners = ownersResult?.items;
+  const animals = animalsResult?.items;
+  const visits = visitsResult?.items;
+  const invoices = invoicesResult?.items;
 
   // Check loading states - only check queries that are actually being fetched (not skipped)
   const isLoading =

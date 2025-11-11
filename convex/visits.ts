@@ -22,7 +22,7 @@ export const list = query({
     search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const items = await ctx.db.query("visits").collect();
+    const allVisits = await ctx.db.query("visits").collect();
     const translitMap: Record<string, string> = {
       А: "A",
       а: "a",
@@ -112,7 +112,7 @@ export const list = query({
       );
     };
 
-    const filtered = items.filter((vDoc: any) => {
+    const filtered = allVisits.filter((vDoc: any) => {
       if (args.status && vDoc.status !== args.status) return false;
       if (args.ownerId && String(vDoc.ownerId) !== String(args.ownerId))
         return false;
@@ -141,9 +141,13 @@ export const list = query({
       args.sort === "datetimeAsc"
         ? filtered.sort(byAsc)
         : filtered.sort(byDesc);
+    const total = sorted.length;
     const start = Math.max(0, args.offset ?? 0);
-    const size = args.limit ?? 50;
-    return sorted.slice(start, start + size);
+    const limit = args.limit ?? 50;
+    const end = start + limit;
+    const items = sorted.slice(start, end);
+    const hasMore = end < total;
+    return { items, total, hasMore };
   },
 });
 

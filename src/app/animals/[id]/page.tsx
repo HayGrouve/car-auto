@@ -72,42 +72,58 @@ export default function AnimalDetailPage() {
   const update = useMutation(api.animals.update);
   const createVisit = useMutation(api.visits.create);
   const removeAnimal = useMutation(api.animals.remove);
-  const owners = useQuery(
+  const ownersQuery = useQuery(
     api.owners.list,
     useMemo(() => ({ search: "" }), []),
-  ) as { _id: string; name: string; phone?: string }[] | undefined;
-  const visits = useQuery(
+  );
+  const ownersResult = ownersQuery as
+    | { items: { _id: string; name: string; phone?: string }[]; total: number; hasMore: boolean }
+    | undefined;
+  const owners = ownersResult?.items;
+  const visitsQuery = useQuery(
     api.visits.list,
     useMemo(() => ({ animalId: id, limit: 5, sort: "datetimeDesc" }), [id]),
-  ) as
+  );
+  const visitsResult = visitsQuery as
     | {
-        _id: string;
-        code?: string | null;
-        datetime?: number | null;
-        status: string;
-        ownerId?: string | null;
-        weight?: number | null;
-        temperature?: number | null;
-        pulse?: number | null;
-        procedures?: string[];
-        medications?: string[];
-        createdAt?: number;
-      }[]
+        items: {
+          _id: string;
+          code?: string | null;
+          datetime?: number | null;
+          status: string;
+          ownerId?: string | null;
+          weight?: number | null;
+          temperature?: number | null;
+          pulse?: number | null;
+          procedures?: string[];
+          medications?: string[];
+          createdAt?: number;
+        }[];
+        total: number;
+        hasMore: boolean;
+      }
     | undefined;
-  const draftVisits = useQuery(
+  const visits = visitsResult?.items;
+  const draftVisitsQuery = useQuery(
     api.visits.list,
     useMemo(
       () => ({ animalId: id, status: "draft", limit: 1, sort: "datetimeDesc" }),
       [id],
     ),
-  ) as
+  );
+  const draftVisitsResult = draftVisitsQuery as
     | {
-        _id: string;
-        code?: string | null;
-        datetime?: number | null;
-        status: string;
-      }[]
+        items: {
+          _id: string;
+          code?: string | null;
+          datetime?: number | null;
+          status: string;
+        }[];
+        total: number;
+        hasMore: boolean;
+      }
     | undefined;
+  const draftVisits = draftVisitsResult?.items;
   const router = useRouter();
 
   const [form, setForm] = useState({

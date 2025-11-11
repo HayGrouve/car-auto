@@ -98,15 +98,21 @@ export default function HomePage() {
   const updateScheduleSlot = useMutation(api.schedule.update);
 
   // Query for draft visits to check if animals have existing visits
-  const allDraftVisits = useQuery(
+  const allDraftVisitsQuery = useQuery(
     api.visits.list,
     useMemo(() => ({ status: "draft", limit: 1000 }), []),
-  ) as
+  );
+  const allDraftVisitsResult = allDraftVisitsQuery as
     | {
-        _id: string;
-        animalId?: string | null;
-      }[]
+        items: {
+          _id: string;
+          animalId?: string | null;
+        }[];
+        total: number;
+        hasMore: boolean;
+      }
     | undefined;
+  const allDraftVisits = allDraftVisitsResult?.items;
 
   // Create a map of animalId -> draft visit ID
   const animalDraftVisitMap = useMemo(() => {
@@ -337,7 +343,7 @@ export default function HomePage() {
           title="Посещения днес"
           visits={todayVisits}
           emptyLabel="Няма планирани посещения"
-          footer={`Планирани днес: ${overview.todayVisits.length}`}
+          footer={`Брой: ${overview.todayVisits.length}`}
         />
       </section>
 

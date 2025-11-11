@@ -19,9 +19,10 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { useRouter, useSearchParams } from "next/navigation";
-import { fmtNumberBG } from "@/lib/format";
+import { fmtNumberBG, fmtDateTimeBG } from "@/lib/format";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { CalendarCheck } from "lucide-react";
 import { invoiceFormSchema } from "@/lib/validation/invoice";
 import {
   useBreadcrumbRegistration,
@@ -33,16 +34,55 @@ function NewInvoicePageInner() {
   const params = useSearchParams();
   const [ownerSearch, setOwnerSearch] = useState("");
   const [animalSearch, setAnimalSearch] = useState("");
-  const owners = useQuery(
+  const [visitSearch, setVisitSearch] = useState("");
+  const [ownerId, setOwnerId] = useState("");
+  const [animalId, setAnimalId] = useState("");
+  const ownersQuery = useQuery(
     api.owners.list,
     useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
-  ) as { _id: string; name: string; phone: string }[] | undefined;
-  const animals = useQuery(
+  );
+  const ownersResult = ownersQuery as
+    | { items: { _id: string; name: string; phone: string }[]; total: number; hasMore: boolean }
+    | undefined;
+  const owners = ownersResult?.items;
+  const animalsQuery = useQuery(
     api.animals.list,
     useMemo(() => ({ search: animalSearch }), [animalSearch]),
-  ) as
-    | { _id: string; name: string; species: string; ownerId?: string | null }[]
+  );
+  const animalsResult = animalsQuery as
+    | {
+        items: { _id: string; name: string; species: string; ownerId?: string | null }[];
+        total: number;
+        hasMore: boolean;
+      }
     | undefined;
+  const animals = animalsResult?.items;
+  const visitsQuery = useQuery(
+    api.visits.list,
+    useMemo(
+      () => ({
+        search: visitSearch,
+        limit: 50,
+        sort: "datetimeDesc",
+        ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
+        animalId: animalId ? (animalId as Id<"animals">) : undefined,
+      }),
+      [visitSearch, ownerId, animalId],
+    ),
+  );
+  const visitsResult = visitsQuery as
+    | {
+        items: {
+          _id: string;
+          code?: string | null;
+          datetime?: number | null;
+          createdAt: number;
+        }[];
+        total: number;
+        hasMore: boolean;
+      }
+    | undefined;
+  const visits = visitsResult?.items;
   const create = useMutation(api.invoices.create) as unknown as (args: {
     ownerId: string;
     animalId?: string;
@@ -58,8 +98,6 @@ function NewInvoicePageInner() {
     id: string;
   }) => Promise<{ ok: boolean }>;
 
-  const [ownerId, setOwnerId] = useState("");
-  const [animalId, setAnimalId] = useState("");
   const [items, setItems] = useState<
     { description: string; quantity: string; price: string; total: number }[]
   >([{ description: "", quantity: "1", price: "0", total: 0 }]);
@@ -79,6 +117,9 @@ function NewInvoicePageInner() {
   const [markPaidNow, setMarkPaidNow] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [prefilledFromVisit, setPrefilledFromVisit] = useState(false);
+  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
+  const [animalPopoverOpen, setAnimalPopoverOpen] = useState(false);
+  const [visitPopoverOpen, setVisitPopoverOpen] = useState(false);
 
   useBreadcrumbRegistration([
     { label: "Начало", href: "/" } satisfies BreadcrumbItem,
@@ -195,8 +236,8 @@ function NewInvoicePageInner() {
       setSubmitting(true);
       const res = (await create({
         ownerId: validationResult.data.ownerId,
-        animalId: validationResult.data.animalId ?? undefined,
-        visitId: validationResult.data.visitId ?? undefined,
+        animalId: validationResult.data.animalId?.trim() ? validationResult.data.animalId : undefined,
+        visitId: validationResult.data.visitId?.trim() ? validationResult.data.visitId : undefined,
         items: validationResult.data.items,
       })) as { ok: boolean; id: string; code?: string };
       if (res?.ok && res.id) {
@@ -220,10 +261,10 @@ function NewInvoicePageInner() {
     <main className="mx-auto max-w-3xl space-y-4 p-6">
       <h1 className="text-2xl font-semibold">Нова фактура</h1>
       <form onSubmit={onSubmit} className="grid gap-3">
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
           <div>
             <Label>Собственик</Label>
-            <Popover>
+            <Popover open={ownerPopoverOpen} onOpenChange={setOwnerPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
                   {ownerId
@@ -246,6 +287,7 @@ function NewInvoicePageInner() {
                         value={o._id}
                         onSelect={(v) => {
                           setOwnerId(v);
+                          setOwnerPopoverOpen(false);
                         }}
                       >
                         {o.name} · {o.phone}
@@ -258,7 +300,7 @@ function NewInvoicePageInner() {
           </div>
           <div>
             <Label>Животно</Label>
-            <Popover>
+            <Popover open={animalPopoverOpen} onOpenChange={setAnimalPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
                   {animalId
@@ -286,11 +328,67 @@ function NewInvoicePageInner() {
                           value={an._id}
                           onSelect={(v) => {
                             setAnimalId(v);
+                            setAnimalPopoverOpen(false);
                           }}
                         >
                           {an.name} ({an.species})
                         </CommandItem>
                       ))}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div>
+            <Label>Посещение</Label>
+            <Popover open={visitPopoverOpen} onOpenChange={setVisitPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  {visitId
+                    ? (() => {
+                        const selectedVisit = (visits ?? []).find((v) => v._id === visitId);
+                        return selectedVisit
+                          ? `${selectedVisit.code ?? `#${selectedVisit._id}`} - ${fmtDateTimeBG(selectedVisit.datetime ?? selectedVisit.createdAt)}`
+                          : "Без посещение";
+                      })()
+                    : "Без посещение"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput
+                    placeholder="Търси посещение..."
+                    value={visitSearch}
+                    onValueChange={setVisitSearch}
+                  />
+                  <CommandList>
+                    <CommandEmpty>Няма резултати</CommandEmpty>
+                    {visitId && (
+                      <CommandItem
+                        value="__clear__"
+                        onSelect={() => {
+                          setVisitId("");
+                          setVisitPopoverOpen(false);
+                        }}
+                      >
+                        <span className="text-muted-foreground">Без посещение</span>
+                      </CommandItem>
+                    )}
+                    {(visits ?? []).map((v) => (
+                      <CommandItem
+                        key={v._id}
+                        value={v._id}
+                        onSelect={(val) => {
+                          setVisitId(val);
+                          setVisitPopoverOpen(false);
+                        }}
+                      >
+                        <CalendarCheck className="mr-2 size-4 flex-shrink-0" aria-hidden />
+                        <span className="truncate">
+                          {v.code ?? `#${v._id}`} - {fmtDateTimeBG(v.datetime ?? v.createdAt)}
+                        </span>
+                      </CommandItem>
+                    ))}
                   </CommandList>
                 </Command>
               </PopoverContent>

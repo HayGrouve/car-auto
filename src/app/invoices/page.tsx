@@ -19,7 +19,7 @@ import type { InvoiceDoc } from "@/types/visit";
 import type { Id } from "@/../convex/_generated/dataModel";
 import dynamic from "next/dynamic";
 import { EmptyState } from "@/components/EmptyState";
-import { FileText, Printer, CheckCircle, ExternalLink } from "lucide-react";
+import { FileText, Printer, CheckCircle, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { SkeletonList } from "@/components/SkeletonList";
 // import dynamic from "next/dynamic";
 // const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
@@ -46,15 +46,23 @@ export default function InvoicesPage() {
   const [to, setTo] = useState("");
   const [unpaidOnly, setUnpaidOnly] = useState(true);
   const [page, setPage] = useState(0);
-  const pageSize = 20;
+  const pageSize = 10;
   const [sort, setSort] = useState<"createdAtDesc" | "createdAtAsc">(
     "createdAtDesc",
   );
-  const owners = useQuery(
+  const ownersQuery = useQuery(
     api.owners.list,
     useMemo(() => ({ search: "" }), []),
-  ) as { _id: string; name: string }[] | undefined;
-  const invoices = useQuery(
+  );
+  const ownersResult = ownersQuery as
+    | {
+        items: { _id: string; name: string }[];
+        total: number;
+        hasMore: boolean;
+      }
+    | undefined;
+  const owners = ownersResult?.items;
+  const invoicesQuery = useQuery(
     api.invoices.list,
     useMemo(
       () => ({
@@ -69,7 +77,11 @@ export default function InvoicesPage() {
       }),
       [unpaidOnly, ownerId, from, to, page, sort],
     ),
-  ) as InvoiceDoc[] | undefined;
+  );
+  const invoices = invoicesQuery as
+    | { items: InvoiceDoc[]; total: number; hasMore: boolean }
+    | undefined;
+  const invoicesList = invoices?.items ?? undefined;
   const [totalsDay, setTotalsDay] = useState(() => {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -77,6 +89,11 @@ export default function InvoicesPage() {
     const dd = String(d.getDate()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}`;
   });
+
+  const totalPages = useMemo(() => {
+    const total = invoices?.total ?? 0;
+    return total > 0 ? Math.ceil(total / pageSize) : 1;
+  }, [invoices?.total, pageSize]);
   const totals = useQuery(
     api.invoices.totals,
     useMemo(
@@ -105,7 +122,7 @@ export default function InvoicesPage() {
         <div className="flex w-full items-center gap-2 md:w-auto">
           <FileText className="text-primary size-5" />
           <h1 className="text-2xl font-semibold">
-            Фактури: {invoices?.length}
+            Фактури: {invoices?.total ?? 0}
           </h1>
         </div>
         <Button
@@ -175,7 +192,7 @@ export default function InvoicesPage() {
               setPage(0);
             }}
           >
-            <SelectTrigger className="h-10 w-full min-h-[44px]">
+            <SelectTrigger className="h-10 min-h-[44px] w-full">
               <SelectValue placeholder="Всички" />
             </SelectTrigger>
             <SelectContent>
@@ -223,7 +240,7 @@ export default function InvoicesPage() {
               setPage(0);
             }}
           >
-            <SelectTrigger className="h-10 w-full min-h-[44px]">
+            <SelectTrigger className="h-10 min-h-[44px] w-full">
               <SelectValue placeholder="Подредба" />
             </SelectTrigger>
             <SelectContent>
@@ -312,14 +329,14 @@ export default function InvoicesPage() {
       <div className="divide-y rounded-md border">
         {invoices === undefined ? (
           <SkeletonList rows={6} />
-        ) : (invoices ?? []).length === 0 ? (
+        ) : (invoicesList ?? []).length === 0 ? (
           <EmptyState
             icon={FileText}
             title="Няма фактури"
             description="Създайте нова фактура от посещение или от страницата за фактури."
           />
         ) : (
-          (invoices ?? []).map((inv) => (
+          (invoicesList ?? []).map((inv) => (
             <div
               key={inv._id}
               className="hover:bg-accent flex flex-col gap-3 p-3 text-sm sm:grid sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,1.6fr)]"
@@ -327,24 +344,28 @@ export default function InvoicesPage() {
               <div className="min-w-0 flex-1">
                 <a
                   href={`/invoices/${inv._id}`}
-                  className="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline min-h-[44px]"
+                  className="inline-flex min-h-[44px] items-center gap-1 font-medium underline-offset-2 hover:underline"
                   aria-label={`Преглед на фактура ${inv.code ?? String(inv._id)}`}
                 >
                   <FileText className="size-4 flex-shrink-0" aria-hidden />
                   <span className="truncate">
-                    {inv.code ?? `#${String(inv._id)}`} · {fmtDateTimeBG(inv.createdAt)}
+                    {inv.code ?? `#${String(inv._id)}`} ·{" "}
+                    {fmtDateTimeBG(inv.createdAt)}
                   </span>
                 </a>
                 <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
                   <InvoiceStatusBadge paid={inv.paid} paidAt={inv.paidAt} />
                   {inv.visitId ? (
                     <a
-                      className="inline-flex items-center gap-1 underline underline-offset-2 min-h-[44px]"
+                      className="inline-flex min-h-[44px] items-center gap-1 underline underline-offset-2"
                       href={`/visits/${inv.visitId}`}
                       aria-label="Към посещение"
                     >
-                      <ExternalLink className="size-3 flex-shrink-0" aria-hidden /> Към
-                      посещение
+                      <ExternalLink
+                        className="size-3 flex-shrink-0"
+                        aria-hidden
+                      />{" "}
+                      Към посещение
                     </a>
                   ) : null}
                 </div>
@@ -414,17 +435,17 @@ export default function InvoicesPage() {
           onClick={() => setPage((p) => Math.max(0, p - 1))}
           disabled={page === 0}
         >
+          <ChevronLeft className="mr-1 size-4" aria-hidden />
           Назад
         </Button>
-        <div className="text-muted-foreground text-sm">Страница {page + 1}</div>
+        <div className="text-muted-foreground text-sm">Страница {page + 1} от {totalPages}</div>
         <Button
           variant="outline"
-          onClick={() =>
-            setPage((p) => ((invoices ?? []).length < pageSize ? p : p + 1))
-          }
-          disabled={(invoices ?? []).length < pageSize}
+          onClick={() => setPage((p) => (invoices?.hasMore ? p + 1 : p))}
+          disabled={!invoices?.hasMore}
         >
           Напред
+          <ChevronRight className="ml-1 size-4" aria-hidden />
         </Button>
       </div>
     </main>

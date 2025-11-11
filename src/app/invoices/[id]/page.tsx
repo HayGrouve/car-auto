@@ -45,10 +45,14 @@ function InvoiceDetailPageContent() {
     api.invoices.getById,
     useMemo(() => (byId ? { id: byId } : "skip"), [byId]),
   ) as InvoiceDoc | undefined;
-  const list = useQuery(
+  const listQuery = useQuery(
     api.invoices.list,
     useMemo(() => ({}), []),
-  ) as { code?: string }[] | undefined;
+  );
+  const listResult = listQuery as
+    | { items: { code?: string }[]; total: number; hasMore: boolean }
+    | undefined;
+  const list = listResult?.items;
   const inv = useMemo(() => {
     if (invById) return invById;
     if (!list) return undefined;

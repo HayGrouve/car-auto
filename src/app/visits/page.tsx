@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { CalendarCheck, CheckCircle, FilePlus } from "lucide-react";
+import { CalendarCheck, CheckCircle, FilePlus, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import type { VisitDoc } from "@/types/visit";
 import { fmtDateTimeBG } from "@/lib/format";
 import type { Id } from "@/../convex/_generated/dataModel";
@@ -48,7 +48,7 @@ function VisitsPageInner() {
   const [sort, setSort] = useState<"datetimeDesc" | "datetimeAsc">(
     "datetimeDesc",
   );
-  const pageSize = 20;
+  const pageSize = 10;
 
   useBreadcrumbRegistration([
     { label: "Начало", href: "/" } satisfies BreadcrumbItem,
@@ -59,7 +59,7 @@ function VisitsPageInner() {
     } satisfies BreadcrumbItem,
   ]);
 
-  const visits = useQuery(
+  const visitsQuery = useQuery(
     api.visits.list,
     useMemo(
       () => ({
@@ -74,7 +74,11 @@ function VisitsPageInner() {
       }),
       [status, ownerId, animalId, from, to, page, sort],
     ),
-  ) as VisitDoc[] | undefined;
+  );
+  const visits = visitsQuery as
+    | { items: VisitDoc[]; total: number; hasMore: boolean }
+    | undefined;
+  const visitsList = visits?.items ?? undefined;
   const createVisit = useMutation(api.visits.create) as unknown as (args: {
     ownerId: string;
     animalId?: string;
@@ -83,6 +87,11 @@ function VisitsPageInner() {
   const finalizeVisit = useMutation(api.visits.finalize) as unknown as (args: {
     id: string;
   }) => Promise<{ ok: boolean }>;
+
+  const totalPages = useMemo(() => {
+    const total = visits?.total ?? 0;
+    return total > 0 ? Math.ceil(total / pageSize) : 1;
+  }, [visits?.total, pageSize]);
 
   const params = useSearchParams();
   useEffect(() => {
@@ -96,16 +105,26 @@ function VisitsPageInner() {
   const [ownerSearch, setOwnerSearch] = useState("");
   const [animalSearch, setAnimalSearch] = useState("");
 
-  const owners = useQuery(
+  const ownersQuery = useQuery(
     api.owners.list,
     useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
-  ) as { _id: string; name: string; phone: string }[] | undefined;
-  const animals = useQuery(
+  );
+  const ownersResult = ownersQuery as
+    | { items: { _id: string; name: string; phone: string }[]; total: number; hasMore: boolean }
+    | undefined;
+  const owners = ownersResult?.items;
+  const animalsQuery = useQuery(
     api.animals.list,
     useMemo(() => ({ search: animalSearch }), [animalSearch]),
-  ) as
-    | { _id: string; name: string; species: string; ownerId?: string | null }[]
+  );
+  const animalsResult = animalsQuery as
+    | {
+        items: { _id: string; name: string; species: string; ownerId?: string | null }[];
+        total: number;
+        hasMore: boolean;
+      }
     | undefined;
+  const animals = animalsResult?.items;
 
   async function onCreateNewVisit() {
     if (!ownerId) {
@@ -140,7 +159,7 @@ function VisitsPageInner() {
         <div className="flex w-full items-center gap-2 md:w-auto">
           <CalendarCheck className="text-primary size-5" />
           <h1 className="text-2xl font-semibold">
-            Посещения: {visits?.length}
+            Посещения: {visits?.total ?? 0}
           </h1>
         </div>
         <Button
@@ -420,14 +439,14 @@ function VisitsPageInner() {
       <div className="divide-y rounded-md border">
         {visits === undefined ? (
           <SkeletonList rows={5} />
-        ) : (visits ?? []).length === 0 ? (
+        ) : (visitsList ?? []).length === 0 ? (
           <EmptyState
             icon={CalendarCheck}
             title="Няма посещения"
             description="Създайте ново посещение от тази страница."
           />
         ) : (
-          (visits ?? []).map((v) => (
+          (visitsList ?? []).map((v) => (
             <div
               key={v._id}
               className="flex flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
@@ -475,6 +494,10 @@ function VisitsPageInner() {
                     href={`/invoices/${encodeURIComponent(v.invoiceCode)}`}
                     aria-label={`Отвори фактура ${v.invoiceCode} за посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                   >
+                    <Eye
+                      className="mr-1 size-4 flex-shrink-0"
+                      aria-hidden
+                    />{" "}
                     <span className="truncate">Виж фактура</span>
                   </a>
                 ) : (
@@ -501,17 +524,19 @@ function VisitsPageInner() {
           onClick={() => setPage((p) => Math.max(0, p - 1))}
           disabled={page === 0}
         >
+          <ChevronLeft className="mr-1 size-4" aria-hidden />
           Назад
         </Button>
-        <div className="text-muted-foreground text-sm">Страница {page + 1}</div>
+        <div className="text-muted-foreground text-sm">Страница {page + 1} от {totalPages}</div>
         <Button
           variant="outline"
           onClick={() =>
-            setPage((p) => ((visits ?? []).length < pageSize ? p : p + 1))
+            setPage((p) => (visits?.hasMore ? p + 1 : p))
           }
-          disabled={(visits ?? []).length < pageSize}
+          disabled={!visits?.hasMore}
         >
           Напред
+          <ChevronRight className="ml-1 size-4" aria-hidden />
         </Button>
       </div>
     </main>

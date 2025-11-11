@@ -104,36 +104,39 @@ export const list = query({
     const q = normalizePair(args.search ?? "");
     const byDateDesc = (a: any, b: any) => b.createdAt - a.createdAt;
     const byDateAsc = (a: any, b: any) => a.createdAt - b.createdAt;
+    let sorted: any[];
     if (!q.base && !q.ascii) {
-      const sorted =
+      sorted =
         args.sort === "createdAtAsc"
           ? filtered.sort(byDateAsc)
           : filtered.sort(byDateDesc);
-      const start = Math.max(0, args.offset ?? 0);
-      const end = (args.limit ?? sorted.length) + start;
-      return sorted.slice(start, end);
-    }
-    const matches = (value: unknown) => {
-      const p = normalizePair(String(value ?? ""));
-      return (
-        (p.base && q.base && p.base.includes(q.base)) ||
-        (p.ascii && q.ascii && p.ascii.includes(q.ascii)) ||
-        (p.base && q.ascii && p.base.includes(q.ascii)) ||
-        (p.ascii && q.base && p.ascii.includes(q.base))
+    } else {
+      const matches = (value: unknown) => {
+        const p = normalizePair(String(value ?? ""));
+        return (
+          (p.base && q.base && p.base.includes(q.base)) ||
+          (p.ascii && q.ascii && p.ascii.includes(q.ascii)) ||
+          (p.base && q.ascii && p.base.includes(q.ascii)) ||
+          (p.ascii && q.base && p.ascii.includes(q.base))
+        );
+      };
+      const matched = filtered.filter((o: any) =>
+        [o.name, o.phone, o.email]
+          .filter(Boolean)
+          .some((v: string) => matches(v)),
       );
-    };
-    const matched = filtered.filter((o: any) =>
-      [o.name, o.phone, o.email]
-        .filter(Boolean)
-        .some((v: string) => matches(v)),
-    );
-    const sorted =
-      args.sort === "createdAtAsc"
-        ? matched.sort(byDateAsc)
-        : matched.sort(byDateDesc);
+      sorted =
+        args.sort === "createdAtAsc"
+          ? matched.sort(byDateAsc)
+          : matched.sort(byDateDesc);
+    }
+    const total = sorted.length;
     const start = Math.max(0, args.offset ?? 0);
-    const end = (args.limit ?? sorted.length) + start;
-    return sorted.slice(start, end);
+    const limit = args.limit ?? total;
+    const end = limit + start;
+    const items = sorted.slice(start, end);
+    const hasMore = end < total;
+    return { items, total, hasMore };
   },
 });
 
