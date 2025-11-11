@@ -19,7 +19,14 @@ import type { InvoiceDoc } from "@/types/visit";
 import type { Id } from "@/../convex/_generated/dataModel";
 import dynamic from "next/dynamic";
 import { EmptyState } from "@/components/EmptyState";
-import { FileText, Printer, CheckCircle, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  FileText,
+  Printer,
+  CheckCircle,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { SkeletonList } from "@/components/SkeletonList";
 // import dynamic from "next/dynamic";
 // const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
@@ -44,7 +51,7 @@ export default function InvoicesPage() {
   const [ownerId, setOwnerId] = useState<string>(ALL_OWNERS_VALUE);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [unpaidOnly, setUnpaidOnly] = useState(true);
+  const [unpaidOnly, setUnpaidOnly] = useState(false);
   const [page, setPage] = useState(0);
   const pageSize = 10;
   const [sort, setSort] = useState<"createdAtDesc" | "createdAtAsc">(
@@ -315,7 +322,7 @@ export default function InvoicesPage() {
                 setOwnerId(ALL_OWNERS_VALUE);
                 setFrom("");
                 setTo("");
-                setUnpaidOnly(true);
+                setUnpaidOnly(false);
                 setPage(0);
               }}
               className="bg-muted hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
@@ -332,8 +339,12 @@ export default function InvoicesPage() {
         ) : (invoicesList ?? []).length === 0 ? (
           <EmptyState
             icon={FileText}
-            title="Няма фактури"
-            description="Създайте нова фактура от посещение или от страницата за фактури."
+            title={unpaidOnly ? "Няма неплатени фактури" : "Няма фактури"}
+            description={
+              unpaidOnly
+                ? "В момента няма неплатени фактури. Може да има платени фактури, но те не се показват с активния филтър."
+                : "Създайте нова фактура от посещение или от страницата за фактури."
+            }
           />
         ) : (
           (invoicesList ?? []).map((inv) => (
@@ -438,7 +449,9 @@ export default function InvoicesPage() {
           <ChevronLeft className="mr-1 size-4" aria-hidden />
           Назад
         </Button>
-        <div className="text-muted-foreground text-sm">Страница {page + 1} от {totalPages}</div>
+        <div className="text-muted-foreground text-sm">
+          Страница {page + 1} от {totalPages}
+        </div>
         <Button
           variant="outline"
           onClick={() => setPage((p) => (invoices?.hasMore ? p + 1 : p))}
