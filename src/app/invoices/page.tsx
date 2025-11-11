@@ -360,7 +360,7 @@ export default function InvoicesPage() {
           (invoicesList ?? []).map((inv) => (
             <div
               key={inv._id}
-              className="hover:bg-accent flex flex-col gap-3 p-3 text-sm sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]"
+              className="flex flex-col gap-3 p-3 text-sm sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex min-h-[44px] items-center justify-between gap-2 sm:justify-start sm:gap-3">

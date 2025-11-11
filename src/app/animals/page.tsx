@@ -215,7 +215,7 @@ export default function AnimalsPage() {
                 return (
                   <div
                     key={a._id}
-                    className="hover:bg-accent flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       <PawPrint

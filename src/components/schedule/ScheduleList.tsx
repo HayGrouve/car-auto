@@ -83,7 +83,7 @@ export function ScheduleList({
         return (
           <div
             key={slot._id}
-            className={`flex flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between ${isSlotPast ? "" : "hover:bg-accent"}`}
+            className="flex flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
