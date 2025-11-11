@@ -478,8 +478,8 @@ export default function VisitDetailPage() {
               },
             ]}
           >
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-3">
+            <div className="grid gap-6 md:grid-cols-2 md:justify-items-center">
+              <div className="space-y-3 w-full max-w-md">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   SOAP
                 </p>
@@ -527,7 +527,7 @@ export default function VisitDetailPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 w-full max-w-md">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Процедури
                 </p>
@@ -542,7 +542,7 @@ export default function VisitDetailPage() {
                 </ul>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 w-full max-w-md">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Медикаменти
                 </p>
@@ -557,7 +557,7 @@ export default function VisitDetailPage() {
                 </ul>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-3 w-full max-w-md">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Фактуриране
                 </p>

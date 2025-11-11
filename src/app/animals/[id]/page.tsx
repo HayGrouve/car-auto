@@ -380,7 +380,13 @@ export default function AnimalDetailPage() {
                     : animal.sex === "female"
                       ? "Женски"
                       : "Неизвестен";
-                const neuteredLabel = animal.neutered ? "Да" : "Не";
+                const neuteredLabel = animal.neutered
+                  ? animal.sex === "male"
+                    ? "Кастриран"
+                    : animal.sex === "female"
+                      ? "Кастрирана"
+                      : "Кастриран/а"
+                  : "Не";
                 const ageYears = summaryAge != null ? String(summaryAge) : "—";
                 const ownerName = owner?.name ?? "";
                 const ownerPhone = owner?.phone ?? "";
@@ -455,7 +461,14 @@ export default function AnimalDetailPage() {
                     ${row("Порода", animal.breed ?? "")}
                     ${row("Микрочип", animal.microchip ?? "")}
                     ${row("Пол", sexLabel)}
-                    ${row("Кастриран/а", neuteredLabel)}
+                    ${row(
+                      animal.sex === "male"
+                        ? "Кастриран"
+                        : animal.sex === "female"
+                          ? "Кастрирана"
+                          : "Кастриран/а",
+                      neuteredLabel,
+                    )}
                     ${row("Дата на раждане", animal.dob ? fmtDateTimeBG(animal.dob) : "")}
                     ${row("Възраст (г.)", ageYears)}
                     ${row("Създадено", fmtDateTimeBG(animal.createdAt))}
@@ -809,7 +822,13 @@ export default function AnimalDetailPage() {
                   setForm((f) => ({ ...f, neutered: Boolean(checked) }))
                 }
               />
-              <span className="text-sm">Кастриран/а</span>
+              <span className="text-sm">
+                {form.sex === "male"
+                  ? "Кастриран"
+                  : form.sex === "female"
+                    ? "Кастрирана"
+                    : "Кастриран/а"}
+              </span>
             </label>
           </div>
           <button type="submit" className="sr-only" aria-hidden="true">

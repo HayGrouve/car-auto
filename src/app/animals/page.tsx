@@ -244,7 +244,11 @@ export default function AnimalsPage() {
                           ) : null}
                           {a.neutered ? (
                             <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs">
-                              Кастриран
+                              {a.sex === "male"
+                                ? "Кастриран"
+                                : a.sex === "female"
+                                  ? "Кастрирана"
+                                  : "Кастриран/а"}
                             </span>
                           ) : null}
                           {owner ? (
@@ -450,7 +454,14 @@ export default function AnimalsPage() {
                           }
                           aria-invalid={!!methods.formState.errors.neutered}
                         />
-                        <span className="text-sm">Кастриран/а</span>
+                        <span className="text-sm">
+                          {(() => {
+                            const sex = methods.watch("sex");
+                            if (sex === "male") return "Кастриран";
+                            if (sex === "female") return "Кастрирана";
+                            return "Кастриран/а";
+                          })()}
+                        </span>
                       </label>
                     </FormField>
 

@@ -490,7 +490,7 @@ function VisitsPageInner() {
                 ) : null}
                 {v.invoiceCode ? (
                   <a
-                    className="hover:bg-accent inline-flex min-h-[44px] flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm sm:flex-none"
+                    className="hover:bg-accent inline-flex min-h-[44px] min-w-[140px] flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm sm:flex-none"
                     href={`/invoices/${encodeURIComponent(v.invoiceCode)}`}
                     aria-label={`Отвори фактура ${v.invoiceCode} за посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                   >
@@ -502,7 +502,7 @@ function VisitsPageInner() {
                   </a>
                 ) : (
                   <a
-                    className="hover:bg-accent inline-flex min-h-[44px] flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm sm:flex-none"
+                    className="hover:bg-accent inline-flex min-h-[44px] min-w-[140px] flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm sm:flex-none"
                     href={`/invoices/new?ownerId=${encodeURIComponent(String(v.ownerId))}${v.animalId ? `&animalId=${encodeURIComponent(String(v.animalId))}` : ""}&visitId=${encodeURIComponent(String(v._id))}`}
                     aria-label={`Нова фактура за посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                   >

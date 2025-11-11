@@ -222,7 +222,17 @@ export function AnimalSummaryCard({
                     d="M4.098 19.902A11.953 11.953 0 0112 17.25c2.818 0 5.414.978 7.402 2.652M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                {animal.neutered ? "Кастриран/а" : "Некатстриран/а"}
+                {animal.neutered
+                  ? animal.sex === "male"
+                    ? "Кастриран"
+                    : animal.sex === "female"
+                      ? "Кастрирана"
+                      : "Кастриран/а"
+                  : animal.sex === "male"
+                    ? "Некастриран"
+                    : animal.sex === "female"
+                      ? "Некастрирана"
+                      : "Некатстриран/а"}
               </span>
               {animal.microchip ? (
                 <span className="bg-muted inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">

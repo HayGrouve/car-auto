@@ -28,8 +28,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { SkeletonList } from "@/components/SkeletonList";
-// import dynamic from "next/dynamic";
-// const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
 import { InvoiceStatusBadge } from "@/components/StatusBadge";
 import {
   useBreadcrumbRegistration,
@@ -362,9 +360,9 @@ export default function InvoicesPage() {
           (invoicesList ?? []).map((inv) => (
             <div
               key={inv._id}
-              className="hover:bg-accent flex flex-col gap-3 p-3 text-sm sm:grid sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_minmax(0,1.6fr)]"
+              className="hover:bg-accent relative flex flex-col gap-3 p-3 text-sm sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]"
             >
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 pr-32 sm:pr-0">
                 <a
                   href={`/invoices/${inv._id}`}
                   className="inline-flex min-h-[44px] items-center gap-1 font-medium underline-offset-2 hover:underline"
@@ -404,48 +402,53 @@ export default function InvoicesPage() {
                   ))}
                 </ul>
               </div>
-              <div className="text-left font-medium sm:text-right">
-                Общо:{" "}
-                {fmtNumberBG(inv.total, { style: "currency", currency: "BGN" })}
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                <div className="flex flex-wrap justify-start gap-2 sm:flex-1 sm:justify-end md:flex-none">
-                  {inv.paid ? null : (
+              <div className="flex flex-col gap-2 sm:flex sm:flex-col sm:items-end sm:justify-between">
+                <div className="absolute top-3 right-3 text-right font-medium sm:static sm:text-right">
+                  Общо:{" "}
+                  {fmtNumberBG(inv.total, {
+                    style: "currency",
+                    currency: "BGN",
+                  })}
+                </div>
+                <div className="mt-2 flex flex-col gap-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-end">
+                  <div className="flex flex-wrap justify-start gap-2 sm:flex-1 sm:justify-end md:flex-none">
+                    {inv.paid ? null : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={paidLoading === inv._id}
+                        aria-label="Маркирай фактура като платена"
+                        className="min-h-[44px] flex-1 sm:flex-none"
+                        onClick={async () => {
+                          setPaidLoading(inv._id);
+                          await markPaid({ id: inv._id });
+                          setPaidLoading(null);
+                          toast.success("Фактура маркирана като платена");
+                          router.push("/");
+                        }}
+                      >
+                        <CheckCircle className="mr-1 size-4" aria-hidden />{" "}
+                        Маркирай платена
+                      </Button>
+                    )}
+                    <InvoicePdfButton
+                      inv={inv}
+                      fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
+                      size="sm"
+                      className="min-h-[44px] flex-1 sm:flex-none"
+                    />
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={paidLoading === inv._id}
-                      aria-label="Маркирай фактура като платена"
+                      aria-label={`Печат за фактура ${inv.code ?? String(inv._id)}`}
                       className="min-h-[44px] flex-1 sm:flex-none"
-                      onClick={async () => {
-                        setPaidLoading(inv._id);
-                        await markPaid({ id: inv._id });
-                        setPaidLoading(null);
-                        toast.success("Фактура маркирана като платена");
-                        router.push("/");
+                      onClick={() => {
+                        printInvoice(inv);
                       }}
                     >
-                      <CheckCircle className="mr-1 size-4" aria-hidden />{" "}
-                      Маркирай платена
+                      <Printer className="mr-1 size-4" aria-hidden /> Печат
                     </Button>
-                  )}
-                  <InvoicePdfButton
-                    inv={inv}
-                    fileName={`invoice-${inv.code ?? String(inv._id)}.pdf`}
-                    size="sm"
-                    className="min-h-[44px] flex-1 sm:flex-none"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    aria-label={`Печат за фактура ${inv.code ?? String(inv._id)}`}
-                    className="min-h-[44px] flex-1 sm:flex-none"
-                    onClick={() => {
-                      printInvoice(inv);
-                    }}
-                  >
-                    <Printer className="mr-1 size-4" aria-hidden /> Печат
-                  </Button>
+                  </div>
                 </div>
               </div>
             </div>

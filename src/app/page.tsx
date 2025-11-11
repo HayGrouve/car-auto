@@ -216,9 +216,6 @@ export default function HomePage() {
     <main className="mx-auto max-w-5xl space-y-6 p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-            {brand.nameBg}
-          </span>
           <h1 className="text-2xl font-semibold">Основно табло</h1>
           <p className="text-muted-foreground text-sm">
             Дневен преглед на пациенти, посещения, фактури и важни събития за
@@ -265,7 +262,7 @@ export default function HomePage() {
           </div>
           <div className="divide-y rounded-md border">
             {overview.todayScheduleSlots.length === 0 ? (
-              <div className="text-muted-foreground p-3 text-sm">
+              <div className="text-muted-foreground flex min-h-[72px] items-center p-3 text-sm">
                 Няма планирани посещения за днес
               </div>
             ) : (
@@ -371,10 +368,9 @@ export default function HomePage() {
         </section>
 
         <VisitList
-          title="Посещения днес"
+          title={`Посещения днес: ${overview.todayVisits.length}`}
           visits={todayVisits}
           emptyLabel="Няма планирани посещения"
-          footer={`Брой: ${overview.todayVisits.length}`}
         />
       </section>
     </main>
