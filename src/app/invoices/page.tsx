@@ -161,7 +161,7 @@ export default function InvoicesPage() {
             </div>
           </div>
           <div className="border-t" />
-          <div className="text-muted-foreground grid gap-3 text-sm md:grid-cols-3">
+          <div className="text-muted-foreground grid gap-3 text-sm md:grid-cols-4">
             <div className="flex items-center justify-between gap-3 md:block md:space-y-1">
               <span className="md:block">Неплатено за деня</span>
               <span className="text-foreground font-medium">
@@ -178,6 +178,18 @@ export default function InvoicesPage() {
                   style: "currency",
                   currency: "BGN",
                 })}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 md:block md:space-y-1">
+              <span className="md:block">Общо</span>
+              <span className="text-foreground font-medium">
+                {fmtNumberBG(
+                  (totals?.paidTotal ?? 0) + (totals?.unpaidTotal ?? 0),
+                  {
+                    style: "currency",
+                    currency: "BGN",
+                  },
+                )}
               </span>
             </div>
             <div className="flex items-center justify-between gap-3 md:block md:space-y-1">

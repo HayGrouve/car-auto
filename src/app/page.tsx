@@ -228,6 +228,37 @@ export default function HomePage() {
       </div>
 
       <section className="grid gap-4 md:grid-cols-2">
+        <div className="flex flex-col rounded-lg border p-4">
+          <Suspense
+            fallback={
+              <div className="flex h-[300px] items-center justify-center">
+                <SkeletonList rows={1} />
+              </div>
+            }
+          >
+            <TodayInvoicesChart
+              paid={overview.totals.today.paid ?? 0}
+              unpaid={overview.totals.today.unpaid ?? 0}
+            />
+          </Suspense>
+        </div>
+        <div className="flex flex-col rounded-lg border p-4">
+          <Suspense
+            fallback={
+              <div className="flex h-[300px] items-center justify-center">
+                <SkeletonList rows={1} />
+              </div>
+            }
+          >
+            <StatusBarChart
+              unpaidInvoices={overview.counts.unpaidInvoices ?? 0}
+              draftVisits={overview.counts.draftVisits ?? 0}
+            />
+          </Suspense>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
         <section className="space-y-2">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-medium">График днес</h2>
@@ -345,37 +376,6 @@ export default function HomePage() {
           emptyLabel="Няма планирани посещения"
           footer={`Брой: ${overview.todayVisits.length}`}
         />
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2">
-        <div className="flex flex-col rounded-lg border p-4">
-          <Suspense
-            fallback={
-              <div className="flex h-[300px] items-center justify-center">
-                <SkeletonList rows={1} />
-              </div>
-            }
-          >
-            <TodayInvoicesChart
-              paid={overview.totals.today.paid ?? 0}
-              unpaid={overview.totals.today.unpaid ?? 0}
-            />
-          </Suspense>
-        </div>
-        <div className="flex flex-col rounded-lg border p-4">
-          <Suspense
-            fallback={
-              <div className="flex h-[300px] items-center justify-center">
-                <SkeletonList rows={1} />
-              </div>
-            }
-          >
-            <StatusBarChart
-              unpaidInvoices={overview.counts.unpaidInvoices ?? 0}
-              draftVisits={overview.counts.draftVisits ?? 0}
-            />
-          </Suspense>
-        </div>
       </section>
     </main>
   );
