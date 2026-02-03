@@ -21,7 +21,7 @@ export function fmtNumberBG(
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("bg-BG", {
     style: "currency",
-    currency: "BGN",
+    currency: "EUR",
   }).format(value);
 }
 

@@ -116,7 +116,7 @@ function parseQuery(rawQuery: string): {
 
 // Format currency
 function formatCurrency(amount: number): string {
-  return `${amount.toFixed(2)} BGN`;
+  return `${amount.toFixed(2)} EUR`;
 }
 
 // Get status badge variant

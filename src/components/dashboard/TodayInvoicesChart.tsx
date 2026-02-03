@@ -63,9 +63,9 @@ export function TodayInvoicesChart({ paid, unpaid }: TodayInvoicesChartProps) {
                       : String(name ?? "");
                   const formatted = fmtNumberBG(numValue, {
                     style: "currency",
-                    currency: "BGN",
+                    currency: "EUR",
                   });
-                  const formattedWithSpace = formatted.replace(/лв\.$/, "лв. ");
+                  const formattedWithSpace = formatted.replace(/€$/, "€ ");
                   return [formattedWithSpace, label];
                 }}
               />
@@ -93,7 +93,7 @@ export function TodayInvoicesChart({ paid, unpaid }: TodayInvoicesChartProps) {
         </PieChart>
       </ChartContainer>
       <div className="text-muted-foreground mt-2 text-center text-xs sm:text-sm">
-        Общо: {fmtNumberBG(total, { style: "currency", currency: "BGN" })}
+        Общо: {fmtNumberBG(total, { style: "currency", currency: "EUR" })}
       </div>
     </div>
   );

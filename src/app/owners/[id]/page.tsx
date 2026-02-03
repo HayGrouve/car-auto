@@ -245,7 +245,7 @@ export default function OwnerDetailPage() {
           Неплатени общо:{" "}
           {fmtNumberBG(
             (ownerUnpaid ?? []).reduce((s: number, i) => s + (i.total ?? 0), 0),
-            { style: "currency", currency: "BGN" },
+            { style: "currency", currency: "EUR" },
           )}
         </div>
         <div>
@@ -519,11 +519,11 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
         <div className="text-muted-foreground flex items-center gap-3 text-sm">
           <span>
             Неплатени:{" "}
-            {fmtNumberBG(totals.unpaid, { style: "currency", currency: "BGN" })}
+            {fmtNumberBG(totals.unpaid, { style: "currency", currency: "EUR" })}
           </span>
           <span>
             Платени:{" "}
-            {fmtNumberBG(totals.paid, { style: "currency", currency: "BGN" })}
+            {fmtNumberBG(totals.paid, { style: "currency", currency: "EUR" })}
           </span>
           <label className="inline-flex items-center gap-2">
             <Checkbox
@@ -560,7 +560,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
                     Общо:{" "}
                     {fmtNumberBG(inv.total, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: "EUR",
                     })}
                   </div>
                 </div>
@@ -586,7 +586,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
                       {it.description} × {it.quantity} —{" "}
                       {fmtNumberBG(it.total, {
                         style: "currency",
-                        currency: "BGN",
+                        currency: "EUR",
                       })}
                     </li>
                   ))}
@@ -597,7 +597,7 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
                   Общо:{" "}
                   {fmtNumberBG(inv.total, {
                     style: "currency",
-                    currency: "BGN",
+                    currency: "EUR",
                   })}
                 </div>
                 <div className="mt-2 flex flex-col gap-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-end">

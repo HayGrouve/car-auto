@@ -42,7 +42,11 @@ function NewInvoicePageInner() {
     useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
   );
   const ownersResult = ownersQuery as
-    | { items: { _id: string; name: string; phone: string }[]; total: number; hasMore: boolean }
+    | {
+        items: { _id: string; name: string; phone: string }[];
+        total: number;
+        hasMore: boolean;
+      }
     | undefined;
   const owners = ownersResult?.items;
   const animalsQuery = useQuery(
@@ -51,7 +55,12 @@ function NewInvoicePageInner() {
   );
   const animalsResult = animalsQuery as
     | {
-        items: { _id: string; name: string; species: string; ownerId?: string | null }[];
+        items: {
+          _id: string;
+          name: string;
+          species: string;
+          ownerId?: string | null;
+        }[];
         total: number;
         hasMore: boolean;
       }
@@ -205,7 +214,7 @@ function NewInvoicePageInner() {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
+
     // Validate invoice data
     const payloadItems = items
       .filter((it) => it.description.trim())
@@ -215,29 +224,35 @@ function NewInvoicePageInner() {
         price: parseFloat(it.price || "0"),
         total: it.total,
       }));
-    
+
     const invoiceData = {
       ownerId: ownerId || "",
       animalId: animalId || "",
       visitId: visitId || "",
       items: payloadItems,
     };
-    
+
     // Validate using schema
     const validationResult = invoiceFormSchema.safeParse(invoiceData);
-    
+
     if (!validationResult.success) {
       const firstError = validationResult.error.errors[0];
-      toast.error(firstError?.message ?? "Моля, попълнете всички задължителни полета");
+      toast.error(
+        firstError?.message ?? "Моля, попълнете всички задължителни полета",
+      );
       return;
     }
-    
+
     try {
       setSubmitting(true);
       const res = (await create({
         ownerId: validationResult.data.ownerId,
-        animalId: validationResult.data.animalId?.trim() ? validationResult.data.animalId : undefined,
-        visitId: validationResult.data.visitId?.trim() ? validationResult.data.visitId : undefined,
+        animalId: validationResult.data.animalId?.trim()
+          ? validationResult.data.animalId
+          : undefined,
+        visitId: validationResult.data.visitId?.trim()
+          ? validationResult.data.visitId
+          : undefined,
         items: validationResult.data.items,
       })) as { ok: boolean; id: string; code?: string };
       if (res?.ok && res.id) {
@@ -259,7 +274,9 @@ function NewInvoicePageInner() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
-      <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">Нова фактура</h1>
+      <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
+        Нова фактура
+      </h1>
       <form onSubmit={onSubmit} className="grid gap-3">
         <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
           <div>
@@ -300,7 +317,10 @@ function NewInvoicePageInner() {
           </div>
           <div>
             <Label>Животно</Label>
-            <Popover open={animalPopoverOpen} onOpenChange={setAnimalPopoverOpen}>
+            <Popover
+              open={animalPopoverOpen}
+              onOpenChange={setAnimalPopoverOpen}
+            >
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
                   {animalId
@@ -346,7 +366,9 @@ function NewInvoicePageInner() {
                 <Button variant="outline" className="w-full justify-between">
                   {visitId
                     ? (() => {
-                        const selectedVisit = (visits ?? []).find((v) => v._id === visitId);
+                        const selectedVisit = (visits ?? []).find(
+                          (v) => v._id === visitId,
+                        );
                         return selectedVisit
                           ? `${selectedVisit.code ?? `#${selectedVisit._id}`} - ${fmtDateTimeBG(selectedVisit.datetime ?? selectedVisit.createdAt)}`
                           : "Без посещение";
@@ -371,7 +393,9 @@ function NewInvoicePageInner() {
                           setVisitPopoverOpen(false);
                         }}
                       >
-                        <span className="text-muted-foreground">Без посещение</span>
+                        <span className="text-muted-foreground">
+                          Без посещение
+                        </span>
                       </CommandItem>
                     )}
                     {(visits ?? []).map((v) => (
@@ -383,9 +407,13 @@ function NewInvoicePageInner() {
                           setVisitPopoverOpen(false);
                         }}
                       >
-                        <CalendarCheck className="mr-2 size-4 flex-shrink-0" aria-hidden />
+                        <CalendarCheck
+                          className="mr-2 size-4 flex-shrink-0"
+                          aria-hidden
+                        />
                         <span className="truncate">
-                          {v.code ?? `#${v._id}`} - {fmtDateTimeBG(v.datetime ?? v.createdAt)}
+                          {v.code ?? `#${v._id}`} -{" "}
+                          {fmtDateTimeBG(v.datetime ?? v.createdAt)}
                         </span>
                       </CommandItem>
                     ))}
@@ -400,17 +428,35 @@ function NewInvoicePageInner() {
           {items.map((it, idx) => {
             const qtyNum = parseFloat(it.quantity || "0");
             const priceNum = parseFloat(it.price || "0");
-            const hasQtyError = it.quantity && (isNaN(qtyNum) || qtyNum <= 0 || !Number.isInteger(qtyNum) || qtyNum > 9999);
-            const hasPriceError = it.price && (isNaN(priceNum) || priceNum < 0 || priceNum > 999999.99);
-            
+            const hasQtyError =
+              it.quantity &&
+              (isNaN(qtyNum) ||
+                qtyNum <= 0 ||
+                !Number.isInteger(qtyNum) ||
+                qtyNum > 9999);
+            const hasPriceError =
+              it.price &&
+              (isNaN(priceNum) || priceNum < 0 || priceNum > 999999.99);
+
             return (
-              <div key={idx} className="grid items-end gap-2 p-3 md:grid-cols-5">
+              <div
+                key={idx}
+                className="grid items-end gap-2 p-3 md:grid-cols-5"
+              >
                 <div className="md:col-span-2">
                   <FormField
                     label="Описание"
                     htmlFor={`desc-${idx}`}
-                    error={it.description.trim() && it.description.length > 200 ? "Описанието не може да надвишава 200 символа" : undefined}
-                    hint={idx === 0 ? "Въведете описание на услугата или продукта" : undefined}
+                    error={
+                      it.description.trim() && it.description.length > 200
+                        ? "Описанието не може да надвишава 200 символа"
+                        : undefined
+                    }
+                    hint={
+                      idx === 0
+                        ? "Въведете описание на услугата или продукта"
+                        : undefined
+                    }
                   >
                     <Input
                       id={`desc-${idx}`}
@@ -418,7 +464,11 @@ function NewInvoicePageInner() {
                       onChange={(e) =>
                         recalcTotal(idx, { description: e.target.value })
                       }
-                      aria-invalid={it.description.trim() && it.description.length > 200 ? true : undefined}
+                      aria-invalid={
+                        it.description.trim() && it.description.length > 200
+                          ? true
+                          : undefined
+                      }
                     />
                   </FormField>
                 </div>
@@ -426,7 +476,11 @@ function NewInvoicePageInner() {
                   <FormField
                     label="Кол-во"
                     htmlFor={`qty-${idx}`}
-                    error={hasQtyError ? "Количеството трябва да е положително цяло число (макс. 9999)" : undefined}
+                    error={
+                      hasQtyError
+                        ? "Количеството трябва да е положително цяло число (макс. 9999)"
+                        : undefined
+                    }
                     hint="Въведете количество"
                   >
                     <Input
@@ -444,20 +498,26 @@ function NewInvoicePageInner() {
                   <FormField
                     label="Цена"
                     htmlFor={`price-${idx}`}
-                    error={hasPriceError ? "Цената трябва да е неотрицателно число (макс. 999999.99)" : undefined}
-                    hint="Въведете цена в BGN"
+                    error={
+                      hasPriceError
+                        ? "Цената трябва да е неотрицателно число (макс. 999999.99)"
+                        : undefined
+                    }
+                    hint="Въведете цена в EUR"
                   >
                     <Input
                       id={`price-${idx}`}
                       inputMode="decimal"
                       value={it.price}
-                      onChange={(e) => recalcTotal(idx, { price: e.target.value })}
+                      onChange={(e) =>
+                        recalcTotal(idx, { price: e.target.value })
+                      }
                       aria-invalid={!!hasPriceError}
                     />
                   </FormField>
                 </div>
                 <div className="text-right">
-                  {Number.isFinite(it.total) ? it.total.toFixed(2) : "0.00"} BGN
+                  {Number.isFinite(it.total) ? it.total.toFixed(2) : "0.00"} EUR
                 </div>
               </div>
             );
@@ -564,7 +624,7 @@ function NewInvoicePageInner() {
                 (s, it) => s + (Number.isFinite(it.total) ? it.total : 0),
                 0,
               ),
-              { style: "currency", currency: "BGN" },
+              { style: "currency", currency: "EUR" },
             )}
           </div>
           <div className="flex items-center gap-3">

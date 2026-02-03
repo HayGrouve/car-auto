@@ -165,7 +165,7 @@ export default function InvoicesPage() {
               <span className="text-foreground font-medium">
                 {fmtNumberBG(totals?.unpaidTotal ?? 0, {
                   style: "currency",
-                  currency: "BGN",
+                  currency: "EUR",
                 })}
               </span>
             </div>
@@ -174,7 +174,7 @@ export default function InvoicesPage() {
               <span className="text-foreground font-medium">
                 {fmtNumberBG(totals?.paidTotal ?? 0, {
                   style: "currency",
-                  currency: "BGN",
+                  currency: "EUR",
                 })}
               </span>
             </div>
@@ -185,7 +185,7 @@ export default function InvoicesPage() {
                   (totals?.paidTotal ?? 0) + (totals?.unpaidTotal ?? 0),
                   {
                     style: "currency",
-                    currency: "BGN",
+                    currency: "EUR",
                   },
                 )}
               </span>
@@ -375,11 +375,11 @@ export default function InvoicesPage() {
                       {fmtDateTimeBG(inv.createdAt)}
                     </span>
                   </a>
-                  <div className="text-right text-xs font-medium flex-shrink-0 sm:hidden">
+                  <div className="flex-shrink-0 text-right text-xs font-medium sm:hidden">
                     Общо:{" "}
                     {fmtNumberBG(inv.total, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: "EUR",
                     })}
                   </div>
                 </div>
@@ -405,7 +405,7 @@ export default function InvoicesPage() {
                       {it.description} × {it.quantity} —{" "}
                       {fmtNumberBG(it.total, {
                         style: "currency",
-                        currency: "BGN",
+                        currency: "EUR",
                       })}
                     </li>
                   ))}
@@ -416,7 +416,7 @@ export default function InvoicesPage() {
                   Общо:{" "}
                   {fmtNumberBG(inv.total, {
                     style: "currency",
-                    currency: "BGN",
+                    currency: "EUR",
                   })}
                 </div>
                 <div className="mt-2 flex flex-col gap-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-end">
@@ -436,7 +436,10 @@ export default function InvoicesPage() {
                           router.push("/");
                         }}
                       >
-                        <CheckCircle className="mr-1 size-3 sm:size-4" aria-hidden />{" "}
+                        <CheckCircle
+                          className="mr-1 size-3 sm:size-4"
+                          aria-hidden
+                        />{" "}
                         Маркирай платена
                       </Button>
                     )}
@@ -455,7 +458,8 @@ export default function InvoicesPage() {
                         printInvoice(inv);
                       }}
                     >
-                      <Printer className="mr-1 size-3 sm:size-4" aria-hidden /> Печат
+                      <Printer className="mr-1 size-3 sm:size-4" aria-hidden />{" "}
+                      Печат
                     </Button>
                   </div>
                 </div>
@@ -474,8 +478,12 @@ export default function InvoicesPage() {
           Назад
         </Button>
         <div className="text-muted-foreground text-sm">
-          <span className="sm:hidden">{page + 1}/{totalPages}</span>
-          <span className="hidden sm:inline">Страница {page + 1} от {totalPages}</span>
+          <span className="sm:hidden">
+            {page + 1}/{totalPages}
+          </span>
+          <span className="hidden sm:inline">
+            Страница {page + 1} от {totalPages}
+          </span>
         </div>
         <Button
           variant="outline"

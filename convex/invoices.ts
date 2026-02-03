@@ -229,7 +229,7 @@ export const create = mutation({
           args.visitId as any,
           {
             invoiceCode: code,
-            outstandingAmount: `${total.toFixed(2)} BGN`,
+            outstandingAmount: `${total.toFixed(2)} EUR`,
             updatedAt: now,
           } as any,
         );
@@ -260,7 +260,7 @@ export const markPaid = mutation({
               updatedAt: now,
             } as any,
           );
-          
+
           // Finalize the visit if it's not already finalized
           const visitStatus = (visit as any).status;
           if (visitStatus !== "finalized") {
@@ -268,7 +268,7 @@ export const markPaid = mutation({
               status: "finalized",
               updatedAt: now,
             });
-            
+
             // Update schedule slot status to "completed" if linked to this visit
             try {
               const slots = await ctx.db
@@ -284,11 +284,11 @@ export const markPaid = mutation({
             } catch (_) {
               // optional; ignore failures
             }
-            
+
             // Update procedure/medication catalogs (same logic as visits.finalize)
             const procedures: string[] = (visit as any).procedures ?? [];
             const medications: string[] = (visit as any).medications ?? [];
-            
+
             // Update procedure catalog
             try {
               for (const name of procedures) {
@@ -300,12 +300,16 @@ export const markPaid = mutation({
                   await ctx.db.patch(existing._id, {
                     count: (existing as any).count + 1,
                   } as any);
-                else await ctx.db.insert("procedureCatalog", { name, count: 1 } as any);
+                else
+                  await ctx.db.insert("procedureCatalog", {
+                    name,
+                    count: 1,
+                  } as any);
               }
             } catch (_) {
               // table may not exist; ignore
             }
-            
+
             // Update medication catalog
             try {
               for (const name of medications) {
@@ -318,7 +322,10 @@ export const markPaid = mutation({
                     count: (existing as any).count + 1,
                   } as any);
                 else
-                  await ctx.db.insert("medicationCatalog", { name, count: 1 } as any);
+                  await ctx.db.insert("medicationCatalog", {
+                    name,
+                    count: 1,
+                  } as any);
               }
             } catch (_) {
               // table may not exist; ignore

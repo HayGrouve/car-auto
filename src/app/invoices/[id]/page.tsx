@@ -104,7 +104,9 @@ function InvoiceDetailPageContent() {
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">Фактура: {inv.code}</h1>
+        <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
+          Фактура: {inv.code}
+        </h1>
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" onClick={() => router.back()}>
             Назад
@@ -173,7 +175,7 @@ function InvoiceDetailPageContent() {
                     Цена:{" "}
                     {fmtNumberBG(it.price, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: "EUR",
                     })}
                   </span>
                 </div>
@@ -182,7 +184,7 @@ function InvoiceDetailPageContent() {
                   <span>
                     {fmtNumberBG(it.total, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: "EUR",
                     })}
                   </span>
                 </div>
@@ -193,7 +195,7 @@ function InvoiceDetailPageContent() {
               <span>
                 {fmtNumberBG(inv.total, {
                   style: "currency",
-                  currency: "BGN",
+                  currency: "EUR",
                 })}
               </span>
             </div>
@@ -217,13 +219,13 @@ function InvoiceDetailPageContent() {
                   <td className="py-2 text-right">
                     {fmtNumberBG(it.price, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: "EUR",
                     })}
                   </td>
                   <td className="py-2 text-right">
                     {fmtNumberBG(it.total, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: "EUR",
                     })}
                   </td>
                 </tr>
@@ -237,7 +239,7 @@ function InvoiceDetailPageContent() {
                 <td className="py-2 text-right font-medium">
                   {fmtNumberBG(inv.total, {
                     style: "currency",
-                    currency: "BGN",
+                    currency: "EUR",
                   })}
                 </td>
               </tr>

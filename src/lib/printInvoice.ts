@@ -10,8 +10,8 @@ export function printInvoice(inv: InvoiceDoc): void {
         <tr>
           <td>${it.description}</td>
           <td style="text-align:right;">${it.quantity}</td>
-          <td style="text-align:right;">${fmtNumberBG(it.price, { style: "currency", currency: "BGN" })}</td>
-          <td style="text-align:right;">${fmtNumberBG(it.total, { style: "currency", currency: "BGN" })}</td>
+          <td style="text-align:right;">${fmtNumberBG(it.price, { style: "currency", currency: "EUR" })}</td>
+          <td style="text-align:right;">${fmtNumberBG(it.total, { style: "currency", currency: "EUR" })}</td>
         </tr>
       `,
     )
@@ -32,7 +32,7 @@ export function printInvoice(inv: InvoiceDoc): void {
       <tbody>${rows}</tbody>
       <tfoot><tr><td colspan="3" style="text-align:right;">Общо</td><td style="text-align:right;">${fmtNumberBG(
         inv.total,
-        { style: "currency", currency: "BGN" },
+        { style: "currency", currency: "EUR" },
       )}</td></tr></tfoot>
       </table>
     </body></html>`;
