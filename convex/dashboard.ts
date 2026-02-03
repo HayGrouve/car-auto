@@ -263,10 +263,13 @@ export const monthlyRevenue = query({
     invoiceDocs.forEach((inv) => {
       const date = new Date(inv.createdAt);
       const monthIndex = date.getUTCMonth();
-      if (inv.paid) {
-        data[monthIndex].paid += inv.total ?? 0;
-      } else {
-        data[monthIndex].unpaid += inv.total ?? 0;
+      const monthData = data[monthIndex];
+      if (monthData) {
+        if (inv.paid) {
+          monthData.paid += inv.total ?? 0;
+        } else {
+          monthData.unpaid += inv.total ?? 0;
+        }
       }
     });
 

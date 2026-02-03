@@ -102,10 +102,12 @@ export default function HomePage() {
 
   const monthlyRevenueData = useMemo(() => {
     return (
-      (monthlyRevenue as any[])?.map((m) => ({
-        name: m.name as string,
-        paid: m.paid as number,
-        unpaid: m.unpaid as number,
+      (monthlyRevenue as
+        | { name: string; paid: number; unpaid: number }[]
+        | undefined)?.map((m) => ({
+        name: m.name,
+        paid: m.paid,
+        unpaid: m.unpaid,
       })) ?? []
     );
   }, [monthlyRevenue]);
