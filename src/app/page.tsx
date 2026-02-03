@@ -101,11 +101,13 @@ export default function HomePage() {
   const monthlyRevenue = useQuery(api.dashboard.monthlyRevenue, {});
 
   const monthlyRevenueData = useMemo(() => {
-    return (monthlyRevenue as any[])?.map((m) => ({
-      name: m.name as string,
-      paid: m.paid as number,
-      unpaid: m.unpaid as number,
-    })) ?? [];
+    return (
+      (monthlyRevenue as any[])?.map((m) => ({
+        name: m.name as string,
+        paid: m.paid as number,
+        unpaid: m.unpaid as number,
+      })) ?? []
+    );
   }, [monthlyRevenue]);
   const createVisit = useMutation(api.visits.create) as unknown as (args: {
     ownerId: string;
