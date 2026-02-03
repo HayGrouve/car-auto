@@ -36,9 +36,9 @@ export function TodayInvoicesChart({ paid, unpaid }: TodayInvoicesChartProps) {
 
   if (total === 0) {
     return (
-      <div className="space-y-2">
-        <h3 className="text-base font-medium sm:text-lg">Фактури днес</h3>
-        <div className="text-muted-foreground flex h-[200px] items-center justify-center rounded-lg border sm:h-[300px]">
+      <div className="flex h-[300px] flex-col space-y-2 sm:h-[400px]">
+        <h3 className="text-base font-medium sm:text-lg">Приходи днес</h3>
+        <div className="text-muted-foreground flex flex-1 items-center justify-center rounded-lg border">
           Няма фактури за днес
         </div>
       </div>
@@ -46,8 +46,8 @@ export function TodayInvoicesChart({ paid, unpaid }: TodayInvoicesChartProps) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <h3 className="mb-2 text-base font-medium sm:text-lg">Фактури днес</h3>
+    <div className="flex h-[300px] flex-col sm:h-[400px]">
+      <h3 className="mb-2 text-base font-medium sm:text-lg">Приходи днес</h3>
       <ChartContainer config={chartConfig} className="min-h-0 w-full flex-1">
         <PieChart>
           <ChartTooltip
@@ -65,8 +65,7 @@ export function TodayInvoicesChart({ paid, unpaid }: TodayInvoicesChartProps) {
                     style: "currency",
                     currency: "EUR",
                   });
-                  const formattedWithSpace = formatted.replace(/€$/, "€ ");
-                  return [formattedWithSpace, label];
+                  return [formatted, label];
                 }}
               />
             }

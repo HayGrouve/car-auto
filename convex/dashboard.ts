@@ -221,3 +221,55 @@ export const overview = query({
     } as const;
   },
 });
+
+export const monthlyRevenue = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = new Date();
+    const currentYear = now.getUTCFullYear();
+    const yearStart = new Date(Date.UTC(currentYear, 0, 1)).getTime();
+    const yearEnd = new Date(
+      Date.UTC(currentYear, 11, 31, 23, 59, 59, 999),
+    ).getTime();
+
+    const invoiceDocs = await ctx.db
+      .query("invoices")
+      .filter((q) => q.gte(q.field("createdAt"), yearStart))
+      .filter((q) => q.lte(q.field("createdAt"), yearEnd))
+      .collect();
+
+    const months = [
+      "Яну",
+      "Фев",
+      "Мар",
+      "Апр",
+      "Май",
+      "Юни",
+      "Юли",
+      "Авг",
+      "Сеп",
+      "Окт",
+      "Ное",
+      "Дек",
+    ];
+
+    const data = months.map((name, index) => ({
+      name,
+      paid: 0,
+      unpaid: 0,
+      month: index,
+    }));
+
+    invoiceDocs.forEach((inv) => {
+      const date = new Date(inv.createdAt);
+      const monthIndex = date.getUTCMonth();
+      if (inv.paid) {
+        data[monthIndex].paid += inv.total ?? 0;
+      } else {
+        data[monthIndex].unpaid += inv.total ?? 0;
+      }
+    });
+
+    return data;
+  },
+});

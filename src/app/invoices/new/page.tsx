@@ -517,7 +517,10 @@ function NewInvoicePageInner() {
                   </FormField>
                 </div>
                 <div className="text-right">
-                  {Number.isFinite(it.total) ? it.total.toFixed(2) : "0.00"} EUR
+                  {fmtNumberBG(it.total, {
+                    style: "currency",
+                    currency: "EUR",
+                  })}
                 </div>
               </div>
             );

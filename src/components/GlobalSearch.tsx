@@ -32,6 +32,7 @@ import {
 import { fmtDateTimeBG } from "@/lib/format";
 import { highlightMatch } from "@/lib/search-utils";
 import { Badge } from "@/components/ui/badge";
+import { fmtNumberBG } from "@/lib/format";
 
 const HISTORY_STORAGE_KEY = "alisa.searchHistory.v1";
 const HISTORY_LIMIT = 8;
@@ -116,7 +117,7 @@ function parseQuery(rawQuery: string): {
 
 // Format currency
 function formatCurrency(amount: number): string {
-  return `${amount.toFixed(2)} EUR`;
+  return fmtNumberBG(amount, { style: "currency", currency: "EUR" });
 }
 
 // Get status badge variant

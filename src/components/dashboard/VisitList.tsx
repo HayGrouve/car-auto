@@ -40,7 +40,7 @@ export function VisitList({
         {actionLabel ? (
           <Link
             href="/visits"
-            className="text-muted-foreground text-xs underline underline-offset-2 cursor-pointer"
+            className="text-muted-foreground cursor-pointer text-xs underline underline-offset-2"
           >
             {actionLabel}
           </Link>
@@ -48,20 +48,22 @@ export function VisitList({
       </div>
       <div className="divide-y rounded-md border">
         {visits.length === 0 ? (
-          <div className="text-muted-foreground p-3 text-sm">{emptyLabel}</div>
+          <div className="text-muted-foreground flex min-h-[72px] items-center p-3 text-sm">
+            {emptyLabel}
+          </div>
         ) : (
           visits.map((visit) => (
             <div
               key={visit._id}
               className={cn(
-                "flex items-center justify-between gap-3 p-3 text-sm min-h-[72px]",
+                "flex min-h-[72px] items-center justify-between gap-3 p-3 text-sm",
                 visit.highlight && "bg-muted/50",
               )}
             >
               <div className="space-y-1">
                 <Link
                   href={`/visits/${visit._id}`}
-                  className="font-medium underline-offset-2 hover:underline cursor-pointer"
+                  className="cursor-pointer font-medium underline-offset-2 hover:underline"
                 >
                   {visit.code ?? `#${visit._id}`}
                 </Link>

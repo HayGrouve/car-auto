@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { useMemo, Suspense } from "react";
+import { useMemo, Suspense, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
-import { Clock } from "lucide-react";
+import { Clock, BarChart3, PieChart as PieChartIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 
 import { api } from "@/../convex/_generated/api";
@@ -36,6 +36,14 @@ const StatusBarChart = dynamic(
   () =>
     import("@/components/dashboard/StatusBarChart").then((m) => ({
       default: m.StatusBarChart,
+    })),
+  { ssr: false },
+);
+
+const MonthlyRevenueChart = dynamic(
+  () =>
+    import("@/components/dashboard/MonthlyRevenueChart").then((m) => ({
+      default: m.MonthlyRevenueChart,
     })),
   { ssr: false },
 );
@@ -86,9 +94,19 @@ type DashboardOverview = {
 
 export default function HomePage() {
   const router = useRouter();
+  const [chartView, setChartView] = useState<"today" | "monthly">("today");
   const overview = useQuery(api.dashboard.overview, {}) as
     | DashboardOverview
     | undefined;
+  const monthlyRevenue = useQuery(api.dashboard.monthlyRevenue, {});
+
+  const monthlyRevenueData = useMemo(() => {
+    return (monthlyRevenue as any[])?.map((m) => ({
+      name: m.name as string,
+      paid: m.paid as number,
+      unpaid: m.unpaid as number,
+    })) ?? [];
+  }, [monthlyRevenue]);
   const createVisit = useMutation(api.visits.create) as unknown as (args: {
     ownerId: string;
     animalId?: string;
@@ -190,7 +208,9 @@ export default function HomePage() {
     return (
       <main className="mx-auto max-w-5xl space-y-6 p-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">Табло на {brand.nameBg}</h1>
+          <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
+            Табло на {brand.nameBg}
+          </h1>
           <div className="w-72">
             <SkeletonList rows={1} />
           </div>
@@ -216,7 +236,9 @@ export default function HomePage() {
     <main className="mx-auto max-w-5xl space-y-6 p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">Основно табло</h1>
+          <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
+            Основно табло
+          </h1>
           <p className="text-muted-foreground text-sm">
             Дневен преглед на пациенти, посещения, фактури и важни събития за
             клиниката.
@@ -225,18 +247,43 @@ export default function HomePage() {
       </div>
 
       <section className="grid gap-4 md:grid-cols-2">
-        <div className="flex flex-col rounded-lg border p-4">
+        <div className="relative flex flex-col rounded-lg border p-4">
+          <div className="absolute top-4 right-4 z-10">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              onClick={() =>
+                setChartView(chartView === "today" ? "monthly" : "today")
+              }
+              title={
+                chartView === "today"
+                  ? "Виж месечни приходи"
+                  : "Виж днешни фактури"
+              }
+            >
+              {chartView === "today" ? (
+                <BarChart3 className="size-4" />
+              ) : (
+                <PieChartIcon className="size-4" />
+              )}
+            </Button>
+          </div>
           <Suspense
             fallback={
-              <div className="flex h-[300px] items-center justify-center">
+              <div className="flex h-[300px] items-center justify-center sm:h-[400px]">
                 <SkeletonList rows={1} />
               </div>
             }
           >
-            <TodayInvoicesChart
-              paid={overview.totals.today.paid ?? 0}
-              unpaid={overview.totals.today.unpaid ?? 0}
-            />
+            {chartView === "today" ? (
+              <TodayInvoicesChart
+                paid={overview.totals.today.paid ?? 0}
+                unpaid={overview.totals.today.unpaid ?? 0}
+              />
+            ) : (
+              <MonthlyRevenueChart data={monthlyRevenueData} />
+            )}
           </Suspense>
         </div>
         <div className="flex flex-col rounded-lg border p-4">
