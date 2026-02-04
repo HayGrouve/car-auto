@@ -18,7 +18,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Trash, AlertTriangle } from "lucide-react";
+import {
+  Trash,
+  AlertTriangle,
+  Paperclip,
+  File,
+  Download,
+  Loader2,
+  Image as ImageIcon,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
 import VisitWizard from "./VisitWizard";
@@ -65,7 +73,11 @@ export default function VisitDetailPage() {
     useMemo(() => ({ search: "" }), []),
   );
   const ownersResult = ownersQuery as
-    | { items: { _id: string; name: string; phone?: string }[]; total: number; hasMore: boolean }
+    | {
+        items: { _id: string; name: string; phone?: string }[];
+        total: number;
+        hasMore: boolean;
+      }
     | undefined;
   const owners = ownersResult?.items;
   const animalsQuery = useQuery(
@@ -91,7 +103,63 @@ export default function VisitDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
 
+  const generateUploadUrl = useMutation(api.visits.generateAttachmentUploadUrl);
+  const addAttachment = useMutation(api.visits.addAttachment);
+  const removeAttachment = useMutation(api.visits.removeAttachment);
+  const [isUploading, setIsUploading] = useState(false);
+
   const visit: VisitDoc | null = visitUnknown ?? null;
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > 25 * 1024 * 1024) {
+          toast.error(`Файлът ${file.name} е твърде голям (макс. 25MB)`);
+          continue;
+        }
+
+        const uploadUrl = await generateUploadUrl();
+        const res = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+
+        if (!res.ok) throw new Error("Upload failed");
+
+        const { storageId } = (await res.json()) as { storageId: string };
+        await addAttachment({
+          visitId: id,
+          storageId,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+        });
+      }
+      toast.success("Файловете са качени");
+    } catch (error) {
+      console.error(error);
+      toast.error("Грешка при качване на файлове");
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleRemoveAttachment(attachmentId: string) {
+    if (!confirm("Сигурни ли сте, че искате да премахнете този файл?")) return;
+    try {
+      await removeAttachment({ visitId: id, attachmentId });
+      toast.success("Файлът е премахнат");
+    } catch (error) {
+      console.error(error);
+      toast.error("Грешка при премахване на файл");
+    }
+  }
 
   // Wizard visibility
   const [showWizard, setShowWizard] = useState(true);
@@ -427,6 +495,148 @@ export default function VisitDetailPage() {
         />
       </section>
       <section className="space-y-6 pb-20 lg:pb-0">
+        <SectionCard
+          title="Прикачени файлове"
+          description={
+            <>
+              Рентгенови снимки, изследвания и други документи.
+              <br />
+              Позволени формати: JPG, PNG, PDF и други, макс. 25MB
+            </>
+          }
+          headerIcon={<Paperclip className="h-4 w-4" />}
+          headerActions={
+            !isFinalized
+              ? [
+                  {
+                    label: isUploading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Качване...
+                      </span>
+                    ) : (
+                      "Добави файл"
+                    ),
+                    onClick: () =>
+                      document.getElementById("file-upload")?.click(),
+                    variant: "outline",
+                  },
+                ]
+              : []
+          }
+        >
+          <input
+            id="file-upload"
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileUpload}
+            disabled={isUploading || isFinalized}
+          />
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {visit.documents && visit.documents.length > 0 ? (
+              visit.documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="group bg-background relative flex flex-col overflow-hidden rounded-lg border transition-all hover:shadow-md"
+                >
+                  {doc.type?.startsWith("image/") && doc.url ? (
+                    <div className="bg-muted aspect-video w-full overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={doc.url}
+                        alt={doc.name}
+                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    </div>
+                  ) : (
+                    <div className="bg-muted flex aspect-video w-full items-center justify-center">
+                      <File className="text-muted-foreground/40 h-10 w-10" />
+                    </div>
+                  )}
+
+                  <div className="flex flex-1 flex-col p-3">
+                    <div className="mb-1 flex items-start justify-between gap-2">
+                      <span
+                        className="line-clamp-1 text-sm font-medium"
+                        title={doc.name}
+                      >
+                        {doc.name}
+                      </span>
+                      {doc.type?.startsWith("image/") && (
+                        <ImageIcon className="text-muted-foreground/60 h-3.5 w-3.5 flex-shrink-0" />
+                      )}
+                    </div>
+
+                    <div className="mt-auto flex items-center justify-between gap-2 pt-2">
+                      <div className="text-muted-foreground text-[10px]">
+                        {doc.size
+                          ? `${(doc.size / 1024 / 1024).toFixed(2)} MB`
+                          : ""}
+                        {doc.uploadedAt
+                          ? ` • ${new Date(doc.uploadedAt).toLocaleDateString("bg-BG")}`
+                          : ""}
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        {doc.url && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={async () => {
+                              if (!doc.url) return;
+                              try {
+                                const response = await fetch(doc.url);
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = doc.name;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                              } catch (error) {
+                                console.error("Download failed", error);
+                                window.open(doc.url, "_blank");
+                              }
+                            }}
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            <span className="sr-only">Изтегли</span>
+                          </Button>
+                        )}
+                        {!isFinalized && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive h-7 w-7"
+                            onClick={() =>
+                              doc.id && handleRemoveAttachment(doc.id)
+                            }
+                          >
+                            <Trash className="h-3.5 w-3.5" />
+                            <span className="sr-only">Премахни</span>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full flex flex-col items-center justify-center py-8 text-center">
+                <Paperclip className="text-muted-foreground/20 mb-2 h-8 w-8" />
+                <p className="text-muted-foreground text-sm">
+                  Няма прикачени файлове
+                </p>
+              </div>
+            )}
+          </div>
+        </SectionCard>
+
         {!isFinalized ? (
           <SectionCard
             title="Ръководен режим"
@@ -479,7 +689,7 @@ export default function VisitDetailPage() {
             ]}
           >
             <div className="grid gap-6 md:grid-cols-2 md:justify-items-center">
-              <div className="space-y-3 w-full max-w-md">
+              <div className="w-full max-w-md space-y-3">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   SOAP
                 </p>
@@ -527,7 +737,7 @@ export default function VisitDetailPage() {
                 </div>
               </div>
 
-              <div className="space-y-3 w-full max-w-md">
+              <div className="w-full max-w-md space-y-3">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Процедури
                 </p>
@@ -542,7 +752,7 @@ export default function VisitDetailPage() {
                 </ul>
               </div>
 
-              <div className="space-y-3 w-full max-w-md">
+              <div className="w-full max-w-md space-y-3">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Медикаменти
                 </p>
@@ -557,7 +767,7 @@ export default function VisitDetailPage() {
                 </ul>
               </div>
 
-              <div className="space-y-3 w-full max-w-md">
+              <div className="w-full max-w-md space-y-3">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Фактуриране
                 </p>

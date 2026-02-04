@@ -241,7 +241,7 @@ export const finalize = mutation({
     const visit = await ctx.db.get(args.id);
     if (!visit) return { ok: false } as const;
     await ctx.db.patch(args.id, { status: "finalized", updatedAt: Date.now() });
-    
+
     // Update schedule slot status to "completed" if linked to this visit
     try {
       const slots = await ctx.db
@@ -257,7 +257,7 @@ export const finalize = mutation({
     } catch (_) {
       // optional; ignore failures
     }
-    
+
     // Upsert procedure/medication catalogs with simple frequency counts
     const procedures: string[] = (visit as any).procedures ?? [];
     const medications: string[] = (visit as any).medications ?? [];
@@ -300,7 +300,23 @@ export const finalize = mutation({
 export const getById = query({
   args: { id: v.id("visits") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const visit = await ctx.db.get(args.id);
+    if (!visit) return null;
+
+    const documents = (visit as any).documents ?? [];
+    if (documents.length === 0) return visit;
+
+    const documentsWithUrls = await Promise.all(
+      documents.map(async (doc: any) => {
+        if (doc.storageId) {
+          const url = await ctx.storage.getUrl(doc.storageId);
+          return { ...doc, url: url ?? undefined };
+        }
+        return doc;
+      }),
+    );
+
+    return { ...visit, documents: documentsWithUrls };
   },
 });
 
@@ -377,6 +393,77 @@ export const suggestMedications = query({
     } catch (_) {
       return [] as string[];
     }
+  },
+});
+
+export const addAttachment = mutation({
+  args: {
+    visitId: v.id("visits"),
+    storageId: v.string(),
+    name: v.string(),
+    type: v.optional(v.string()),
+    size: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const visit = await ctx.db.get(args.visitId);
+    if (!visit) throw new Error("Visit not found");
+    if (visit.status !== "draft")
+      throw new Error("Cannot add attachments to finalized visits");
+
+    const documents = (visit as any).documents ?? [];
+    const newDoc = {
+      id: Math.random().toString(36).substring(2, 11),
+      name: args.name,
+      type: args.type,
+      storageId: args.storageId,
+      size: args.size,
+      uploadedAt: Date.now(),
+    };
+
+    await ctx.db.patch(args.visitId, {
+      documents: [...documents, newDoc],
+      updatedAt: Date.now(),
+    });
+
+    return { ok: true };
+  },
+});
+
+export const removeAttachment = mutation({
+  args: {
+    visitId: v.id("visits"),
+    attachmentId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const visit = await ctx.db.get(args.visitId);
+    if (!visit) throw new Error("Visit not found");
+    if (visit.status !== "draft")
+      throw new Error("Cannot remove attachments from finalized visits");
+
+    const documents = (visit as any).documents ?? [];
+    const docToRemove = documents.find((d: any) => d.id === args.attachmentId);
+
+    if (docToRemove?.storageId) {
+      await ctx.storage.delete(docToRemove.storageId);
+    }
+
+    const newDocuments = documents.filter(
+      (d: any) => d.id !== args.attachmentId,
+    );
+
+    await ctx.db.patch(args.visitId, {
+      documents: newDocuments,
+      updatedAt: Date.now(),
+    });
+
+    return { ok: true };
+  },
+});
+
+export const generateAttachmentUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
   },
 });
 

@@ -34,7 +34,9 @@ export const VisitDocSchema = z.object({
         id: z.string().optional(),
         name: z.string(),
         type: z.string().optional(),
+        storageId: z.string().optional(),
         url: z.string().optional(),
+        size: z.number().optional(),
         uploadedAt: z.number().optional(),
       }),
     )
