@@ -55,6 +55,7 @@ export default function AnimalsPage() {
     "createdAtDesc",
   );
   const [showCreatePanel, setShowCreatePanel] = useState(false);
+  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
   const animalsQuery = useQuery(
     api.animals.list,
     useMemo(
@@ -496,7 +497,10 @@ export default function AnimalsPage() {
                     </FormField>
 
                     <FormField label="Собственик">
-                      <Popover>
+                      <Popover
+                        open={ownerPopoverOpen}
+                        onOpenChange={setOwnerPopoverOpen}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -520,10 +524,11 @@ export default function AnimalsPage() {
                               {(owners ?? []).map((o) => (
                                 <CommandItem
                                   key={o._id}
-                                  value={o._id}
-                                  onSelect={(v) => {
-                                    setOwnerId(v);
-                                    methods.setValue("ownerId", v);
+                                  value={o.name}
+                                  onSelect={() => {
+                                    setOwnerId(o._id);
+                                    methods.setValue("ownerId", o._id);
+                                    setOwnerPopoverOpen(false);
                                   }}
                                 >
                                   {o.name}

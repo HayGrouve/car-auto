@@ -143,6 +143,7 @@ export default function AnimalDetailPage() {
   });
   const formRef = useRef<HTMLFormElement | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
   const [ownerOpen, setOwnerOpen] = useState(false);
   const [ownerSheetOpen, setOwnerSheetOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -712,9 +713,9 @@ export default function AnimalDetailPage() {
                       {(owners ?? []).map((o) => (
                         <CommandItem
                           key={o._id}
-                          value={o._id}
-                          onSelect={(v) => {
-                            setForm((f) => ({ ...f, ownerId: v }));
+                          value={o.name}
+                          onSelect={() => {
+                            setForm((f) => ({ ...f, ownerId: o._id }));
                             setOwnerSheetOpen(false);
                           }}
                           className="flex flex-col items-start gap-0.5 px-4 py-3 text-base"
@@ -732,7 +733,7 @@ export default function AnimalDetailPage() {
                 </DialogContent>
               </Dialog>
 
-              <Popover open={ownerOpen} onOpenChange={setOwnerOpen}>
+              <Popover open={ownerPopoverOpen} onOpenChange={setOwnerPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -751,10 +752,10 @@ export default function AnimalDetailPage() {
                       {(owners ?? []).map((o) => (
                         <CommandItem
                           key={o._id}
-                          value={o._id}
-                          onSelect={(v) => {
-                            setForm((f) => ({ ...f, ownerId: v }));
-                            setOwnerOpen(false);
+                          value={o.name}
+                          onSelect={() => {
+                            setForm((f) => ({ ...f, ownerId: o._id }));
+                            setOwnerPopoverOpen(false);
                           }}
                         >
                           {o.name}

@@ -127,6 +127,7 @@ export function ScheduleSlotForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
+  const [visitPopoverOpen, setVisitPopoverOpen] = useState(false);
   const [animalPopoverOpen, setAnimalPopoverOpen] = useState(false);
   const isInitialMount = useRef(true);
 
@@ -547,7 +548,7 @@ export function ScheduleSlotForm({
 
       <div>
         <Label>Посещение</Label>
-        <Popover>
+        <Popover open={visitPopoverOpen} onOpenChange={setVisitPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               {visitId
@@ -564,14 +565,23 @@ export function ScheduleSlotForm({
               />
               <CommandList>
                 <CommandEmpty>Няма резултати</CommandEmpty>
-                <CommandItem value="" onSelect={() => setVisitId("")}>
+                <CommandItem
+                  value=""
+                  onSelect={() => {
+                    setVisitId("");
+                    setVisitPopoverOpen(false);
+                  }}
+                >
                   Без посещение
                 </CommandItem>
                 {filteredVisits.map((v) => (
                   <CommandItem
                     key={v._id}
-                    value={v._id}
-                    onSelect={(val) => setVisitId(val)}
+                    value={v.code ?? v._id}
+                    onSelect={() => {
+                      setVisitId(v._id);
+                      setVisitPopoverOpen(false);
+                    }}
                   >
                     {v.code ?? v._id}
                   </CommandItem>
@@ -613,8 +623,8 @@ export function ScheduleSlotForm({
                 {filteredOwners.map((o) => (
                   <CommandItem
                     key={o._id}
-                    value={o._id}
-                    onSelect={(val) => handleOwnerSelect(val)}
+                    value={o.name}
+                    onSelect={() => handleOwnerSelect(o._id)}
                   >
                     {o.name}
                     {o.phone ? ` · ${o.phone}` : ""}
@@ -657,8 +667,8 @@ export function ScheduleSlotForm({
                 {filteredAnimals.map((a) => (
                   <CommandItem
                     key={a._id}
-                    value={a._id}
-                    onSelect={(val) => handleAnimalSelect(val)}
+                    value={a.name}
+                    onSelect={() => handleAnimalSelect(a._id)}
                   >
                     {a.name} ({a.species})
                   </CommandItem>
