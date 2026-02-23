@@ -6,18 +6,29 @@ import { z } from "zod";
 
 /**
  * Validates Bulgarian phone number format
- * Accepts: 08xxxxxxxx or 08xx xxx xxx
+ * Supports:
+ * - Domestic: 08xxxxxxxx, 09xxxxxxxx, 02xxxxxxx, etc.
+ * - International: +359...
  */
 export const bulgarianPhoneSchema = z
   .string()
   .min(1, "Телефонът е задължителен")
   .refine(
     (val) => {
-      const cleaned = val.replace(/\s+/g, "");
-      return /^08\d{8}$/.test(cleaned);
+      // Remove all non-digit characters except the leading plus
+      const cleaned = val.replace(/[^\d+]/g, "");
+      
+      // International format: +359 followed by 7-9 digits
+      if (cleaned.startsWith("+359")) {
+        return /^\+359\d{7,9}$/.test(cleaned);
+      }
+      
+      // Domestic format: starts with 0 and has 9-10 digits total
+      // (e.g., 0888123456, 021234567)
+      return /^0\d{8,9}$/.test(cleaned);
     },
     {
-      message: "Телефонът трябва да започва с 08 и да съдържа 10 цифри",
+      message: "Въведете валиден български телефонен номер (напр. 08xxxxxxxx или +359...)",
     },
   );
 

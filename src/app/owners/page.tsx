@@ -307,12 +307,12 @@ export default function OwnersPage() {
                     htmlFor="phone"
                     required
                     error={methods.formState.errors.phone?.message}
-                    hint="Въведете телефон във формат 08xx xxx xxx или 08xxxxxxxx"
+                    hint="Въведете телефон (напр. 08xxxxxxxx или +359...)"
                   >
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="08xx xxx xxx"
+                      placeholder="08xxxxxxxx"
                       {...getFormFieldProps(methods, "phone")}
                     />
                   </FormField>
