@@ -1,17 +1,17 @@
-# Alisa (Алиса) - Veterinary Clinic CRM
+# Alisa (Алиса) — Car Service CRM
 
-A comprehensive veterinary clinic management system built with Next.js 15, React 19, and Convex. This application helps veterinary clinics manage owners, animals (patients), visits, appointments, and billing.
+A CRM and workshop operations app for **car services** (auto repair, maintenance, and scheduling), built with Next.js 15, React 19, and Convex. This repository is being **refactored** from a veterinary (“zoo”) product: domain names in code and routes still say owners/animals in places, but the product direction is car service—customers, vehicles, jobs, appointments, and billing.
 
 ## Features
 
-- **Owner Management**: Register and manage pet owners with GDPR compliance
-- **Animal (Patient) Management**: Track patient information, medical history, and weight records
-- **Visit Management**: Create and manage veterinary visits with SOAP notes
-- **Appointment Scheduling**: Schedule and manage appointments with calendar view
-- **Billing & Invoicing**: Generate invoices and track payments
-- **PDF Generation**: Create vaccination certificates, visit summaries, and invoices
-- **Bulgarian Localization**: Fully localized Bulgarian interface
-- **GDPR Compliance**: Built-in GDPR consent management and data protection features
+- **Customer management**: Register and manage vehicle owners with GDPR-oriented tooling
+- **Vehicle records**: Track vehicles linked to customers, history, and related notes (module naming still reflects the legacy “animals” codebase during migration)
+- **Service visits / jobs**: Create and manage workshop visits with structured notes
+- **Appointment scheduling**: Schedule and manage appointments with calendar views
+- **Billing & invoicing**: Invoices and payment tracking
+- **PDF generation**: Documents such as visit summaries and invoices (legacy certificate flows may remain until replaced)
+- **Bulgarian localization**: Bulgarian-first UI where applicable
+- **GDPR-related tooling**: Consent and data-protection features carried over from the clinic app
 
 ## Technology Stack
 
@@ -37,7 +37,7 @@ Before you begin, ensure you have the following installed:
 
 ```bash
 git clone <repository-url>
-cd zoo
+cd auto
 ```
 
 ### 2. Install Dependencies
@@ -76,7 +76,7 @@ NODE_ENV=development
 JWT_SECRET=your-secret-key-minimum-32-characters-long
 
 # Single user email for authentication
-SINGLE_USER_EMAIL=admin@clinic.local
+SINGLE_USER_EMAIL=admin@service.local
 
 # Password hash (generate with bcrypt)
 # Generate with: node -e "const bcrypt=require('bcryptjs'); bcrypt.hash('your-password', 10).then(h=>console.log(h))"
@@ -182,8 +182,8 @@ npx convex deploy --prod
 1. **Single-User Authentication**: MVP uses a single admin account for simplicity
 2. **Convex Backend**: Real-time database with automatic reactivity
 3. **JWT Tokens**: Stateless authentication with httpOnly cookies for security
-4. **Bulgarian First**: Primary language is Bulgarian with English code comments
-5. **GDPR Compliance**: Built-in consent management and data protection
+4. **Bulgarian First**: Primary language is Bulgarian where the product is localized, with English code comments
+5. **GDPR-oriented features**: Consent and data protection inherited from the previous clinic product
 
 ### Data Flow
 
@@ -204,7 +204,7 @@ Authenticate user and receive JWT token.
 **Request:**
 ```json
 {
-  "email": "admin@clinic.local",
+  "email": "admin@service.local",
   "password": "your-password"
 }
 ```
@@ -269,20 +269,24 @@ All API endpoints follow a standardized error format:
 
 ## Project Structure
 
+Legacy route and Convex module names (`owners`, `animals`) are still in the tree while the refactor proceeds—they correspond to **customers** and **vehicles** in the car-service domain.
+
 ```
-zoo/
+auto/
 ├── convex/              # Convex backend functions and schema
-│   ├── animals.ts       # Animal management functions
-│   ├── owners.ts        # Owner management functions
-│   ├── visits.ts        # Visit management functions
-│   ├── invoices.ts      # Invoice management functions
-│   ├── schedule.ts      # Scheduling functions
+│   ├── animals.ts       # Vehicle records (legacy file name)
+│   ├── owners.ts        # Customer records (legacy file name)
+│   ├── visits.ts        # Service visits / jobs
+│   ├── invoices.ts      # Invoice management
+│   ├── schedule.ts      # Scheduling
+│   ├── auditLogs.ts     # Audit log functions
+│   ├── seed.ts          # Seed data helper
 │   └── dashboard.ts     # Dashboard queries
 ├── src/
 │   ├── app/             # Next.js App Router pages
 │   │   ├── api/         # API routes
-│   │   ├── animals/     # Animal pages
-│   │   ├── owners/      # Owner pages
+│   │   ├── animals/     # Vehicle UI (legacy path)
+│   │   ├── owners/      # Customer UI (legacy path)
 │   │   ├── visits/      # Visit pages
 │   │   └── ...
 │   ├── components/      # React components
