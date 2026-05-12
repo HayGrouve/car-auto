@@ -43,10 +43,10 @@ const InvoicePdfButton = dynamic(
   { ssr: false },
 );
 
-const ALL_OWNERS_VALUE = "__all";
+const ALL_CUSTOMERS_VALUE = "__all";
 
 export default function InvoicesPage() {
-  const [ownerId, setOwnerId] = useState<string>(ALL_OWNERS_VALUE);
+  const [customerId, setCustomerId] = useState<string>(ALL_CUSTOMERS_VALUE);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [unpaidOnly, setUnpaidOnly] = useState(false);
@@ -55,32 +55,32 @@ export default function InvoicesPage() {
   const [sort, setSort] = useState<"createdAtDesc" | "createdAtAsc">(
     "createdAtDesc",
   );
-  const ownersQuery = useQuery(
-    api.owners.list,
+  const customersQuery = useQuery(
+    api.customers.list,
     useMemo(() => ({ search: "" }), []),
   );
-  const ownersResult = ownersQuery as
+  const customersResult = customersQuery as
     | {
         items: { _id: string; name: string }[];
         total: number;
         hasMore: boolean;
       }
     | undefined;
-  const owners = ownersResult?.items;
+  const customers = customersResult?.items;
   const invoicesQuery = useQuery(
     api.invoices.list,
     useMemo(
       () => ({
         unpaidOnly,
-        ownerId:
-          ownerId !== ALL_OWNERS_VALUE ? (ownerId as Id<"owners">) : undefined,
+        customerId:
+          customerId !== ALL_CUSTOMERS_VALUE ? (customerId as Id<"customers">) : undefined,
         from: from ? Date.parse(from) : undefined,
         to: to ? Date.parse(to) : undefined,
         limit: pageSize,
         offset: page * pageSize,
         sort,
       }),
-      [unpaidOnly, ownerId, from, to, page, sort],
+      [unpaidOnly, customerId, from, to, page, sort],
     ),
   );
   const invoices = invoicesQuery as
@@ -165,7 +165,7 @@ export default function InvoicesPage() {
               <span className="text-foreground font-medium">
                 {fmtNumberBG(totals?.unpaidTotal ?? 0, {
                   style: "currency",
-                  currency: "EUR",
+                  currency: "BGN",
                 })}
               </span>
             </div>
@@ -174,7 +174,7 @@ export default function InvoicesPage() {
               <span className="text-foreground font-medium">
                 {fmtNumberBG(totals?.paidTotal ?? 0, {
                   style: "currency",
-                  currency: "EUR",
+                  currency: "BGN",
                 })}
               </span>
             </div>
@@ -185,7 +185,7 @@ export default function InvoicesPage() {
                   (totals?.paidTotal ?? 0) + (totals?.unpaidTotal ?? 0),
                   {
                     style: "currency",
-                    currency: "EUR",
+                    currency: "BGN",
                   },
                 )}
               </span>
@@ -201,11 +201,11 @@ export default function InvoicesPage() {
       </SectionCard>
       <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 md:grid-cols-5">
         <div>
-          <Label>Собственик</Label>
+          <Label>Клиент</Label>
           <Select
-            value={ownerId}
+            value={customerId}
             onValueChange={(value) => {
-              setOwnerId(value);
+              setCustomerId(value);
               setPage(0);
             }}
           >
@@ -213,8 +213,8 @@ export default function InvoicesPage() {
               <SelectValue placeholder="Всички" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_OWNERS_VALUE}>Всички</SelectItem>
-              {(owners ?? []).map((o) => (
+              <SelectItem value={ALL_CUSTOMERS_VALUE}>Всички</SelectItem>
+              {(customers ?? []).map((o) => (
                 <SelectItem key={o._id} value={o._id}>
                   {o.name}
                 </SelectItem>
@@ -280,18 +280,18 @@ export default function InvoicesPage() {
 
       <div className="-mt-2 md:col-span-5">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          {ownerId !== ALL_OWNERS_VALUE && (
+          {customerId !== ALL_CUSTOMERS_VALUE && (
             <button
               type="button"
               onClick={() => {
-                setOwnerId(ALL_OWNERS_VALUE);
+                setCustomerId(ALL_CUSTOMERS_VALUE);
                 setPage(0);
               }}
               className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
             >
               <span>
-                Собственик:{" "}
-                {(owners ?? []).find((o) => o._id === ownerId)?.name ?? ownerId}
+                Клиент:{" "}
+                {(customers ?? []).find((o) => o._id === customerId)?.name ?? customerId}
               </span>
               <span aria-hidden>✕</span>
             </button>
@@ -325,11 +325,11 @@ export default function InvoicesPage() {
               <span aria-hidden>✕</span>
             </button>
           )}
-          {(ownerId !== ALL_OWNERS_VALUE || from || to || unpaidOnly) && (
+          {(customerId !== ALL_CUSTOMERS_VALUE || from || to || unpaidOnly) && (
             <button
               type="button"
               onClick={() => {
-                setOwnerId(ALL_OWNERS_VALUE);
+                setCustomerId(ALL_CUSTOMERS_VALUE);
                 setFrom("");
                 setTo("");
                 setUnpaidOnly(false);
@@ -377,9 +377,9 @@ export default function InvoicesPage() {
                   </a>
                   <div className="flex-shrink-0 text-right text-xs font-medium sm:hidden">
                     Общо:{" "}
-                    {fmtNumberBG(inv.total, {
+                    {fmtNumberBG(inv.totalAmount, {
                       style: "currency",
-                      currency: "EUR",
+                      currency: "BGN",
                     })}
                   </div>
                 </div>
@@ -400,12 +400,12 @@ export default function InvoicesPage() {
                   ) : null}
                 </div>
                 <ul className="text-muted-foreground ml-5 list-disc">
-                  {inv.items.map((it, idx) => (
+                  {[...(inv.parts ?? []), ...(inv.labor ?? [])].map((it, idx) => (
                     <li key={idx} className="truncate">
-                      {it.description} × {it.quantity} —{" "}
-                      {fmtNumberBG(it.total, {
+                      {it.name} × {it.quantity} —{" "}
+                      {fmtNumberBG(it.price * it.quantity, {
                         style: "currency",
-                        currency: "EUR",
+                        currency: "BGN",
                       })}
                     </li>
                   ))}
@@ -414,9 +414,9 @@ export default function InvoicesPage() {
               <div className="flex flex-col gap-2 sm:flex sm:flex-col sm:items-end sm:justify-between">
                 <div className="hidden min-h-[44px] items-center text-right font-medium sm:flex sm:text-right">
                   Общо:{" "}
-                  {fmtNumberBG(inv.total, {
+                  {fmtNumberBG(inv.totalAmount, {
                     style: "currency",
-                    currency: "EUR",
+                    currency: "BGN",
                   })}
                 </div>
                 <div className="mt-2 flex flex-col gap-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-end">

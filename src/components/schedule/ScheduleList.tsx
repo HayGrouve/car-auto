@@ -15,7 +15,7 @@ type ScheduleListProps = {
   onEdit?: (slot: ScheduleSlot) => void;
   onDelete?: (slotId: string) => void;
   visitMap?: Map<string, string>;
-  animalMap?: Map<string, string>;
+  vehicleMap?: Map<string, string>;
 };
 
 function ScheduleStatusBadge({ status }: { status: string }) {
@@ -48,7 +48,7 @@ export function ScheduleList({
   onEdit,
   onDelete,
   visitMap,
-  animalMap,
+  vehicleMap,
 }: ScheduleListProps) {
   if (slots === undefined) {
     return <SkeletonList rows={6} />;
@@ -103,12 +103,12 @@ export function ScheduleList({
                     {visitMap?.get(slot.visitId) ?? "Посещение"}
                   </Link>
                 )}
-                {slot.animalId && (
+                {slot.vehicleId && (
                   <Link
-                    href={`/animals/${slot.animalId}`}
+                    href={`/vehicles/${slot.vehicleId}`}
                     className="underline-offset-2 hover:underline cursor-pointer min-h-[44px] flex items-center"
                   >
-                    {animalMap?.get(slot.animalId) ?? "Животно"}
+                    {vehicleMap?.get(slot.vehicleId) ?? "Автомобил"}
                   </Link>
                 )}
               </div>

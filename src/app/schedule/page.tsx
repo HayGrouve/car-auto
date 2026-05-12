@@ -98,27 +98,27 @@ function SchedulePageContent() {
   }, [allSlots]);
 
   // Fetch related data for form
-  const ownersQuery = useQuery(
-    api.owners.list,
+  const customersQuery = useQuery(
+    api.customers.list,
     useMemo(() => ({ search: "" }), []),
   );
-  const ownersResult = ownersQuery as
+  const customersResult = customersQuery as
     | { items: { _id: string; name: string; phone?: string }[]; total: number; hasMore: boolean }
     | undefined;
-  const owners = ownersResult?.items;
+  const customers = customersResult?.items;
 
-  const animalsQuery = useQuery(
-    api.animals.list,
+  const vehiclesQuery = useQuery(
+    api.vehicles.list,
     useMemo(() => ({ search: "", limit: 1000, sort: "createdAtDesc" }), []),
   );
-  const animalsResult = animalsQuery as
+  const vehiclesResult = vehiclesQuery as
     | {
-        items: { _id: string; name: string; species: string; ownerId?: string | null }[];
+        items: { _id: string; licensePlate: string; make: string; customerId?: string | null }[];
         total: number;
         hasMore: boolean;
       }
     | undefined;
-  const animals = animalsResult?.items;
+  const vehicles = vehiclesResult?.items;
 
   const visitsQuery = useQuery(
     api.visits.list,
@@ -126,41 +126,41 @@ function SchedulePageContent() {
   );
   const visitsResult = visitsQuery as
     | {
-        items: { _id: string; code?: string | null; animalId?: string | null; status?: string }[];
+        items: { _id: string; code?: string | null; vehicleId?: string | null; status?: string }[];
         total: number;
         hasMore: boolean;
       }
     | undefined;
   const visits = visitsResult?.items;
 
-  // Query for draft visits to create animal -> draft visit map
+  // Query for draft visits to create vehicle -> draft visit map
   const draftVisitsQuery = useQuery(
     api.visits.list,
     useMemo(() => ({ status: "draft", limit: 1000 }), []),
   );
   const draftVisitsResult = draftVisitsQuery as
     | {
-        items: { _id: string; animalId?: string | null }[];
+        items: { _id: string; vehicleId?: string | null }[];
         total: number;
         hasMore: boolean;
       }
     | undefined;
   const draftVisits = draftVisitsResult?.items;
 
-  // Create a map of animalId -> draft visit ID
-  const animalDraftVisitMap = useMemo(() => {
+  // Create a map of vehicleId -> draft visit ID
+  const vehicleDraftVisitMap = useMemo(() => {
     const map = new Map<string, string>();
     if (draftVisits) {
       draftVisits.forEach((visit) => {
-        if (visit.animalId) {
-          map.set(String(visit.animalId), visit._id);
+        if (visit.vehicleId) {
+          map.set(String(visit.vehicleId), visit._id);
         }
       });
     }
     return map;
   }, [draftVisits]);
 
-  // Create lookup maps for visits and animals
+  // Create lookup maps for visits and vehicles
   const visitMap = useMemo(() => {
     const map = new Map<string, string>();
     if (visits) {
@@ -171,15 +171,15 @@ function SchedulePageContent() {
     return map;
   }, [visits]);
 
-  const animalMap = useMemo(() => {
+  const vehicleMap = useMemo(() => {
     const map = new Map<string, string>();
-    if (animals) {
-      animals.forEach((animal) => {
-        map.set(animal._id, animal.name);
+    if (vehicles) {
+      vehicles.forEach((vehicle) => {
+        map.set(vehicle._id, vehicle.licensePlate);
       });
     }
     return map;
-  }, [animals]);
+  }, [vehicles]);
 
   const handleCreate = async (data: {
     date: number;
@@ -188,8 +188,8 @@ function SchedulePageContent() {
     title: string;
     description?: string;
     visitId?: Id<"visits">;
-    ownerId?: Id<"owners">;
-    animalId?: Id<"animals">;
+    customerId?: Id<"customers">;
+    vehicleId?: Id<"vehicles">;
     status?: "scheduled" | "completed" | "cancelled";
   }) => {
     try {
@@ -213,8 +213,8 @@ function SchedulePageContent() {
     title?: string;
     description?: string;
     visitId?: Id<"visits">;
-    ownerId?: Id<"owners">;
-    animalId?: Id<"animals">;
+    customerId?: Id<"customers">;
+    vehicleId?: Id<"vehicles">;
     status?: "scheduled" | "completed" | "cancelled";
   }) => {
     if (!editingSlot) return;
@@ -318,7 +318,7 @@ function SchedulePageContent() {
             onEdit={handleEdit}
             onDelete={handleDelete}
             visitMap={visitMap}
-            animalMap={animalMap}
+            vehicleMap={vehicleMap}
           />
         </section>
 
@@ -376,10 +376,10 @@ function SchedulePageContent() {
                   <ScheduleSlotForm
                     selectedDate={selectedDate}
                     onSubmit={handleCreate}
-                    owners={owners}
-                    animals={animals}
+                    customers={customers}
+                    vehicles={vehicles}
                     visits={visits}
-                    animalDraftVisitMap={animalDraftVisitMap}
+                    vehicleDraftVisitMap={vehicleDraftVisitMap}
                     hideDatePicker={true}
                     existingSlots={slots ?? []}
                   />
@@ -411,8 +411,8 @@ function SchedulePageContent() {
                   title: data.title,
                   description: data.description,
                   visitId: data.visitId,
-                  ownerId: data.ownerId,
-                  animalId: data.animalId,
+                  customerId: data.customerId,
+                  vehicleId: data.vehicleId,
                   status: data.status,
                 });
               }}
@@ -421,10 +421,10 @@ function SchedulePageContent() {
                 setEditingSlot(null);
               }}
               initialData={editingSlot}
-              owners={owners}
-              animals={animals}
+              customers={customers}
+              vehicles={vehicles}
               visits={visits}
-              animalDraftVisitMap={animalDraftVisitMap}
+              vehicleDraftVisitMap={vehicleDraftVisitMap}
             />
           ) : null}
         </DialogContent>

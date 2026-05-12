@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const OwnerDocSchema = z.object({
+export const CustomerDocSchema = z.object({
   _id: z.string(),
   name: z.string(),
   phone: z.string(),
@@ -8,7 +8,8 @@ export const OwnerDocSchema = z.object({
   address: z.string().nullable().optional(),
   gdprConsent: z.boolean().optional(),
   legalHold: z.boolean().optional(),
+  notes: z.string().nullable().optional(),
   createdAt: z.number(),
 });
 
-export type OwnerDoc = z.infer<typeof OwnerDocSchema>;
+export type CustomerDoc = z.infer<typeof CustomerDocSchema>;

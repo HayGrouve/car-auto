@@ -10,162 +10,149 @@ function randInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+/** Only fields allowed by `invoices.create` — strips e.g. legacy `total` so Convex validation passes. */
+function invoiceLineItems(
+  items: Array<{ name: string; quantity: number; price: number }>,
+): Array<{ name: string; quantity: number; price: number }> {
+  return items.map(({ name, quantity, price }) => ({
+    name,
+    quantity,
+    price,
+  }));
+}
+
 export const run = action({
   args: {
-    owners: v.optional(v.number()),
-    animalsPerOwner: v.optional(v.number()),
-    visitsPerAnimal: v.optional(v.number()),
+    customers: v.optional(v.number()),
+    vehiclesPerCustomer: v.optional(v.number()),
+    visitsPerVehicle: v.optional(v.number()),
     invoicesPerVisit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const ownersCount = Math.max(1, args.owners ?? 5);
-    const animalsPerOwner = Math.max(1, args.animalsPerOwner ?? 2);
-    const visitsPerAnimal = Math.max(1, args.visitsPerAnimal ?? 1);
+    const customersCount = Math.max(1, args.customers ?? 5);
+    const vehiclesPerCustomer = Math.max(1, args.vehiclesPerCustomer ?? 2);
+    const visitsPerVehicle = Math.max(1, args.visitsPerVehicle ?? 1);
     const invoicesPerVisit = Math.max(0, args.invoicesPerVisit ?? 1);
 
-    const ownerFirstNames = [
-      "Иван",
-      "Мария",
-      "Георги",
-      "Елена",
-      "Петър",
-      "Николай",
-      "Румяна",
-      "Даниела",
+    const firstNames = [
+      "Иван", "Мария", "Георги", "Елена", "Петър", "Николай", "Румяна", "Даниела"
     ];
-    const ownerLastNames = [
-      "Иванов",
-      "Георгиева",
-      "Петров",
-      "Николова",
-      "Попов",
-      "Симеонова",
-      "Димитров",
-      "Костова",
+    const lastNames = [
+      "Иванов", "Георгиева", "Петров", "Николова", "Попов", "Симеонова", "Димитров", "Костова"
     ];
     const streets = [
-      "ул. Шипка 10",
-      "бул. Витоша 25",
-      "ул. Раковски 14",
-      "бул. България 101",
-      "ул. Славянска 7",
+      "ул. Шипка 10", "бул. Витоша 25", "ул. Раковски 14", "бул. България 101", "ул. Славянска 7"
     ];
 
-    const animalNames = [
-      "Рекс",
-      "Мая",
-      "Луна",
-      "Макс",
-      "Сара",
-      "Оскар",
-      "Чара",
-      "Коко",
-    ];
-    const species = ["Куче", "Котка", "Заек", "Морско свинче"];
-    const breedsBySpecies: Record<string, string[]> = {
-      Куче: ["Лабрадор", "Джак Ръсел", "Бигъл", "Немска овчарка"],
-      Котка: ["Европейска", "Сиамска", "Мейн Кун"],
-      Заек: ["Холандско джудже", "Рекс"],
-      "Морско свинче": ["Абисинско", "Ангорско"],
+    const carMakes = ["Toyota", "Volkswagen", "BMW", "Mercedes-Benz", "Audi", "Ford", "Honda"];
+    const modelsByMake: Record<string, string[]> = {
+      "Toyota": ["Corolla", "Camry", "RAV4", "Yaris"],
+      "Volkswagen": ["Golf", "Passat", "Tiguan", "Polo"],
+      "BMW": ["3 Series", "5 Series", "X3", "X5"],
+      "Mercedes-Benz": ["C-Class", "E-Class", "GLC", "GLE"],
+      "Audi": ["A3", "A4", "Q5", "Q7"],
+      "Ford": ["Focus", "Fiesta", "Kuga", "Mondeo"],
+      "Honda": ["Civic", "CR-V", "Accord", "HR-V"],
     };
+    const colors = ["Черен", "Бял", "Сребрист", "Сив", "Син", "Червен"];
 
-    const procedurePool = [
-      "Ваксинация",
-      "Обезпаразитяване",
-      "Почистване на зъби",
-      "Преглед",
+    const servicePool = [
+      "Смяна на масло и филтри",
+      "Смяна на накладки",
+      "Компютърна диагностика",
+      "Реглаж на преден мост",
+      "Смяна на ангренажен ремък"
     ];
-    const medsPool = [
-      "Амоксицилин",
-      "Ибупрофен (вет.)",
-      "Витамини",
-      "Антибиотик",
+    const partsPool = [
+      "Моторно масло 5W-30",
+      "Маслен филтър",
+      "Въздушен филтър",
+      "Предни накладки",
+      "Спирачен диск"
     ];
 
-    const owners: string[] = [];
-    const animals: string[] = [];
+    const customers: string[] = [];
+    const vehicles: string[] = [];
     const visits: string[] = [];
     const invoices: string[] = [];
 
-    // Create owners
-    for (let i = 0; i < ownersCount; i++) {
-      const name = `${pick(ownerFirstNames)} ${pick(ownerLastNames)}`;
-      const phone = `0${randInt(87, 89)}${randInt(1000000, 9999999)}`; // 0 87x yyyyyyy
+    // Create customers
+    for (let i = 0; i < customersCount; i++) {
+      const name = `${pick(firstNames)} ${pick(lastNames)}`;
+      const phone = `0${randInt(87, 89)}${randInt(1000000, 9999999)}`;
       const email = `user${Date.now()}_${i}@example.com`;
       const address = pick(streets);
-      const o = (await ctx.runMutation(api.owners.create, {
+      const o = (await ctx.runMutation(api.customers.create, {
         name,
         phone,
         email,
         address,
         gdprConsent: true,
+        notes: "Редовен клиент",
       })) as unknown as { ok: boolean; id: string };
-      if (o?.ok && o.id) owners.push(o.id);
+      if (o?.ok && o.id) customers.push(o.id);
     }
 
-    // Create animals for each owner
-    for (const ownerId of owners) {
-      for (let j = 0; j < animalsPerOwner; j++) {
-        const sp = pick(species);
-        const a = (await ctx.runMutation(api.animals.create, {
-          name: pick(animalNames),
-          species: sp,
-          breed: pick(breedsBySpecies[sp] ?? [""]) || undefined,
-          neutered: Math.random() < 0.5,
-          ownerId: ownerId as any,
+    // Create vehicles for each customer
+    for (const customerId of customers) {
+      for (let j = 0; j < vehiclesPerCustomer; j++) {
+        const make = pick(carMakes);
+        const model = pick(modelsByMake[make] ?? [""]);
+        const licensePlate = `СВ${randInt(1000, 9999)}${String.fromCharCode(65 + randInt(0, 25))}${String.fromCharCode(65 + randInt(0, 25))}`;
+        const a = (await ctx.runMutation(api.vehicles.create, {
+          licensePlate,
+          make,
+          model,
+          color: pick(colors),
+          year: randInt(2005, 2024),
+          vin: `WBA${randInt(10000000000000, 99999999999999)}`,
+          customerId: customerId as any,
         })) as unknown as { ok: boolean; id: string };
-        if (a?.ok && a.id) animals.push(a.id);
+        if (a?.ok && a.id) vehicles.push(a.id);
       }
     }
 
-    // Create visits per animal
-    for (const animalId of animals) {
-      // Random owner from created (for relational realism could lookup actual owner, keeping simple here)
-      const ownerId = pick(owners);
-      for (let k = 0; k < visitsPerAnimal; k++) {
-        const when = Date.now() - randInt(0, 14) * 24 * 60 * 60 * 1000; // within last 2 weeks
+    // Create visits per vehicle
+    for (const vehicleId of vehicles) {
+      const customerId = pick(customers);
+      for (let k = 0; k < visitsPerVehicle; k++) {
+        const when = Date.now() - randInt(0, 14) * 24 * 60 * 60 * 1000;
         const vCreated = (await ctx.runMutation(api.visits.create, {
-          ownerId: ownerId as any,
-          animalId: animalId as any,
+          customerId: customerId as any,
+          vehicleId: vehicleId as any,
           datetime: when,
-          soap: {
-            s: "Собственикът съобщава за намален апетит.",
-            o: "Температурата е в норма, пулсът нормален.",
-            a: "Лека вирусна инфекция",
-            p: "Покой, витамини, хидратация",
+          mileage: randInt(50000, 250000),
+          notes: {
+            issue: "Странен шум при спиране.",
+            inspection: "Износени предни накладки.",
+            diagnosis: "Нужда от смяна на накладки и дискове.",
+            plan: "Смяна на предни накладки и спирачни дискове.",
           },
-          procedures: [pick(procedurePool)],
-          medications: Math.random() < 0.5 ? [pick(medsPool)] : [],
+          services: [pick(servicePool)],
+          parts: Math.random() < 0.5 ? [pick(partsPool)] : [],
         })) as unknown as { ok: boolean; id: string };
+        
         if (vCreated?.ok && vCreated.id) {
           visits.push(vCreated.id);
-          // Randomly finalize some visits
           if (Math.random() < 0.6) {
             await ctx.runMutation(api.visits.finalize, {
               id: vCreated.id as any,
             });
           }
 
-          // Optionally create invoices per visit
           for (let m = 0; m < invoicesPerVisit; m++) {
-            const items = [
-              { description: "Преглед", quantity: 1, price: 30, total: 30 },
-              ...(Math.random() < 0.5
-                ? [
-                    {
-                      description: "Ваксина",
-                      quantity: 1,
-                      price: 25,
-                      total: 25,
-                    },
-                  ]
-                : []),
-            ];
+            const parts = invoiceLineItems([
+              { name: "Предни накладки", quantity: 1, price: 80 },
+            ]);
+            const labor = invoiceLineItems([
+              { name: "Смяна на накладки", quantity: 1, price: 50 },
+            ]);
             const inv = (await ctx.runMutation(api.invoices.create, {
-              ownerId: ownerId as any,
-              animalId: animalId as any,
+              customerId: customerId as any,
+              vehicleId: vehicleId as any,
               visitId: vCreated.id as any,
-              items,
+              parts,
+              labor,
             })) as unknown as { ok: boolean; id: string };
             if (inv?.ok && inv.id) {
               invoices.push(inv.id);
@@ -183,8 +170,8 @@ export const run = action({
     return {
       ok: true,
       created: {
-        owners: owners.length,
-        animals: animals.length,
+        customers: customers.length,
+        vehicles: vehicles.length,
         visits: visits.length,
         invoices: invoices.length,
       },

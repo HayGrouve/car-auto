@@ -10,16 +10,15 @@ import { VisitStatusBadge } from "@/components/StatusBadge";
 
 type VisitHeroProps = {
   visit: VisitDoc;
-  owner?: {
+  customer?: {
     name?: string | null;
     phone?: string | null;
     balance?: string | null;
   } | null;
-  animal?: {
+  vehicle?: {
     id?: string | null;
     name?: string | null;
-    species?: string | null;
-    sex?: string | null;
+    make?: string | null;
     alerts?: string[];
   } | null;
   billing?: {
@@ -32,8 +31,8 @@ type VisitHeroProps = {
 
 export function VisitHero({
   visit,
-  owner,
-  animal,
+  customer,
+  vehicle,
   billing,
   actionsMenuDesktop,
   actionsMenuMobile,
@@ -41,17 +40,8 @@ export function VisitHero({
   const formattedDate = visit.datetime
     ? new Date(visit.datetime).toLocaleString("bg-BG")
     : new Date(visit.createdAt).toLocaleString("bg-BG");
-  const genderLabel =
-    animal?.sex === "male"
-      ? "Мъжки"
-      : animal?.sex === "female"
-        ? "Женски"
-        : animal?.sex === "unknown"
-          ? "Неизвестен"
-          : undefined;
   const speciesWithGender = [
-    animal?.species ?? visit.animalSpecies ?? "без вид",
-    genderLabel,
+    vehicle?.make ?? visit.vehicleMake ?? "без марка",
   ]
     .filter(Boolean)
     .join(" · ");
@@ -83,27 +73,27 @@ export function VisitHero({
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 md:grid-cols-3">
-            <InfoBlock title="Пациент" fallback="Няма данни">
+            <InfoBlock title="Автомобил" fallback="Няма данни">
               <div className="space-y-1">
-                {animal?.id && (animal?.name ?? visit.animalName) ? (
+                {vehicle?.id && (vehicle?.name ?? visit.vehicleName) ? (
                   <Link
-                    href={`/animals/${animal.id}`}
+                    href={`/vehicles/${vehicle.id}`}
                     className="font-medium hover:underline inline-block"
-                    aria-label={`Преглед на животно ${animal.name ?? visit.animalName ?? ""}`}
+                    aria-label={`Преглед на автомобил ${vehicle.name ?? visit.vehicleName ?? ""}`}
                   >
-                    {animal.name ?? visit.animalName ?? "Неизвестно животно"}
+                    {vehicle.name ?? visit.vehicleName ?? "Неизвестен автомобил"}
                   </Link>
                 ) : (
                   <p className="font-medium">
-                    {animal?.name ?? visit.animalName ?? "Неизвестно животно"}
+                    {vehicle?.name ?? visit.vehicleName ?? "Неизвестен автомобил"}
                   </p>
                 )}
                 <p className="text-muted-foreground text-sm">
                   {speciesWithGender}
                 </p>
-                {(animal?.alerts ?? visit.alerts ?? []).length ? (
+                {(vehicle?.alerts ?? visit.alerts ?? []).length ? (
                   <ul className="text-destructive space-y-1 text-xs">
-                    {(animal?.alerts ?? visit.alerts ?? []).map(
+                    {(vehicle?.alerts ?? visit.alerts ?? []).map(
                       (alert, idx) => (
                         <li key={idx}>• {alert}</li>
                       ),
@@ -112,22 +102,22 @@ export function VisitHero({
                 ) : null}
               </div>
             </InfoBlock>
-            <InfoBlock title="Собственик" fallback="Няма собственик">
+            <InfoBlock title="Клиент" fallback="Няма клиент">
               <div className="space-y-1">
-                <p className="font-medium">{owner?.name ?? "Неизвестен"}</p>
-                {owner?.phone ? (
+                <p className="font-medium">{customer?.name ?? "Неизвестен"}</p>
+                {customer?.phone ? (
                   <a
-                    href={`tel:${owner.phone}`}
+                    href={`tel:${customer.phone}`}
                     className="inline-flex items-center gap-1 text-sm hover:underline cursor-pointer"
-                    aria-label={`Обади се на ${owner.phone}`}
+                    aria-label={`Обади се на ${customer.phone}`}
                   >
                     <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-                    {owner.phone}
+                    {customer.phone}
                   </a>
                 ) : null}
-                {owner?.balance ? (
+                {customer?.balance ? (
                   <p className="text-muted-foreground text-xs">
-                    Баланс: {owner.balance}
+                    Баланс: {customer.balance}
                   </p>
                 ) : null}
               </div>

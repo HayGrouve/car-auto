@@ -14,18 +14,18 @@ function endOfDay(timestamp: number): number {
   return d.getTime();
 }
 
-type OwnerDoc = {
+type CustomerDoc = {
   _id: string;
   name: string;
   phone?: string | null;
   deletedAt?: number | null;
 };
 
-type AnimalDoc = {
+type VehicleDoc = {
   _id: string;
-  name: string;
-  species?: string | null;
-  ownerId?: string | null;
+  licensePlate: string;
+  make?: string | null;
+  customerId?: string | null;
   createdAt: number;
 };
 
@@ -35,8 +35,8 @@ type VisitDoc = {
   datetime?: number | null;
   createdAt: number;
   status: string;
-  ownerId?: string | null;
-  animalId?: string | null;
+  customerId?: string | null;
+  vehicleId?: string | null;
 };
 
 type InvoiceDoc = {
@@ -56,8 +56,8 @@ type ScheduleSlotDoc = {
   title: string;
   description?: string | null;
   visitId?: string | null;
-  ownerId?: string | null;
-  animalId?: string | null;
+  customerId?: string | null;
+  vehicleId?: string | null;
   status: string;
 };
 
@@ -69,39 +69,39 @@ export const overview = query({
     const todayEnd = endOfDay(now);
     const weekStart = startOfDay(now - 6 * DAY_MS);
 
-    const [ownerDocs, animalDocs, visitDocs, invoiceDocs, scheduleDocs] =
+    const [customerDocs, vehicleDocs, visitDocs, invoiceDocs, scheduleDocs] =
       await Promise.all([
-        ctx.db.query("owners").collect() as Promise<OwnerDoc[]>,
-        ctx.db.query("animals").collect() as Promise<AnimalDoc[]>,
+        ctx.db.query("customers").collect() as Promise<CustomerDoc[]>,
+        ctx.db.query("vehicles").collect() as Promise<VehicleDoc[]>,
         ctx.db.query("visits").collect() as Promise<VisitDoc[]>,
         ctx.db.query("invoices").collect() as Promise<InvoiceDoc[]>,
         ctx.db.query("schedule").collect() as Promise<ScheduleSlotDoc[]>,
       ]);
 
-    const ownerMap = new Map<string, { name: string; phone?: string | null }>();
-    ownerDocs.forEach((owner) => {
-      if (!owner?.deletedAt) {
-        ownerMap.set(String(owner._id), {
-          name: owner.name,
-          phone: owner.phone ?? null,
+    const customerMap = new Map<string, { name: string; phone?: string | null }>();
+    customerDocs.forEach((customer) => {
+      if (!customer?.deletedAt) {
+        customerMap.set(String(customer._id), {
+          name: customer.name,
+          phone: customer.phone ?? null,
         });
       }
     });
 
-    const animalMap = new Map<
+    const vehicleMap = new Map<
       string,
-      { name: string; species?: string | null; ownerId?: string | null }
+      { licensePlate: string; make?: string | null; customerId?: string | null }
     >();
-    animalDocs.forEach((animal) => {
-      animalMap.set(String(animal._id), {
-        name: animal.name,
-        species: animal.species ?? null,
-        ownerId: animal.ownerId ? String(animal.ownerId) : null,
+    vehicleDocs.forEach((vehicle) => {
+      vehicleMap.set(String(vehicle._id), {
+        licensePlate: vehicle.licensePlate,
+        make: vehicle.make ?? null,
+        customerId: vehicle.customerId ? String(vehicle.customerId) : null,
       });
     });
 
-    const animalCount = animalDocs.length;
-    const ownerCount = ownerDocs.filter((o) => !o?.deletedAt).length;
+    const vehicleCount = vehicleDocs.length;
+    const customerCount = customerDocs.filter((o) => !o?.deletedAt).length;
 
     const draftVisitsCount = visitDocs.filter(
       (v) => v.status === "draft",
@@ -120,11 +120,11 @@ export const overview = query({
         code: visit.code ?? null,
         datetime: visit.datetime ?? visit.createdAt ?? Date.now(),
         status: visit.status,
-        ownerId: visit.ownerId ? String(visit.ownerId) : null,
-        ownerName: visit.ownerId
-          ? (ownerMap.get(String(visit.ownerId))?.name ?? null)
+        customerId: visit.customerId ? String(visit.customerId) : null,
+        customerName: visit.customerId
+          ? (customerMap.get(String(visit.customerId))?.name ?? null)
           : null,
-        animalId: visit.animalId ? String(visit.animalId) : null,
+        vehicleId: visit.vehicleId ? String(visit.vehicleId) : null,
       }));
 
     // Create a map of visitId -> invoiceId for quick lookup
@@ -193,20 +193,20 @@ export const overview = query({
         startTime: slot.startTime,
         endTime: slot.endTime,
         visitId: slot.visitId ? String(slot.visitId) : null,
-        ownerId: slot.ownerId ? String(slot.ownerId) : null,
-        ownerName: slot.ownerId
-          ? (ownerMap.get(String(slot.ownerId))?.name ?? null)
+        customerId: slot.customerId ? String(slot.customerId) : null,
+        customerName: slot.customerId
+          ? (customerMap.get(String(slot.customerId))?.name ?? null)
           : null,
-        animalId: slot.animalId ? String(slot.animalId) : null,
-        animalName: slot.animalId
-          ? (animalMap.get(String(slot.animalId))?.name ?? null)
+        vehicleId: slot.vehicleId ? String(slot.vehicleId) : null,
+        vehicleName: slot.vehicleId
+          ? (vehicleMap.get(String(slot.vehicleId))?.licensePlate ?? null)
           : null,
       }));
 
     return {
       counts: {
-        owners: ownerCount,
-        animals: animalCount,
+        customers: customerCount,
+        vehicles: vehicleCount,
         draftVisits: draftVisitsCount,
         unpaidInvoices: unpaidInvoices.length,
       },

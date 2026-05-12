@@ -1,14 +1,13 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import logoJpg from "@/../public/logo.jpg";
 import { usePathname } from "next/navigation";
 import { brand } from "@/lib/brand";
 import {
   Menu,
   Search,
-  PawPrint,
-  User,
+  Car,
+  Users,
   CalendarCheck,
   FileText,
   Calendar,
@@ -45,8 +44,8 @@ export function AppNav() {
   }, []);
 
   const links = [
-    { href: "/owners", label: "Собственици", icon: User },
-    { href: "/animals", label: "Животни", icon: PawPrint },
+    { href: "/customers", label: "Клиенти", icon: Users },
+    { href: "/vehicles", label: "Автомобили", icon: Car },
     { href: "/visits", label: "Посещения", icon: CalendarCheck },
     { href: "/schedule", label: "График", icon: Calendar },
     { href: "/invoices", label: "Фактури", icon: FileText },
@@ -77,7 +76,7 @@ export function AppNav() {
             className="inline-flex cursor-pointer items-center gap-2 font-semibold hover:underline"
           >
             <Image
-              src={logoJpg}
+              src="/logo.jpg"
               alt="Лого"
               width={24}
               height={24}

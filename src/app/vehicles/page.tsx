@@ -11,13 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import type { AnimalDoc } from "@/types/animal";
+import type { VehicleDoc } from "@/types/vehicle";
 import {
-  PawPrint,
+  Car,
   Hash,
-  User as UserIcon,
+  Users as UserIcon,
   Phone as PhoneIcon,
   ChevronLeft,
   ChevronRight,
@@ -45,9 +44,10 @@ import {
 } from "@/components/breadcrumbs";
 import { Form, getFormFieldProps } from "@/components/ui/form";
 import { FormField } from "@/components/ui/form-field";
-import { animalFormSchema, type AnimalFormData } from "@/lib/validation/animal";
+import { vehicleFormSchema, type VehicleFormData } from "@/lib/validation/vehicle";
 import type { UseFormReturn } from "react-hook-form";
-export default function AnimalsPage() {
+
+export default function VehiclesPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const pageSize = 10;
@@ -55,88 +55,84 @@ export default function AnimalsPage() {
     "createdAtDesc",
   );
   const [showCreatePanel, setShowCreatePanel] = useState(false);
-  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
-  const animalsQuery = useQuery(
-    api.animals.list,
+  const [customerPopoverOpen, setCustomerPopoverOpen] = useState(false);
+  const vehiclesQuery = useQuery(
+    api.vehicles.list,
     useMemo(
       () => ({ search, limit: pageSize, offset: page * pageSize, sort }),
       [search, page, sort],
     ),
   );
-  const animals = animalsQuery as
-    | { items: AnimalDoc[]; total: number; hasMore: boolean }
+  const vehicles = vehiclesQuery as
+    | { items: VehicleDoc[]; total: number; hasMore: boolean }
     | undefined;
-  const animalsList = animals?.items ?? undefined;
-  const createAnimal = useMutation(api.animals.create);
-  const [ownerId, setOwnerId] = useState("");
-  const [ownerSearch, setOwnerSearch] = useState("");
+  const vehiclesList = vehicles?.items ?? undefined;
+  const createVehicle = useMutation(api.vehicles.create);
+  const [customerId, setCustomerId] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
 
   const totalPages = useMemo(() => {
-    const total = animals?.total ?? 0;
+    const total = vehicles?.total ?? 0;
     return total > 0 ? Math.ceil(total / pageSize) : 1;
-  }, [animals?.total, pageSize]);
-  const ownersQuery = useQuery(
-    api.owners.list,
-    useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
+  }, [vehicles?.total, pageSize]);
+  const customersQuery = useQuery(
+    api.customers.list,
+    useMemo(() => ({ search: customerSearch }), [customerSearch]),
   );
-  const ownersResult = ownersQuery as
+  const customersResult = customersQuery as
     | { items: { _id: string; name: string; phone?: string }[]; total: number; hasMore: boolean }
     | undefined;
-  const owners = ownersResult?.items;
+  const customers = customersResult?.items;
 
-  const ownersById = useMemo(() => {
+  const customersById = useMemo(() => {
     const map: Record<string, { _id: string; name: string; phone?: string }> =
       {};
-    (owners ?? []).forEach((o) => {
+    (customers ?? []).forEach((o) => {
       map[o._id] = o;
     });
     return map;
-  }, [owners]);
+  }, [customers]);
 
   async function handleCreate(
-    data: AnimalFormData,
-    methods: UseFormReturn<AnimalFormData>,
+    data: VehicleFormData,
+    methods: UseFormReturn<VehicleFormData>,
   ) {
-    const microchipCleaned = data.microchip?.replace(/\s+/g, "") ?? undefined;
-    const dobParsed = data.dob ? Date.parse(data.dob) : undefined;
-    const dob = dobParsed && !Number.isNaN(dobParsed) ? dobParsed : undefined;
+    const vinCleaned = data.vin?.replace(/\s+/g, "") ?? undefined;
+    const yearParsed = data.year ? parseInt(data.year, 10) : undefined;
+    const year = yearParsed && !Number.isNaN(yearParsed) ? yearParsed : undefined;
 
-    const res = (await createAnimal({
-      name: data.name.trim(),
-      species: data.species.trim(),
-      breed: data.breed?.trim() ?? undefined,
+    const res = (await createVehicle({
+      licensePlate: data.licensePlate.trim(),
+      make: data.make.trim(),
+      model: data.model?.trim() ?? undefined,
       color: data.color?.trim() ?? undefined,
-      microchip: microchipCleaned,
-      dob,
-      sex: data.sex,
-      neutered: data.neutered,
-      ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
-    })) as { ok: true; id: string } | { ok: false; reason: "microchip" };
+      vin: vinCleaned,
+      year,
+      customerId: customerId ? (customerId as Id<"customers">) : undefined,
+    })) as { ok: true; id: string } | { ok: false; reason: "vin" };
     if (!res?.ok) {
-      toast.error("Съществува животно с този микрочип");
+      toast.error("Съществува автомобил с този VIN номер");
       return;
     }
     methods.reset({
-      name: "",
-      species: "",
-      breed: "",
+      licensePlate: "",
+      make: "",
+      model: "",
       color: "",
-      sex: "unknown",
-      neutered: false,
-      microchip: "",
-      dob: "",
-      ownerId: "",
+      vin: "",
+      year: "",
+      customerId: "",
     });
-    setOwnerId("");
-    setOwnerSearch("");
-    toast.success("Животното е добавено успешно");
+    setCustomerId("");
+    setCustomerSearch("");
+    toast.success("Автомобилът е добавен успешно");
   }
 
   useBreadcrumbRegistration([
     { label: "Начало", href: "/" } satisfies BreadcrumbItem,
     {
-      label: "Животни",
-      href: "/animals",
+      label: "Автомобили",
+      href: "/vehicles",
       current: true,
     } satisfies BreadcrumbItem,
   ]);
@@ -145,7 +141,7 @@ export default function AnimalsPage() {
     <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
-          Животни: {animals?.total ?? 0}
+          Автомобили: {vehicles?.total ?? 0}
         </h1>
         <Button
           className="md:hidden"
@@ -162,9 +158,9 @@ export default function AnimalsPage() {
               }
             }, 100);
           }}
-          aria-label="Ново животно"
+          aria-label="Нов автомобил"
         >
-          Ново животно
+          Нов автомобил
         </Button>
       </div>
 
@@ -173,14 +169,14 @@ export default function AnimalsPage() {
         <section id="search" className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Input
-              placeholder="Търсене по име, вид, порода, микрочип"
+              placeholder="Търсене по рег. номер, марка, модел, VIN"
               className="h-10 w-full"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(0);
               }}
-              aria-label="Търсене на животни"
+              aria-label="Търсене на автомобили"
             />
             <Select
               value={sort}
@@ -200,76 +196,67 @@ export default function AnimalsPage() {
           </div>
 
           <div className="divide-y rounded-md border">
-            {animals === undefined ? (
+            {vehicles === undefined ? (
               <SkeletonList rows={6} />
-            ) : (animalsList ?? []).length === 0 ? (
+            ) : (vehiclesList ?? []).length === 0 ? (
               <EmptyState
-                icon={PawPrint}
-                title="Няма животни"
-                description="Добавете животно към собственик."
+                icon={Car}
+                title="Няма автомобили"
+                description="Добавете автомобил към клиент."
               />
             ) : (
-              (animalsList ?? []).map((a) => {
-                const owner = a.ownerId
-                  ? ownersById[String(a.ownerId)]
+              (vehiclesList ?? []).map((vDoc) => {
+                const customer = vDoc.customerId
+                  ? customersById[String(vDoc.customerId)]
                   : undefined;
                 return (
                   <div
-                    key={a._id}
+                    key={vDoc._id}
                     className="flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <PawPrint
+                      <Car
                         className="text-primary size-5 flex-shrink-0"
                         aria-hidden
                       />
                       <div className="min-w-0 flex-1">
                         <Link
-                          href={`/animals/${a._id}`}
+                          href={`/vehicles/${vDoc._id}`}
                           className="inline-flex min-h-[44px] items-center gap-1 font-medium underline-offset-2 hover:underline"
-                          aria-label={`Преглед на ${a.name}`}
+                          aria-label={`Преглед на ${vDoc.licensePlate}`}
                         >
                           <span className="truncate">
-                            {a.name} ({a.species})
+                            {vDoc.licensePlate} ({vDoc.make})
                           </span>
                         </Link>
                         <div className="text-muted-foreground flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3 sm:gap-y-1">
-                          {a.breed && (
-                            <span className="truncate">{a.breed}</span>
+                          {vDoc.model && (
+                            <span className="truncate">{vDoc.model}</span>
                           )}
-                          {a.microchip ? (
+                          {vDoc.vin ? (
                             <span className="inline-flex items-center gap-1">
                               <Hash className="size-4 flex-shrink-0" />
-                              <span className="truncate">{a.microchip}</span>
+                              <span className="truncate">{vDoc.vin}</span>
                             </span>
                           ) : null}
-                          {a.neutered ? (
-                            <span className="inline-flex w-fit items-center gap-1 rounded-full border px-2 py-0.5 text-xs">
-                              {a.sex === "male"
-                                ? "Кастриран"
-                                : a.sex === "female"
-                                  ? "Кастрирана"
-                                  : "Кастриран/а"}
-                            </span>
-                          ) : null}
-                          {owner ? (
+                          {customer ? (
                             <span className="inline-flex flex-wrap items-center gap-2">
                               <Link
-                                href={`/owners/${owner._id}`}
+                                href={`/customers/${customer._id}`}
                                 className="inline-flex min-h-[44px] items-center gap-1 underline-offset-2 hover:underline"
-                                aria-label={`Собственик ${owner.name}`}
+                                aria-label={`Клиент ${customer.name}`}
                               >
                                 <UserIcon
                                   className="size-4 flex-shrink-0"
                                   aria-hidden
                                 />
-                                <span className="truncate">{owner.name}</span>
+                                <span className="truncate">{customer.name}</span>
                               </Link>
-                              {owner.phone ? (
+                              {customer.phone ? (
                                 <span className="text-muted-foreground inline-flex items-center gap-1">
                                   <PhoneIcon className="size-4 flex-shrink-0" />
                                   <span className="truncate">
-                                    {owner.phone}
+                                    {customer.phone}
                                   </span>
                                 </span>
                               ) : null}
@@ -279,7 +266,7 @@ export default function AnimalsPage() {
                       </div>
                     </div>
                     <div className="text-muted-foreground text-xs sm:flex-shrink-0 sm:text-sm">
-                      {fmtDateTimeBG(a.createdAt)}
+                      {fmtDateTimeBG(vDoc.createdAt)}
                     </div>
                   </div>
                 );
@@ -303,9 +290,9 @@ export default function AnimalsPage() {
             <Button
               variant="outline"
               onClick={() =>
-                setPage((p) => (animals?.hasMore ? p + 1 : p))
+                setPage((p) => (vehicles?.hasMore ? p + 1 : p))
               }
-              disabled={!animals?.hasMore}
+              disabled={!vehicles?.hasMore}
             >
               Напред
               <ChevronRight className="ml-1 size-4" aria-hidden />
@@ -320,7 +307,7 @@ export default function AnimalsPage() {
         >
           <div className="space-y-4 rounded-md border p-4 md:space-y-3 md:p-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-medium">Ново животно</h2>
+              <h2 className="font-medium">Нов автомобил</h2>
               <Button
                 className="min-h-[44px] min-w-[44px] md:hidden"
                 variant="outline"
@@ -332,76 +319,74 @@ export default function AnimalsPage() {
               </Button>
             </div>
             <Form
-              schema={animalFormSchema}
+              schema={vehicleFormSchema}
               defaultValues={{
-                name: "",
-                species: "",
-                breed: "",
+                licensePlate: "",
+                make: "",
+                model: "",
                 color: "",
-                sex: "unknown",
-                neutered: false,
-                microchip: "",
-                dob: "",
-                ownerId: "",
+                vin: "",
+                year: "",
+                customerId: "",
               }}
               onSubmit={handleCreate}
               className="grid grid-cols-1 gap-4 md:gap-3"
             >
-              {(methods: UseFormReturn<AnimalFormData>) => {
-                const nameField = getFormFieldProps(methods, "name");
-                const speciesField = getFormFieldProps(methods, "species");
-                const breedField = getFormFieldProps(methods, "breed");
+              {(methods: UseFormReturn<VehicleFormData>) => {
+                const licensePlateField = getFormFieldProps(methods, "licensePlate");
+                const makeField = getFormFieldProps(methods, "make");
+                const modelField = getFormFieldProps(methods, "model");
                 const colorField = getFormFieldProps(methods, "color");
-                const microchipField = getFormFieldProps(methods, "microchip");
-                const dobField = getFormFieldProps(methods, "dob");
+                const vinField = getFormFieldProps(methods, "vin");
+                const yearField = getFormFieldProps(methods, "year");
                 return (
                   <>
                     <FormField
-                      label="Име"
-                      htmlFor="aname"
+                      label="Рег. номер"
+                      htmlFor="licensePlate"
                       required
-                      error={methods.formState.errors.name?.message}
-                      hint="Въведете име на животното"
+                      error={methods.formState.errors.licensePlate?.message}
+                      hint="Въведете регистрационен номер"
                     >
                       <Input
-                        id="aname"
+                        id="licensePlate"
                         type="text"
-                        autoCapitalize="words"
-                        placeholder="Шаро"
-                        aria-label="Име на животно"
-                        {...nameField}
+                        autoCapitalize="characters"
+                        placeholder="СВ1234АВ"
+                        aria-label="Рег. номер"
+                        {...licensePlateField}
                       />
                     </FormField>
 
                     <FormField
-                      label="Вид"
-                      htmlFor="species"
+                      label="Марка"
+                      htmlFor="make"
                       required
-                      error={methods.formState.errors.species?.message}
-                      hint="Въведете вида на животното"
+                      error={methods.formState.errors.make?.message}
+                      hint="Въведете марка на автомобила"
                     >
                       <Input
-                        id="species"
+                        id="make"
                         type="text"
                         autoCapitalize="words"
-                        placeholder="Куче"
-                        aria-label="Вид на животно"
-                        {...speciesField}
+                        placeholder="Toyota"
+                        aria-label="Марка на автомобил"
+                        {...makeField}
                       />
                     </FormField>
 
                     <FormField
-                      label="Порода"
-                      htmlFor="breed"
-                      error={methods.formState.errors.breed?.message}
+                      label="Модел"
+                      htmlFor="model"
+                      error={methods.formState.errors.model?.message}
                     >
                       <Input
-                        id="breed"
+                        id="model"
                         type="text"
                         autoCapitalize="words"
-                        placeholder="Лабрадор"
-                        aria-label="Порода на животно"
-                        {...breedField}
+                        placeholder="Corolla"
+                        aria-label="Модел на автомобил"
+                        {...modelField}
                       />
                     </FormField>
 
@@ -414,121 +399,74 @@ export default function AnimalsPage() {
                         id="color"
                         type="text"
                         autoCapitalize="words"
-                        placeholder="напр. Кафяв"
-                        aria-label="Цвят на животно"
+                        placeholder="напр. Черен"
+                        aria-label="Цвят на автомобил"
                         {...colorField}
                       />
                     </FormField>
 
                     <FormField
-                      label="Пол"
-                      htmlFor="sex"
-                      error={methods.formState.errors.sex?.message}
-                    >
-                      <Select
-                        value={methods.watch("sex") ?? "unknown"}
-                        onValueChange={(value: "male" | "female" | "unknown") =>
-                          methods.setValue("sex", value)
-                        }
-                      >
-                        <SelectTrigger id="sex" className="h-9 w-full">
-                          <SelectValue placeholder="Пол" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Мъжки</SelectItem>
-                          <SelectItem value="female">Женски</SelectItem>
-                          <SelectItem value="unknown">Неизвестен</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormField>
-
-                    <FormField
-                      label="Стерилизиран"
-                      htmlFor="neutered"
-                      error={methods.formState.errors.neutered?.message}
-                    >
-                      <label className="flex items-center gap-2">
-                        <Checkbox
-                          id="neutered"
-                          checked={methods.watch("neutered") ?? false}
-                          onCheckedChange={(checked) =>
-                            methods.setValue("neutered", checked === true)
-                          }
-                          aria-invalid={!!methods.formState.errors.neutered}
-                        />
-                        <span className="text-sm">
-                          {(() => {
-                            const sex = methods.watch("sex");
-                            if (sex === "male") return "Кастриран";
-                            if (sex === "female") return "Кастрирана";
-                            return "Кастриран/а";
-                          })()}
-                        </span>
-                      </label>
-                    </FormField>
-
-                    <FormField
-                      label="Микрочип"
-                      htmlFor="microchip"
-                      error={methods.formState.errors.microchip?.message}
-                      hint="ISO формат: 15 цифри (опционално)"
+                      label="VIN номер"
+                      htmlFor="vin"
+                      error={methods.formState.errors.vin?.message}
+                      hint="17 символа (опционално)"
                     >
                       <Input
-                        id="microchip"
+                        id="vin"
                         type="text"
-                        placeholder="напр. 985112003178000"
-                        aria-label="Микрочип на животно"
-                        {...microchipField}
+                        autoCapitalize="characters"
+                        placeholder="напр. WBA..."
+                        aria-label="VIN номер на автомобил"
+                        {...vinField}
                       />
                     </FormField>
 
                     <FormField
-                      label="Дата на раждане"
-                      htmlFor="birthdate"
-                      error={methods.formState.errors.dob?.message}
-                      hint="Датата на раждане не може да бъде в бъдещето"
+                      label="Година на производство"
+                      htmlFor="year"
+                      error={methods.formState.errors.year?.message}
                     >
                       <Input
-                        id="birthdate"
-                        type="date"
-                        max={new Date().toISOString().split("T")[0]}
-                        {...dobField}
+                        id="year"
+                        type="number"
+                        placeholder="2020"
+                        {...yearField}
                       />
                     </FormField>
 
-                    <FormField label="Собственик">
+                    <FormField label="Клиент">
                       <Popover
-                        open={ownerPopoverOpen}
-                        onOpenChange={setOwnerPopoverOpen}
+                        open={customerPopoverOpen}
+                        onOpenChange={setCustomerPopoverOpen}
                       >
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             className="w-full justify-between"
                           >
-                            {ownerId
-                              ? (owners ?? []).find((o) => o._id === ownerId)
+                            {customerId
+                              ? (customers ?? []).find((o) => o._id === customerId)
                                   ?.name
-                              : "Без собственик"}
+                              : "Без клиент"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                           <Command>
                             <CommandInput
-                              placeholder="Търси собственик..."
-                              value={ownerSearch}
-                              onValueChange={setOwnerSearch}
+                              placeholder="Търси клиент..."
+                              value={customerSearch}
+                              onValueChange={setCustomerSearch}
                             />
                             <CommandList>
                               <CommandEmpty>Няма резултати</CommandEmpty>
-                              {(owners ?? []).map((o) => (
+                              {(customers ?? []).map((o) => (
                                 <CommandItem
                                   key={o._id}
                                   value={o.name}
                                   onSelect={() => {
-                                    setOwnerId(o._id);
-                                    methods.setValue("ownerId", o._id);
-                                    setOwnerPopoverOpen(false);
+                                    setCustomerId(o._id);
+                                    methods.setValue("customerId", o._id);
+                                    setCustomerPopoverOpen(false);
                                   }}
                                 >
                                   {o.name}
@@ -549,7 +487,7 @@ export default function AnimalsPage() {
                       >
                         {methods.formState.isSubmitting
                           ? "Добавяне..."
-                          : "Добави животно"}
+                          : "Добави автомобил"}
                       </Button>
                     </div>
                   </>

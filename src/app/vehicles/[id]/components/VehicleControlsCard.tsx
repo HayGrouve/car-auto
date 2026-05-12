@@ -21,8 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-interface AnimalControlsCardProps {
-  hasOwner: boolean;
+interface VehicleControlsCardProps {
+  hasCustomer: boolean;
   hasDraftVisit?: boolean;
   hasIncompleteVisit?: boolean;
   draftVisitId?: string;
@@ -45,8 +45,8 @@ interface AnimalControlsCardProps {
   className?: string;
 }
 
-export function AnimalControlsCard({
-  hasOwner,
+export function VehicleControlsCard({
+  hasCustomer,
   hasDraftVisit = false,
   hasIncompleteVisit = false,
   canStartVisit = true,
@@ -66,13 +66,13 @@ export function AnimalControlsCard({
   disablePrimary = false,
   disableSecondary = false,
   className,
-}: AnimalControlsCardProps) {
+}: VehicleControlsCardProps) {
   const primaryText =
     primaryLabel ??
     (hasDraftVisit ? "Продължи посещение" : "Започни посещение");
 
   const handlePrimaryClick = () => {
-    if (!hasOwner && !canStartVisit) return;
+    if (!hasCustomer && !canStartVisit) return;
     if (hasDraftVisit) {
       onResumeVisit?.();
     } else if (onStartVisit) {
@@ -82,7 +82,7 @@ export function AnimalControlsCard({
     }
   };
 
-  const primaryDisabled = disablePrimary || (!hasOwner && !canStartVisit);
+  const primaryDisabled = disablePrimary || (!hasCustomer && !canStartVisit);
   const secondaryDisabled = disableSecondary;
 
   const actionItems = [
@@ -106,7 +106,7 @@ export function AnimalControlsCard({
       variant: "destructive" as const,
     },
     onBack && {
-      label: "Назад към животните",
+      label: "Назад към автомобилите",
       icon: <ArrowLeft className="size-4" aria-hidden="true" />,
       onClick: onBack,
       disabled: secondaryDisabled,
@@ -130,10 +130,10 @@ export function AnimalControlsCard({
         title="Контроли"
       >
         <div className="space-y-4">
-          {!hasOwner ? (
+          {!hasCustomer ? (
             <Alert variant="destructive">
               <AlertDescription>
-                Изберете собственик, преди да започнете ново посещение.
+                Изберете клиент, преди да започнете ново посещение.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -141,7 +141,7 @@ export function AnimalControlsCard({
           {hasIncompleteVisit ? (
             <Alert>
               <AlertDescription>
-                Има незавършено посещение за това животно. Може да го
+                Има незавършено посещение за този автомобил. Може да го
                 продължите.
               </AlertDescription>
             </Alert>
@@ -197,7 +197,7 @@ export function AnimalControlsCard({
                 onClick={onConfirmDelete}
                 disabled={secondaryDisabled || isDeleting}
                 aria-disabled={secondaryDisabled || isDeleting}
-                aria-label="Изтриване на животното"
+                aria-label="Изтриване на автомобила"
               >
                 <Trash2 className="mr-2 size-4" aria-hidden="true" />
                 {isDeleting ? "Изтриване..." : "Изтрий"}
@@ -213,7 +213,7 @@ export function AnimalControlsCard({
               aria-label="Назад към списъка"
             >
               <ArrowLeft className="mr-2 size-4" aria-hidden="true" />
-              Назад към животните
+              Назад към автомобилите
             </Button>
           </div>
         </div>
@@ -266,4 +266,4 @@ export function AnimalControlsCard({
   );
 }
 
-export default AnimalControlsCard;
+export default VehicleControlsCard;

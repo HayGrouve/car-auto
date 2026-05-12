@@ -22,8 +22,8 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Search,
-  User,
-  PawPrint,
+  Users,
+  Car,
   CalendarCheck,
   FileText,
   Loader2,
@@ -39,19 +39,19 @@ const HISTORY_LIMIT = 8;
 const MIN_QUERY_LENGTH = 2;
 
 // Type definitions
-interface Owner {
+interface Customer {
   _id: string;
   name: string;
   phone?: string;
 }
 
-interface Animal {
+interface Vehicle {
   _id: string;
-  name: string;
-  species: string;
-  ownerId?: string | null;
-  ownerName?: string | null;
-  ownerPhone?: string | null;
+  licensePlate: string;
+  make: string;
+  customerId?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
 }
 
 interface Visit {
@@ -59,51 +59,51 @@ interface Visit {
   code?: string;
   createdAt: number;
   status: string;
-  ownerId?: string;
-  animalId?: string;
+  customerId?: string;
+  vehicleId?: string;
 }
 
 interface Invoice {
   _id: string;
   code?: string;
   createdAt: number;
-  total: number;
-  ownerId?: string;
+  totalAmount: number;
+  customerId?: string;
   visitId?: string;
 }
 
-// Parse query for prefix filters (o:, a:, v:, i:)
+// Parse query for prefix filters (c:, v:, p:, i:)
 function parseQuery(rawQuery: string): {
   query: string;
   filters: {
-    owners: boolean;
-    animals: boolean;
+    customers: boolean;
+    vehicles: boolean;
     visits: boolean;
     invoices: boolean;
   };
 } {
   const trimmed = rawQuery.trim();
   const filters = {
-    owners: false,
-    animals: false,
+    customers: false,
+    vehicles: false,
     visits: false,
     invoices: false,
   };
 
   let query = trimmed;
-  const prefixRegex = /^([oavi]):(.+)$/i;
+  const prefixRegex = /^([cvpi]):(.+)$/i;
   const prefixMatch = prefixRegex.exec(trimmed);
   if (prefixMatch?.[1] && prefixMatch?.[2]) {
     const prefix = prefixMatch[1].toLowerCase();
     query = prefixMatch[2].trim();
     switch (prefix) {
-      case "o":
-        filters.owners = true;
-        break;
-      case "a":
-        filters.animals = true;
+      case "c":
+        filters.customers = true;
         break;
       case "v":
+        filters.vehicles = true;
+        break;
+      case "p":
         filters.visits = true;
         break;
       case "i":
@@ -117,7 +117,7 @@ function parseQuery(rawQuery: string): {
 
 // Format currency
 function formatCurrency(amount: number): string {
-  return fmtNumberBG(amount, { style: "currency", currency: "EUR" });
+  return fmtNumberBG(amount, { style: "currency", currency: "BGN" });
 }
 
 // Get status badge variant
@@ -239,16 +239,16 @@ export function GlobalSearch({
 
   // Determine which types to search
   const hasAnyFilter =
-    filters.owners || filters.animals || filters.visits || filters.invoices;
-  const shouldSearchOwners = !hasAnyFilter || filters.owners;
-  const shouldSearchAnimals = !hasAnyFilter || filters.animals;
+    filters.customers || filters.vehicles || filters.visits || filters.invoices;
+  const shouldSearchCustomers = !hasAnyFilter || filters.customers;
+  const shouldSearchVehicles = !hasAnyFilter || filters.vehicles;
   const shouldSearchVisits = !hasAnyFilter || filters.visits;
   const shouldSearchInvoices = !hasAnyFilter || filters.invoices;
 
   // Queries with loading and error states
-  const ownersQuery = useQuery(
-    api.owners.list,
-    shouldFetch && shouldSearchOwners
+  const customersQuery = useQuery(
+    api.customers.list,
+    shouldFetch && shouldSearchCustomers
       ? {
           search: searchQuery,
           limit: 10,
@@ -256,9 +256,9 @@ export function GlobalSearch({
       : "skip",
   );
 
-  const animalsQuery = useQuery(
-    api.animals.list,
-    shouldFetch && shouldSearchAnimals
+  const vehiclesQuery = useQuery(
+    api.vehicles.list,
+    shouldFetch && shouldSearchVehicles
       ? {
           search: searchQuery,
           limit: 10,
@@ -288,11 +288,11 @@ export function GlobalSearch({
   );
 
   // Type-safe results
-  const ownersResult = ownersQuery as
-    | { items: Owner[]; total: number; hasMore: boolean }
+  const customersResult = customersQuery as
+    | { items: Customer[]; total: number; hasMore: boolean }
     | undefined;
-  const animalsResult = animalsQuery as
-    | { items: Animal[]; total: number; hasMore: boolean }
+  const vehiclesResult = vehiclesQuery as
+    | { items: Vehicle[]; total: number; hasMore: boolean }
     | undefined;
   const visitsResult = visitsQuery as
     | { items: Visit[]; total: number; hasMore: boolean }
@@ -301,30 +301,30 @@ export function GlobalSearch({
     | { items: Invoice[]; total: number; hasMore: boolean }
     | undefined;
 
-  const owners = ownersResult?.items;
-  const animals = animalsResult?.items;
+  const customers = customersResult?.items;
+  const vehicles = vehiclesResult?.items;
   const visits = visitsResult?.items;
   const invoices = invoicesResult?.items;
 
   // Check loading states - only check queries that are actually being fetched (not skipped)
   const isLoading =
     shouldFetch &&
-    ((shouldSearchOwners && ownersQuery === undefined) ||
-      (shouldSearchAnimals && animalsQuery === undefined) ||
+    ((shouldSearchCustomers && customersQuery === undefined) ||
+      (shouldSearchVehicles && vehiclesQuery === undefined) ||
       (shouldSearchVisits && visitsQuery === undefined) ||
       (shouldSearchInvoices && invoicesQuery === undefined));
 
   // Check for errors (if query returns null when it shouldn't)
   const hasError = false; // Convex handles errors internally
 
-  // Build owner map for animal display
-  const ownerMap = useMemo(() => {
+  // Build customer map for vehicle display
+  const customerMap = useMemo(() => {
     const map: Record<string, { name: string; phone?: string }> = {};
-    (owners ?? []).forEach((o) => {
+    (customers ?? []).forEach((o) => {
       map[o._id] = { name: o.name, phone: o.phone };
     });
     return map;
-  }, [owners]);
+  }, [customers]);
 
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -371,15 +371,15 @@ export function GlobalSearch({
   );
 
   // Filter results based on prefix filters
-  const filteredOwners = useMemo(() => {
-    if (!shouldSearchOwners) return [];
-    return owners ?? [];
-  }, [owners, shouldSearchOwners]);
+  const filteredCustomers = useMemo(() => {
+    if (!shouldSearchCustomers) return [];
+    return customers ?? [];
+  }, [customers, shouldSearchCustomers]);
 
-  const filteredAnimals = useMemo(() => {
-    if (!shouldSearchAnimals) return [];
-    return animals ?? [];
-  }, [animals, shouldSearchAnimals]);
+  const filteredVehicles = useMemo(() => {
+    if (!shouldSearchVehicles) return [];
+    return vehicles ?? [];
+  }, [vehicles, shouldSearchVehicles]);
 
   const filteredVisits = useMemo(() => {
     if (!shouldSearchVisits) return [];
@@ -392,19 +392,19 @@ export function GlobalSearch({
   }, [invoices, shouldSearchInvoices]);
 
   const hasResults =
-    filteredOwners.length > 0 ||
-    filteredAnimals.length > 0 ||
+    filteredCustomers.length > 0 ||
+    filteredVehicles.length > 0 ||
     filteredVisits.length > 0 ||
     filteredInvoices.length > 0;
 
   const showHistory = history.length > 0 && !searchQuery;
 
   const getPlaceholder = () => {
-    if (filters.owners) return "Търси собственици...";
-    if (filters.animals) return "Търси животни...";
+    if (filters.customers) return "Търси клиенти...";
+    if (filters.vehicles) return "Търси автомобили...";
     if (filters.visits) return "Търси посещения...";
     if (filters.invoices) return "Търси фактури...";
-    return "Търси по име, код... (o:, a:, v:, i: за филтри)";
+    return "Търси по име, код... (c:, v:, p:, i: за филтри)";
   };
 
   return (
@@ -432,7 +432,7 @@ export function GlobalSearch({
           }
         }}
         title="Търсене"
-        description="Намери собственици, животни, посещения, фактури"
+        description="Намери клиенти, автомобили, посещения, фактури"
       >
         <div className="relative">
           <CommandInput
@@ -491,26 +491,26 @@ export function GlobalSearch({
             </CommandGroup>
           )}
 
-          {filteredOwners.length > 0 && (
+          {filteredCustomers.length > 0 && (
             <CommandGroup
               heading={
                 <div className="flex items-center justify-between">
-                  <span>Собственици</span>
+                  <span>Клиенти</span>
                   <Badge variant="secondary" className="ml-2">
-                    {filteredOwners.length}
+                    {filteredCustomers.length}
                   </Badge>
                 </div>
               }
             >
-              {filteredOwners.map((o) => {
+              {filteredCustomers.map((o) => {
                 const nameParts = highlightMatch(o.name, query);
                 return (
                   <CommandItem
-                    key={`owner-${o._id}`}
-                    value={`owner-${o._id}`}
-                    onSelect={() => onNavigate(`/owners/${o._id}`)}
+                    key={`customer-${o._id}`}
+                    value={`customer-${o._id}`}
+                    onSelect={() => onNavigate(`/customers/${o._id}`)}
                   >
-                    <User className="mr-2 size-4" aria-hidden />
+                    <Users className="mr-2 size-4" aria-hidden />
                     <span className="font-medium">
                       {nameParts.map((part, i) =>
                         part.highlight ? (
@@ -536,29 +536,29 @@ export function GlobalSearch({
             </CommandGroup>
           )}
 
-          {filteredAnimals.length > 0 && (
+          {filteredVehicles.length > 0 && (
             <CommandGroup
               heading={
                 <div className="flex items-center justify-between">
-                  <span>Животни</span>
+                  <span>Автомобили</span>
                   <Badge variant="secondary" className="ml-2">
-                    {filteredAnimals.length}
+                    {filteredVehicles.length}
                   </Badge>
                 </div>
               }
             >
-              {filteredAnimals.map((a) => {
-                const ownerDisplay =
-                  a.ownerName ??
-                  (a.ownerId ? ownerMap[String(a.ownerId)]?.name : undefined);
-                const nameParts = highlightMatch(a.name, query);
+              {filteredVehicles.map((a) => {
+                const customerDisplay =
+                  a.customerName ??
+                  (a.customerId ? customerMap[String(a.customerId)]?.name : undefined);
+                const nameParts = highlightMatch(a.licensePlate, query);
                 return (
                   <CommandItem
-                    key={`animal-${a._id}`}
-                    value={`animal-${a._id}`}
-                    onSelect={() => onNavigate(`/animals/${a._id}`)}
+                    key={`vehicle-${a._id}`}
+                    value={`vehicle-${a._id}`}
+                    onSelect={() => onNavigate(`/vehicles/${a._id}`)}
                   >
-                    <PawPrint className="mr-2 size-4" aria-hidden />
+                    <Car className="mr-2 size-4" aria-hidden />
                     <span className="font-medium">
                       {nameParts.map((part, i) =>
                         part.highlight ? (
@@ -574,11 +574,11 @@ export function GlobalSearch({
                       )}
                     </span>
                     <span className="text-muted-foreground ml-2">
-                      · {a.species}
+                      · {a.make}
                     </span>
-                    {ownerDisplay ? (
+                    {customerDisplay ? (
                       <span className="text-muted-foreground ml-2">
-                        · {ownerDisplay}
+                        · {customerDisplay}
                       </span>
                     ) : null}
                   </CommandItem>
@@ -676,7 +676,7 @@ export function GlobalSearch({
                       · {fmtDateTimeBG(inv.createdAt)}
                     </span>
                     <span className="text-muted-foreground ml-2">
-                      · {formatCurrency(inv.total)}
+                      · {formatCurrency(inv.totalAmount)}
                     </span>
                   </CommandItem>
                 );
@@ -688,15 +688,15 @@ export function GlobalSearch({
             <div className="text-muted-foreground py-6 text-center text-sm">
               <p className="mb-2">Въведете заявка за търсене</p>
               <div className="mt-4 px-3 text-xs">
-                Използвайте префикси за филтриране:{" "}
+              Използвайте префикси за филтриране:{" "}
                 <div className="mt-1">
-                  <span className="font-bold">o:</span> собственици,
+                  <span className="font-bold">c:</span> клиенти,
                 </div>
                 <div className="mt-1">
-                  <span className="font-bold">a:</span> животни,
+                  <span className="font-bold">v:</span> автомобили,
                 </div>
                 <div className="mt-1">
-                  <span className="font-bold">v:</span> посещения,
+                  <span className="font-bold">p:</span> посещения,
                 </div>
                 <div className="mt-1">
                   <span className="font-bold">i:</span> фактури

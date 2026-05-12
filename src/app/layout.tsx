@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     default: brand.name,
     template: `%s • ${brand.name}`,
   },
-  description: `${brand.name} veterinary clinic CRM`,
+  description: `${brand.name} car service CRM`,
 };
 
 export default function RootLayout({

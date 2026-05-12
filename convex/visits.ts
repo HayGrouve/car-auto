@@ -15,8 +15,8 @@ export const list = query({
     offset: v.optional(v.number()),
     sort: v.optional(v.string()), // 'datetimeAsc' | 'datetimeDesc'
     status: v.optional(v.string()),
-    ownerId: v.optional(v.id("owners")),
-    animalId: v.optional(v.id("animals")),
+    customerId: v.optional(v.id("customers")),
+    vehicleId: v.optional(v.id("vehicles")),
     from: v.optional(v.number()),
     to: v.optional(v.number()),
     search: v.optional(v.string()),
@@ -24,66 +24,14 @@ export const list = query({
   handler: async (ctx, args) => {
     const allVisits = await ctx.db.query("visits").collect();
     const translitMap: Record<string, string> = {
-      А: "A",
-      а: "a",
-      Б: "B",
-      б: "b",
-      В: "V",
-      в: "v",
-      Г: "G",
-      г: "g",
-      Д: "D",
-      д: "d",
-      Е: "E",
-      е: "e",
-      Ж: "zh",
-      ж: "zh",
-      З: "Z",
-      з: "z",
-      И: "i",
-      и: "i",
-      Й: "y",
-      й: "y",
-      К: "k",
-      к: "k",
-      Л: "l",
-      л: "l",
-      М: "m",
-      м: "m",
-      Н: "n",
-      н: "n",
-      О: "o",
-      о: "o",
-      П: "p",
-      п: "p",
-      Р: "r",
-      р: "r",
-      С: "s",
-      с: "s",
-      Т: "t",
-      т: "t",
-      У: "u",
-      у: "u",
-      Ф: "f",
-      ф: "f",
-      Х: "h",
-      х: "h",
-      Ц: "ts",
-      ц: "ts",
-      Ч: "ch",
-      ч: "ch",
-      Ш: "sh",
-      ш: "sh",
-      Щ: "sht",
-      щ: "sht",
-      Ъ: "a",
-      ъ: "a",
-      Ь: "",
-      ь: "",
-      Ю: "yu",
-      ю: "yu",
-      Я: "ya",
-      я: "ya",
+      А: "A", а: "a", Б: "B", б: "b", В: "V", в: "v", Г: "G", г: "g",
+      Д: "D", д: "d", Е: "E", е: "e", Ж: "zh", ж: "zh", З: "Z", з: "z",
+      И: "i", и: "i", Й: "y", й: "y", К: "k", к: "k", Л: "l", л: "l",
+      М: "m", м: "m", Н: "n", н: "n", О: "o", о: "o", П: "p", п: "p",
+      Р: "r", р: "r", С: "s", с: "s", Т: "t", т: "t", У: "u", у: "u",
+      Ф: "f", ф: "f", Х: "h", х: "h", Ц: "ts", ц: "ts", Ч: "ch", ч: "ch",
+      Ш: "sh", ш: "sh", Щ: "sht", щ: "sht", Ъ: "a", ъ: "a", Ь: "", ь: "",
+      Ю: "yu", ю: "yu", Я: "ya", я: "ya",
     };
     const toAscii = (s: string) =>
       Array.from(String(s))
@@ -114,9 +62,9 @@ export const list = query({
 
     const filtered = allVisits.filter((vDoc: any) => {
       if (args.status && vDoc.status !== args.status) return false;
-      if (args.ownerId && String(vDoc.ownerId) !== String(args.ownerId))
+      if (args.customerId && String(vDoc.customerId) !== String(args.customerId))
         return false;
-      if (args.animalId && String(vDoc.animalId) !== String(args.animalId))
+      if (args.vehicleId && String(vDoc.vehicleId) !== String(args.vehicleId))
         return false;
       const t = vDoc.datetime ?? vDoc.createdAt;
       if (args.from && t < args.from) return false;
@@ -124,10 +72,12 @@ export const list = query({
       if (queryPair.base || queryPair.ascii) {
         const haystacks = [
           vDoc.code ?? vDoc._id,
-          vDoc.subjective,
-          vDoc.objective,
-          ...(vDoc.procedures ?? []),
-          ...(vDoc.medications ?? []),
+          vDoc.notes?.issue,
+          vDoc.notes?.inspection,
+          vDoc.notes?.diagnosis,
+          vDoc.notes?.plan,
+          ...(vDoc.services ?? []),
+          ...(vDoc.parts ?? []),
         ];
         if (!haystacks.some((v: any) => matchesSearch(v))) return false;
       }
@@ -156,47 +106,44 @@ export const visitsFilters = query({
   handler: async (ctx) => {
     const visits = await ctx.db.query("visits").collect();
     const statusCounts: Record<string, number> = {};
-    const ownerIds = new Set<string>();
-    const animalIds = new Set<string>();
+    const customerIds = new Set<string>();
+    const vehicleIds = new Set<string>();
     for (const visit of visits) {
       statusCounts[visit.status] = (statusCounts[visit.status] ?? 0) + 1;
-      if (visit.ownerId) ownerIds.add(String(visit.ownerId));
-      if (visit.animalId) animalIds.add(String(visit.animalId));
+      if (visit.customerId) customerIds.add(String(visit.customerId));
+      if (visit.vehicleId) vehicleIds.add(String(visit.vehicleId));
     }
     return {
       statusCounts,
-      ownerIds: Array.from(ownerIds),
-      animalIds: Array.from(animalIds),
+      customerIds: Array.from(customerIds),
+      vehicleIds: Array.from(vehicleIds),
     } as const;
   },
 });
 
 export const create = mutation({
   args: {
-    ownerId: v.id("owners"),
-    animalId: v.optional(v.id("animals")),
+    customerId: v.id("customers"),
+    vehicleId: v.optional(v.id("vehicles")),
     datetime: v.optional(v.number()),
-    // Measurements (optional)
-    weight: v.optional(v.number()),
-    temperature: v.optional(v.number()),
-    pulse: v.optional(v.number()),
-    soap: v.object({
-      s: v.optional(v.string()),
-      o: v.optional(v.string()),
-      a: v.optional(v.string()),
-      p: v.optional(v.string()),
+    mileage: v.optional(v.number()),
+    notes: v.object({
+      issue: v.optional(v.string()),
+      inspection: v.optional(v.string()),
+      diagnosis: v.optional(v.string()),
+      plan: v.optional(v.string()),
     }),
-    procedures: v.optional(v.array(v.string())),
-    medications: v.optional(v.array(v.string())),
+    services: v.optional(v.array(v.string())),
+    parts: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    // Prevent multiple draft visits per animal
-    if (args.animalId) {
+    // Prevent multiple draft visits per vehicle
+    if (args.vehicleId) {
       const existing = await ctx.db.query("visits").collect();
       const existingDraft = existing.find(
-        (v: any) =>
-          v.status === "draft" && String(v.animalId) === String(args.animalId),
+        (vDoc: any) =>
+          vDoc.status === "draft" && String(vDoc.vehicleId) === String(args.vehicleId),
       );
       if (existingDraft) {
         return {
@@ -217,15 +164,13 @@ export const create = mutation({
       }
     }
     const id = await ctx.db.insert("visits", {
-      ownerId: args.ownerId,
-      animalId: args.animalId ?? null,
+      customerId: args.customerId,
+      vehicleId: args.vehicleId ?? null,
       datetime: args.datetime ?? now,
-      weight: args.weight ?? null,
-      temperature: args.temperature ?? null,
-      pulse: args.pulse ?? null,
-      soap: args.soap,
-      procedures: args.procedures ?? [],
-      medications: args.medications ?? [],
+      mileage: args.mileage ?? null,
+      notes: args.notes,
+      services: args.services ?? [],
+      parts: args.parts ?? [],
       status: "draft",
       code,
       createdAt: now,
@@ -258,29 +203,29 @@ export const finalize = mutation({
       // optional; ignore failures
     }
 
-    // Upsert procedure/medication catalogs with simple frequency counts
-    const procedures: string[] = (visit as any).procedures ?? [];
-    const medications: string[] = (visit as any).medications ?? [];
+    // Upsert service/part catalogs with simple frequency counts
+    const services: string[] = (visit as any).services ?? [];
+    const parts: string[] = (visit as any).parts ?? [];
     // We store catalogs as documents in a dedicated table if it exists; otherwise, no-op
     try {
-      for (const name of procedures) {
+      for (const name of services) {
         const existing = await ctx.db
-          .query("procedureCatalog")
+          .query("serviceCatalog")
           .filter((q: any) => q.eq(q.field("name"), name))
           .first();
         if (existing)
           await ctx.db.patch(existing._id, {
             count: (existing as any).count + 1,
           } as any);
-        else await ctx.db.insert("procedureCatalog", { name, count: 1 } as any);
+        else await ctx.db.insert("serviceCatalog", { name, count: 1 } as any);
       }
     } catch (_) {
       // table may not exist; ignore
     }
     try {
-      for (const name of medications) {
+      for (const name of parts) {
         const existing = await ctx.db
-          .query("medicationCatalog")
+          .query("partCatalog")
           .filter((q: any) => q.eq(q.field("name"), name))
           .first();
         if (existing)
@@ -288,7 +233,7 @@ export const finalize = mutation({
             count: (existing as any).count + 1,
           } as any);
         else
-          await ctx.db.insert("medicationCatalog", { name, count: 1 } as any);
+          await ctx.db.insert("partCatalog", { name, count: 1 } as any);
       }
     } catch (_) {
       // table may not exist; ignore
@@ -324,37 +269,33 @@ export const update = mutation({
   args: {
     id: v.id("visits"),
     datetime: v.optional(v.union(v.number(), v.null())),
-    weight: v.optional(v.union(v.number(), v.null())),
-    temperature: v.optional(v.union(v.number(), v.null())),
-    pulse: v.optional(v.union(v.number(), v.null())),
-    soap: v.optional(
+    mileage: v.optional(v.union(v.number(), v.null())),
+    notes: v.optional(
       v.object({
-        s: v.optional(v.string()),
-        o: v.optional(v.string()),
-        a: v.optional(v.string()),
-        p: v.optional(v.string()),
+        issue: v.optional(v.string()),
+        inspection: v.optional(v.string()),
+        diagnosis: v.optional(v.string()),
+        plan: v.optional(v.string()),
       }),
     ),
-    animalId: v.optional(v.union(v.id("animals"), v.null())),
+    vehicleId: v.optional(v.union(v.id("vehicles"), v.null())),
     status: v.optional(v.string()),
-    procedures: v.optional(v.array(v.string())),
-    medications: v.optional(v.array(v.string())),
-    ownerId: v.optional(v.union(v.id("owners"), v.null())),
+    services: v.optional(v.array(v.string())),
+    parts: v.optional(v.array(v.string())),
+    customerId: v.optional(v.union(v.id("customers"), v.null())),
     invoiceCode: v.optional(v.union(v.string(), v.null())),
     outstandingAmount: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const patch: any = { updatedAt: Date.now() };
     if (args.datetime !== undefined) patch.datetime = args.datetime;
-    if (args.weight !== undefined) patch.weight = args.weight;
-    if (args.temperature !== undefined) patch.temperature = args.temperature;
-    if (args.pulse !== undefined) patch.pulse = args.pulse;
-    if (args.soap !== undefined) patch.soap = args.soap;
-    if (args.animalId !== undefined) patch.animalId = args.animalId;
+    if (args.mileage !== undefined) patch.mileage = args.mileage;
+    if (args.notes !== undefined) patch.notes = args.notes;
+    if (args.vehicleId !== undefined) patch.vehicleId = args.vehicleId;
     if (args.status !== undefined) patch.status = args.status;
-    if (args.procedures !== undefined) patch.procedures = args.procedures;
-    if (args.medications !== undefined) patch.medications = args.medications;
-    if (args.ownerId !== undefined) patch.ownerId = args.ownerId;
+    if (args.services !== undefined) patch.services = args.services;
+    if (args.parts !== undefined) patch.parts = args.parts;
+    if (args.customerId !== undefined) patch.customerId = args.customerId;
     if (args.invoiceCode !== undefined) patch.invoiceCode = args.invoiceCode;
     if (args.outstandingAmount !== undefined)
       patch.outstandingAmount = args.outstandingAmount;
@@ -363,12 +304,12 @@ export const update = mutation({
   },
 });
 
-// Suggestions for procedures/medications (most frequent first)
-export const suggestProcedures = query({
+// Suggestions for services/parts (most frequent first)
+export const suggestServices = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     try {
-      const list = await ctx.db.query("procedureCatalog").collect();
+      const list = await ctx.db.query("serviceCatalog").collect();
       const sorted = list.sort(
         (a: any, b: any) => (b.count ?? 0) - (a.count ?? 0),
       );
@@ -380,11 +321,11 @@ export const suggestProcedures = query({
   },
 });
 
-export const suggestMedications = query({
+export const suggestParts = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     try {
-      const list = await ctx.db.query("medicationCatalog").collect();
+      const list = await ctx.db.query("partCatalog").collect();
       const sorted = list.sort(
         (a: any, b: any) => (b.count ?? 0) - (a.count ?? 0),
       );

@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { bulgarianPhoneSchema, emailSchema, nameSchema } from "./common";
 
-/**
- * Owner creation/update validation schema
- */
-export const ownerFormSchema = z.object({
+export const customerFormSchema = z.object({
   name: nameSchema,
   phone: bulgarianPhoneSchema,
   email: emailSchema,
@@ -16,7 +13,11 @@ export const ownerFormSchema = z.object({
   gdprConsent: z.boolean().refine((val) => val === true, {
     message: "Трябва да се съгласите с политиката за поверителност",
   }),
+  notes: z
+    .string()
+    .max(1000, "Бележките не могат да надвишават 1000 символа")
+    .optional()
+    .or(z.literal("")),
 });
 
-export type OwnerFormData = z.infer<typeof ownerFormSchema>;
-
+export type CustomerFormData = z.infer<typeof customerFormSchema>;

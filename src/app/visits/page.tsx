@@ -42,8 +42,8 @@ function VisitsPageInner() {
   const [status, setStatus] = useState<string>("");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
-  const [ownerId, setOwnerId] = useState("");
-  const [animalId, setAnimalId] = useState("");
+  const [customerId, setCustomerId] = useState("");
+  const [vehicleId, setVehicleId] = useState("");
   const [page, setPage] = useState(0);
   const [sort, setSort] = useState<"datetimeDesc" | "datetimeAsc">(
     "datetimeDesc",
@@ -67,12 +67,12 @@ function VisitsPageInner() {
         offset: page * pageSize,
         sort,
         status: status || undefined,
-        ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
-        animalId: animalId ? (animalId as Id<"animals">) : undefined,
+        customerId: customerId ? (customerId as Id<"customers">) : undefined,
+        vehicleId: vehicleId ? (vehicleId as Id<"vehicles">) : undefined,
         from: from ? Date.parse(from) : undefined,
         to: to ? Date.parse(to) : undefined,
       }),
-      [status, ownerId, animalId, from, to, page, sort],
+      [status, customerId, vehicleId, from, to, page, sort],
     ),
   );
   const visits = visitsQuery as
@@ -80,9 +80,9 @@ function VisitsPageInner() {
     | undefined;
   const visitsList = visits?.items ?? undefined;
   const createVisit = useMutation(api.visits.create) as unknown as (args: {
-    ownerId: string;
-    animalId?: string;
-    soap: { s?: string; o?: string; a?: string; p?: string };
+    customerId: string;
+    vehicleId?: string;
+    notes: { issue?: string; inspection?: string; diagnosis?: string; plan?: string };
   }) => Promise<{ ok: boolean; id?: string; reason?: string }>;
   const finalizeVisit = useMutation(api.visits.finalize) as unknown as (args: {
     id: string;
@@ -95,50 +95,50 @@ function VisitsPageInner() {
 
   const params = useSearchParams();
   useEffect(() => {
-    const o = params.get("ownerId") ?? "";
-    const a = params.get("animalId") ?? "";
+    const c = params.get("customerId") ?? "";
+    const v = params.get("vehicleId") ?? "";
     const s = params.get("status") ?? ""; // "draft" | "finalized"
-    if (o) setOwnerId(o);
-    if (a) setAnimalId(a);
+    if (c) setCustomerId(c);
+    if (v) setVehicleId(v);
     if (s === "draft" || s === "finalized") setStatus(s);
   }, [params]);
-  const [ownerSearch, setOwnerSearch] = useState("");
-  const [animalSearch, setAnimalSearch] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [vehicleSearch, setVehicleSearch] = useState("");
 
-  const ownersQuery = useQuery(
-    api.owners.list,
-    useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
+  const customersQuery = useQuery(
+    api.customers.list,
+    useMemo(() => ({ search: customerSearch }), [customerSearch]),
   );
-  const ownersResult = ownersQuery as
+  const customersResult = customersQuery as
     | { items: { _id: string; name: string; phone: string }[]; total: number; hasMore: boolean }
     | undefined;
-  const owners = ownersResult?.items;
-  const animalsQuery = useQuery(
-    api.animals.list,
-    useMemo(() => ({ search: animalSearch }), [animalSearch]),
+  const customers = customersResult?.items;
+  const vehiclesQuery = useQuery(
+    api.vehicles.list,
+    useMemo(() => ({ search: vehicleSearch }), [vehicleSearch]),
   );
-  const animalsResult = animalsQuery as
+  const vehiclesResult = vehiclesQuery as
     | {
-        items: { _id: string; name: string; species: string; ownerId?: string | null }[];
+        items: { _id: string; licensePlate: string; make: string; customerId?: string | null }[];
         total: number;
         hasMore: boolean;
       }
     | undefined;
-  const animals = animalsResult?.items;
+  const vehicles = vehiclesResult?.items;
 
   async function onCreateNewVisit() {
-    if (!ownerId) {
-      toast.error("Изберете собственик (ownerId)");
+    if (!customerId) {
+      toast.error("Изберете клиент (customerId)");
       return;
     }
-    if (!animalId) {
-      toast.error("Изберете животно (animalId)");
+    if (!vehicleId) {
+      toast.error("Изберете автомобил (vehicleId)");
       return;
     }
     const res = await createVisit({
-      ownerId,
-      animalId: animalId || undefined,
-      soap: {},
+      customerId,
+      vehicleId: vehicleId || undefined,
+      notes: {},
     });
     if (res?.ok && res.id) {
       toast.success("Посещението е създадено");
@@ -146,7 +146,7 @@ function VisitsPageInner() {
       return;
     }
     if (res && res.reason === "draft_exists" && res.id) {
-      toast.info("Има незавършено посещение за това животно, пренасочване...");
+      toast.info("Има незавършено посещение за този автомобил, пренасочване...");
       setTimeout(() => {
         window.location.href = `/visits/${res.id}`;
       }, 4000);
@@ -174,37 +174,37 @@ function VisitsPageInner() {
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <div className="grid grid-cols-1 gap-3 sm:col-span-2 md:grid-cols-2">
           <div>
-            <Label>Собственик</Label>
+            <Label>Клиент</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className="h-10 min-h-[44px] w-full justify-between"
                 >
-                  {ownerId
-                    ? (owners ?? []).find((o) => o._id === ownerId)?.name
-                    : "Изберете собственик"}
+                  {customerId
+                    ? (customers ?? []).find((o) => o._id === customerId)?.name
+                    : "Изберете клиент"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
                   <CommandInput
-                    placeholder="Търси собственик..."
-                    value={ownerSearch}
+                    placeholder="Търси клиент..."
+                    value={customerSearch}
                     onValueChange={(v) => {
-                      setOwnerSearch(v);
+                      setCustomerSearch(v);
                       setPage(0);
                     }}
                   />
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
-                    {(owners ?? []).map((o) => (
+                    {(customers ?? []).map((o) => (
                       <CommandItem
                         key={o._id}
                         value={o._id}
                         onSelect={(v) => {
-                          setOwnerId(v);
-                          setAnimalId("");
+                          setCustomerId(v);
+                          setVehicleId("");
                           setPage(0);
                         }}
                       >
@@ -217,50 +217,50 @@ function VisitsPageInner() {
             </Popover>
           </div>
           <div>
-            <Label>Животно</Label>
+            <Label>Автомобил</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   className="h-10 min-h-[44px] w-full justify-between"
                 >
-                  {animalId
-                    ? (animals ?? []).find((a) => a._id === animalId)?.name
-                    : "Без животно"}
+                  {vehicleId
+                    ? (vehicles ?? []).find((a) => a._id === vehicleId)?.licensePlate
+                    : "Без автомобил"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
                   <CommandInput
-                    placeholder="Търси животно..."
-                    value={animalSearch}
+                    placeholder="Търси автомобил..."
+                    value={vehicleSearch}
                     onValueChange={(v) => {
-                      setAnimalSearch(v);
+                      setVehicleSearch(v);
                       setPage(0);
                     }}
                   />
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
-                    {(animals ?? [])
+                    {(vehicles ?? [])
                       .filter(
                         (an) =>
-                          !ownerId || String(an.ownerId) === String(ownerId),
+                          !customerId || String(an.customerId) === String(customerId),
                       )
                       .map((an) => (
                         <CommandItem
                           key={an._id}
                           value={an._id}
                           onSelect={(v) => {
-                            setAnimalId(v);
-                            const chosen = (animals ?? []).find(
+                            setVehicleId(v);
+                            const chosen = (vehicles ?? []).find(
                               (x) => x._id === v,
                             );
-                            if (chosen?.ownerId)
-                              setOwnerId(String(chosen.ownerId));
+                            if (chosen?.customerId)
+                              setCustomerId(String(chosen.customerId));
                             setPage(0);
                           }}
                         >
-                          {an.name} ({an.species})
+                          {an.licensePlate} ({an.make})
                         </CommandItem>
                       ))}
                   </CommandList>
@@ -360,30 +360,30 @@ function VisitsPageInner() {
         </div>
         <div className="grid grid-cols-1 gap-2 md:col-span-4">
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            {ownerId && (
+            {customerId && (
               <button
                 type="button"
-                onClick={() => setOwnerId("")}
+                onClick={() => setCustomerId("")}
                 className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
               >
                 <span>
-                  Собственик:{" "}
-                  {(owners ?? []).find((o) => o._id === ownerId)?.name ??
-                    ownerId}
+                  Клиент:{" "}
+                  {(customers ?? []).find((o) => o._id === customerId)?.name ??
+                    customerId}
                 </span>
                 <span aria-hidden>✕</span>
               </button>
             )}
-            {animalId && (
+            {vehicleId && (
               <button
                 type="button"
-                onClick={() => setAnimalId("")}
+                onClick={() => setVehicleId("")}
                 className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
               >
                 <span>
-                  Животно:{" "}
-                  {(animals ?? []).find((an) => an._id === animalId)?.name ??
-                    animalId}
+                  Автомобил:{" "}
+                  {(vehicles ?? []).find((an) => an._id === vehicleId)?.licensePlate ??
+                    vehicleId}
                 </span>
                 <span aria-hidden>✕</span>
               </button>
@@ -416,12 +416,12 @@ function VisitsPageInner() {
                 <span aria-hidden>✕</span>
               </button>
             )}
-            {(ownerId || animalId || status || from || to) && (
+            {(customerId || vehicleId || status || from || to) && (
               <button
                 type="button"
                 onClick={() => {
-                  setOwnerId("");
-                  setAnimalId("");
+                  setCustomerId("");
+                  setVehicleId("");
                   setStatus("");
                   setFrom("");
                   setTo("");
@@ -503,7 +503,7 @@ function VisitsPageInner() {
                 ) : (
                   <a
                     className="hover:bg-accent inline-flex min-h-[44px] min-w-[140px] flex-1 items-center justify-center rounded-md border px-3 py-2 text-sm sm:flex-none"
-                    href={`/invoices/new?ownerId=${encodeURIComponent(String(v.ownerId))}${v.animalId ? `&animalId=${encodeURIComponent(String(v.animalId))}` : ""}&visitId=${encodeURIComponent(String(v._id))}`}
+                    href={`/invoices/new?customerId=${encodeURIComponent(String(v.customerId))}${v.vehicleId ? `&vehicleId=${encodeURIComponent(String(v.vehicleId))}` : ""}&visitId=${encodeURIComponent(String(v._id))}`}
                     aria-label={`Нова фактура за посещение ${(v as VisitDoc & { code?: string }).code ?? String(v._id)}`}
                   >
                     <FilePlus

@@ -4,14 +4,27 @@ import { fmtNumberBG } from "@/lib/format";
 export function printInvoice(inv: InvoiceDoc): void {
   if (!inv) return;
 
-  const rows = (inv.items ?? [])
+  const partsRows = (inv.parts ?? [])
     .map(
       (it) => `
         <tr>
-          <td>${it.description}</td>
+          <td>${it.name}</td>
           <td style="text-align:right;">${it.quantity}</td>
-          <td style="text-align:right;">${fmtNumberBG(it.price, { style: "currency", currency: "EUR" })}</td>
-          <td style="text-align:right;">${fmtNumberBG(it.total, { style: "currency", currency: "EUR" })}</td>
+          <td style="text-align:right;">${fmtNumberBG(it.price, { style: "currency", currency: "BGN" })}</td>
+          <td style="text-align:right;">${fmtNumberBG(it.price * it.quantity, { style: "currency", currency: "BGN" })}</td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  const laborRows = (inv.labor ?? [])
+    .map(
+      (it) => `
+        <tr>
+          <td>${it.name}</td>
+          <td style="text-align:right;">${it.quantity}</td>
+          <td style="text-align:right;">${fmtNumberBG(it.price, { style: "currency", currency: "BGN" })}</td>
+          <td style="text-align:right;">${fmtNumberBG(it.price * it.quantity, { style: "currency", currency: "BGN" })}</td>
         </tr>
       `,
     )
@@ -29,10 +42,13 @@ export function printInvoice(inv: InvoiceDoc): void {
           : ""
       }</div>
       <table><thead><tr><th>Описание</th><th style="text-align:right;">Кол-во</th><th style="text-align:right;">Цена</th><th style="text-align:right;">Сума</th></tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody>
+        ${partsRows ? `<tr><td colspan="4" style="font-weight:bold;background:#f9f9f9;">Части</td></tr>${partsRows}` : ""}
+        ${laborRows ? `<tr><td colspan="4" style="font-weight:bold;background:#f9f9f9;">Труд/Услуги</td></tr>${laborRows}` : ""}
+      </tbody>
       <tfoot><tr><td colspan="3" style="text-align:right;">Общо</td><td style="text-align:right;">${fmtNumberBG(
-        inv.total,
-        { style: "currency", currency: "EUR" },
+        inv.totalAmount,
+        { style: "currency", currency: "BGN" },
       )}</td></tr></tfoot>
       </table>
     </body></html>`;

@@ -161,12 +161,13 @@ function InvoiceDetailPageContent() {
         <div className="p-3">
           {/* Mobile card view */}
           <div className="space-y-3 md:hidden">
-            {(inv.items ?? []).map((it, idx) => (
+            <h3 className="font-semibold px-1">Части</h3>
+            {(inv.parts ?? []).map((it, idx) => (
               <div
-                key={idx}
+                key={`part-${idx}`}
                 className="flex flex-col gap-2 rounded-md border p-3"
               >
-                <div className="font-medium">{it.description}</div>
+                <div className="font-medium">{it.name}</div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
                     Кол-во: {it.quantity}
@@ -175,16 +176,46 @@ function InvoiceDetailPageContent() {
                     Цена:{" "}
                     {fmtNumberBG(it.price, {
                       style: "currency",
-                      currency: "EUR",
+                      currency: "BGN",
                     })}
                   </span>
                 </div>
                 <div className="flex items-center justify-between border-t pt-2 font-medium">
                   <span>Сума:</span>
                   <span>
-                    {fmtNumberBG(it.total, {
+                    {fmtNumberBG(it.price * it.quantity, {
                       style: "currency",
-                      currency: "EUR",
+                      currency: "BGN",
+                    })}
+                  </span>
+                </div>
+              </div>
+            ))}
+            <h3 className="font-semibold px-1 mt-4">Труд/Услуги</h3>
+            {(inv.labor ?? []).map((it, idx) => (
+              <div
+                key={`labor-${idx}`}
+                className="flex flex-col gap-2 rounded-md border p-3"
+              >
+                <div className="font-medium">{it.name}</div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Кол-во: {it.quantity}
+                  </span>
+                  <span className="text-muted-foreground">
+                    Цена:{" "}
+                    {fmtNumberBG(it.price, {
+                      style: "currency",
+                      currency: "BGN",
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t pt-2 font-medium">
+                  <span>Сума:</span>
+                  <span>
+                    {fmtNumberBG(it.price * it.quantity, {
+                      style: "currency",
+                      currency: "BGN",
                     })}
                   </span>
                 </div>
@@ -193,9 +224,9 @@ function InvoiceDetailPageContent() {
             <div className="flex items-center justify-between border-t pt-3 font-medium">
               <span>Общо:</span>
               <span>
-                {fmtNumberBG(inv.total, {
+                {fmtNumberBG(inv.totalAmount, {
                   style: "currency",
-                  currency: "EUR",
+                  currency: "BGN",
                 })}
               </span>
             </div>
@@ -212,20 +243,48 @@ function InvoiceDetailPageContent() {
               </tr>
             </thead>
             <tbody>
-              {(inv.items ?? []).map((it, idx) => (
-                <tr key={idx}>
-                  <td className="py-2">{it.description}</td>
+              {((inv.parts ?? []).length > 0) && (
+                <tr>
+                  <td colSpan={4} className="py-2 font-semibold bg-muted/50 px-2">Части</td>
+                </tr>
+              )}
+              {(inv.parts ?? []).map((it, idx) => (
+                <tr key={`part-${idx}`}>
+                  <td className="py-2 px-2">{it.name}</td>
                   <td className="py-2 text-right">{it.quantity}</td>
                   <td className="py-2 text-right">
                     {fmtNumberBG(it.price, {
                       style: "currency",
-                      currency: "EUR",
+                      currency: "BGN",
                     })}
                   </td>
                   <td className="py-2 text-right">
-                    {fmtNumberBG(it.total, {
+                    {fmtNumberBG(it.price * it.quantity, {
                       style: "currency",
-                      currency: "EUR",
+                      currency: "BGN",
+                    })}
+                  </td>
+                </tr>
+              ))}
+              {((inv.labor ?? []).length > 0) && (
+                <tr>
+                  <td colSpan={4} className="py-2 font-semibold bg-muted/50 px-2 mt-2">Труд/Услуги</td>
+                </tr>
+              )}
+              {(inv.labor ?? []).map((it, idx) => (
+                <tr key={`labor-${idx}`}>
+                  <td className="py-2 px-2">{it.name}</td>
+                  <td className="py-2 text-right">{it.quantity}</td>
+                  <td className="py-2 text-right">
+                    {fmtNumberBG(it.price, {
+                      style: "currency",
+                      currency: "BGN",
+                    })}
+                  </td>
+                  <td className="py-2 text-right">
+                    {fmtNumberBG(it.price * it.quantity, {
+                      style: "currency",
+                      currency: "BGN",
                     })}
                   </td>
                 </tr>
@@ -237,9 +296,9 @@ function InvoiceDetailPageContent() {
                   Общо:
                 </td>
                 <td className="py-2 text-right font-medium">
-                  {fmtNumberBG(inv.total, {
+                  {fmtNumberBG(inv.totalAmount, {
                     style: "currency",
-                    currency: "EUR",
+                    currency: "BGN",
                   })}
                 </td>
               </tr>

@@ -50,23 +50,23 @@ type ScheduleSlotFormProps = {
     title: string;
     description?: string;
     visitId?: Id<"visits">;
-    ownerId?: Id<"owners">;
-    animalId?: Id<"animals">;
+    customerId?: Id<"customers">;
+    vehicleId?: Id<"vehicles">;
     status?: "scheduled" | "completed" | "cancelled";
   }) => Promise<void>;
   onCancel?: () => void;
   initialData?: ScheduleSlot | null;
-  owners?: Array<{ _id: string; name: string; phone?: string }>;
-  animals?: Array<{
+  customers?: Array<{ _id: string; name: string; phone?: string }>;
+  vehicles?: Array<{
     _id: string;
-    name: string;
-    species: string;
-    ownerId?: string | null;
+    licensePlate: string;
+    make: string;
+    customerId?: string | null;
   }>;
   visits?: Array<{ _id: string; code?: string | null }>;
   hideDatePicker?: boolean; // Hide date picker when using calendar selection
   existingSlots?: Array<{ startTime: number; endTime: number }>; // Existing slots for the selected date
-  animalDraftVisitMap?: Map<string, string>; // Map of animalId -> draft visit ID
+  vehicleDraftVisitMap?: Map<string, string>; // Map of vehicleId -> draft visit ID
 };
 
 export function ScheduleSlotForm({
@@ -74,12 +74,12 @@ export function ScheduleSlotForm({
   onSubmit,
   onCancel,
   initialData,
-  owners = [],
-  animals = [],
+  customers = [],
+  vehicles = [],
   visits = [],
   hideDatePicker = false,
   existingSlots = [],
-  animalDraftVisitMap,
+  vehicleDraftVisitMap,
 }: ScheduleSlotFormProps) {
   const [date, setDate] = useState<Date>(
     initialData ? new Date(initialData.date) : selectedDate,
@@ -116,19 +116,19 @@ export function ScheduleSlotForm({
     initialData?.description ?? "",
   );
   const [visitId, setVisitId] = useState<string>(initialData?.visitId ?? "");
-  const [ownerId, setOwnerId] = useState<string>(initialData?.ownerId ?? "");
-  const [animalId, setAnimalId] = useState<string>(initialData?.animalId ?? "");
+  const [customerId, setCustomerId] = useState<string>(initialData?.customerId ?? "");
+  const [vehicleId, setVehicleId] = useState<string>(initialData?.vehicleId ?? "");
   const [status, setStatus] = useState<"scheduled" | "completed" | "cancelled">(
     initialData?.status ?? "scheduled",
   );
-  const [ownerSearch, setOwnerSearch] = useState("");
-  const [animalSearch, setAnimalSearch] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [vehicleSearch, setVehicleSearch] = useState("");
   const [visitSearch, setVisitSearch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
+  const [customerPopoverOpen, setCustomerPopoverOpen] = useState(false);
   const [visitPopoverOpen, setVisitPopoverOpen] = useState(false);
-  const [animalPopoverOpen, setAnimalPopoverOpen] = useState(false);
+  const [vehiclePopoverOpen, setVehiclePopoverOpen] = useState(false);
   const isInitialMount = useRef(true);
 
   // Update form values when initialData changes (for editing)
@@ -146,8 +146,8 @@ export function ScheduleSlotForm({
       setTitle(initialData.title ?? "");
       setDescription(initialData.description ?? "");
       setVisitId(initialData.visitId ?? "");
-      setOwnerId(initialData.ownerId ?? "");
-      setAnimalId(initialData.animalId ?? "");
+      setCustomerId(initialData.customerId ?? "");
+      setVehicleId(initialData.vehicleId ?? "");
       setStatus(initialData.status ?? "scheduled");
       // Reset the initial mount flag when editing a new slot
       isInitialMount.current = true;
@@ -161,71 +161,71 @@ export function ScheduleSlotForm({
     }
   }, [selectedDate, initialData]);
 
-  // Filter animals by owner when owner is selected
-  const filteredAnimals = useMemo(() => {
-    let filtered = animals;
+  // Filter vehicles by customer when customer is selected
+  const filteredVehicles = useMemo(() => {
+    let filtered = vehicles;
 
-    // Filter by owner if owner is selected
-    if (ownerId) {
-      filtered = filtered.filter((a) => a.ownerId === ownerId);
+    // Filter by customer if customer is selected
+    if (customerId) {
+      filtered = filtered.filter((a) => a.customerId === customerId);
     }
 
     // Filter by search
-    if (animalSearch) {
-      const search = animalSearch.toLowerCase();
+    if (vehicleSearch) {
+      const search = vehicleSearch.toLowerCase();
       filtered = filtered.filter(
         (a) =>
-          a.name.toLowerCase().includes(search) ||
-          a.species.toLowerCase().includes(search),
+          a.licensePlate.toLowerCase().includes(search) ||
+          a.make.toLowerCase().includes(search),
       );
     }
 
     return filtered;
-  }, [animals, ownerId, animalSearch]);
+  }, [vehicles, customerId, vehicleSearch]);
 
-  // Auto-fill owner when animal is selected
-  const handleAnimalSelect = (animalIdValue: string) => {
-    setAnimalId(animalIdValue);
-    if (animalIdValue) {
-      const selectedAnimal = animals.find((a) => a._id === animalIdValue);
-      if (selectedAnimal?.ownerId) {
-        setOwnerId(selectedAnimal.ownerId);
+  // Auto-fill customer when vehicle is selected
+  const handleVehicleSelect = (vehicleIdValue: string) => {
+    setVehicleId(vehicleIdValue);
+    if (vehicleIdValue) {
+      const selectedVehicle = vehicles.find((a) => a._id === vehicleIdValue);
+      if (selectedVehicle?.customerId) {
+        setCustomerId(selectedVehicle.customerId);
       }
-      // Auto-fill draft visit if one exists for this animal
-      if (animalDraftVisitMap?.has(animalIdValue)) {
-        const draftVisitId = animalDraftVisitMap.get(animalIdValue);
+      // Auto-fill draft visit if one exists for this vehicle
+      if (vehicleDraftVisitMap?.has(vehicleIdValue)) {
+        const draftVisitId = vehicleDraftVisitMap.get(vehicleIdValue);
         if (draftVisitId) {
           setVisitId(draftVisitId);
         }
       }
     }
-    setAnimalPopoverOpen(false);
+    setVehiclePopoverOpen(false);
   };
 
-  // Clear animal when owner changes (if animal doesn't belong to new owner)
-  const handleOwnerSelect = (ownerIdValue: string) => {
-    setOwnerId(ownerIdValue);
-    if (ownerIdValue && animalId) {
-      const selectedAnimal = animals.find((a) => a._id === animalId);
-      if (selectedAnimal?.ownerId !== ownerIdValue) {
-        setAnimalId("");
+  // Clear vehicle when customer changes (if vehicle doesn't belong to new customer)
+  const handleCustomerSelect = (customerIdValue: string) => {
+    setCustomerId(customerIdValue);
+    if (customerIdValue && vehicleId) {
+      const selectedVehicle = vehicles.find((a) => a._id === vehicleId);
+      if (selectedVehicle?.customerId !== customerIdValue) {
+        setVehicleId("");
       }
-    } else if (!ownerIdValue) {
-      // Clear animal when owner is cleared
-      setAnimalId("");
+    } else if (!customerIdValue) {
+      // Clear vehicle when customer is cleared
+      setVehicleId("");
     }
-    setOwnerPopoverOpen(false);
+    setCustomerPopoverOpen(false);
   };
 
-  const filteredOwners = useMemo(() => {
-    if (!ownerSearch) return owners;
-    const search = ownerSearch.toLowerCase();
-    return owners.filter(
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch) return customers;
+    const search = customerSearch.toLowerCase();
+    return customers.filter(
       (o) =>
         o.name.toLowerCase().includes(search) ||
         o.phone?.toLowerCase().includes(search),
     );
-  }, [owners, ownerSearch]);
+  }, [customers, customerSearch]);
 
   const filteredVisits = useMemo(() => {
     if (!visitSearch) return visits;
@@ -275,8 +275,8 @@ export function ScheduleSlotForm({
         title,
         description: description || undefined,
         visitId: visitId ? (visitId as Id<"visits">) : undefined,
-        ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
-        animalId: animalId ? (animalId as Id<"animals">) : undefined,
+        customerId: customerId ? (customerId as Id<"customers">) : undefined,
+        vehicleId: vehicleId ? (vehicleId as Id<"vehicles">) : undefined,
         status: status,
       });
 
@@ -287,8 +287,8 @@ export function ScheduleSlotForm({
         setTitle(`Преглед ${newId}`);
         setDescription("");
         setVisitId("");
-        setOwnerId("");
-        setAnimalId("");
+        setCustomerId("");
+        setVehicleId("");
         setStatus("scheduled");
         setStartHour(9);
         setStartMinute(0);
@@ -593,38 +593,38 @@ export function ScheduleSlotForm({
       </div>
 
       <div>
-        <Label>Собственик</Label>
-        <Popover open={ownerPopoverOpen} onOpenChange={setOwnerPopoverOpen}>
+        <Label>Клиент</Label>
+        <Popover open={customerPopoverOpen} onOpenChange={setCustomerPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
-              {ownerId
-                ? filteredOwners.find((o) => o._id === ownerId)?.name
-                : "Без собственик"}
+              {customerId
+                ? filteredCustomers.find((o) => o._id === customerId)?.name
+                : "Без клиент"}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
             <Command shouldFilter={false}>
               <CommandInput
-                placeholder="Търси собственик..."
-                value={ownerSearch}
-                onValueChange={setOwnerSearch}
+                placeholder="Търси клиент..."
+                value={customerSearch}
+                onValueChange={setCustomerSearch}
               />
               <CommandList>
                 <CommandEmpty>Няма резултати</CommandEmpty>
                 <CommandItem
                   value=""
                   onSelect={() => {
-                    setOwnerId("");
-                    setOwnerPopoverOpen(false);
+                    setCustomerId("");
+                    setCustomerPopoverOpen(false);
                   }}
                 >
-                  Без собственик
+                  Без клиент
                 </CommandItem>
-                {filteredOwners.map((o) => (
+                {filteredCustomers.map((o) => (
                   <CommandItem
                     key={o._id}
                     value={o.name}
-                    onSelect={() => handleOwnerSelect(o._id)}
+                    onSelect={() => handleCustomerSelect(o._id)}
                   >
                     {o.name}
                     {o.phone ? ` · ${o.phone}` : ""}
@@ -637,40 +637,40 @@ export function ScheduleSlotForm({
       </div>
 
       <div>
-        <Label>Животно</Label>
-        <Popover open={animalPopoverOpen} onOpenChange={setAnimalPopoverOpen}>
+        <Label>Автомобил</Label>
+        <Popover open={vehiclePopoverOpen} onOpenChange={setVehiclePopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
-              {animalId
-                ? filteredAnimals.find((a) => a._id === animalId)?.name
-                : "Без животно"}
+              {vehicleId
+                ? filteredVehicles.find((a) => a._id === vehicleId)?.licensePlate
+                : "Без автомобил"}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
             <Command shouldFilter={false}>
               <CommandInput
-                placeholder="Търси животно..."
-                value={animalSearch}
-                onValueChange={setAnimalSearch}
+                placeholder="Търси автомобил..."
+                value={vehicleSearch}
+                onValueChange={setVehicleSearch}
               />
               <CommandList>
                 <CommandEmpty>Няма резултати</CommandEmpty>
                 <CommandItem
                   value=""
                   onSelect={() => {
-                    setAnimalId("");
-                    setAnimalPopoverOpen(false);
+                    setVehicleId("");
+                    setVehiclePopoverOpen(false);
                   }}
                 >
-                  Без животно
+                  Без автомобил
                 </CommandItem>
-                {filteredAnimals.map((a) => (
+                {filteredVehicles.map((a) => (
                   <CommandItem
                     key={a._id}
-                    value={a.name}
-                    onSelect={() => handleAnimalSelect(a._id)}
+                    value={a.licensePlate}
+                    onSelect={() => handleVehicleSelect(a._id)}
                   >
-                    {a.name} ({a.species})
+                    {a.licensePlate} ({a.make})
                   </CommandItem>
                 ))}
               </CommandList>

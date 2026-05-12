@@ -12,7 +12,7 @@ function generateHumanCode(prefix: string): string {
 export const list = query({
   args: {
     unpaidOnly: v.optional(v.boolean()),
-    ownerId: v.optional(v.id("owners")),
+    customerId: v.optional(v.id("customers")),
     from: v.optional(v.number()),
     to: v.optional(v.number()),
     limit: v.optional(v.number()),
@@ -31,66 +31,14 @@ export const list = query({
   handler: async (ctx, args) => {
     const all = await ctx.db.query("invoices").collect();
     const translitMap: Record<string, string> = {
-      А: "A",
-      а: "a",
-      Б: "B",
-      б: "b",
-      В: "V",
-      в: "v",
-      Г: "G",
-      г: "g",
-      Д: "D",
-      д: "d",
-      Е: "E",
-      е: "e",
-      Ж: "zh",
-      ж: "zh",
-      З: "Z",
-      з: "z",
-      И: "i",
-      и: "i",
-      Й: "y",
-      й: "y",
-      К: "k",
-      к: "k",
-      Л: "l",
-      л: "l",
-      М: "m",
-      м: "m",
-      Н: "n",
-      н: "n",
-      О: "o",
-      о: "o",
-      П: "p",
-      п: "p",
-      Р: "r",
-      р: "r",
-      С: "s",
-      с: "s",
-      Т: "t",
-      т: "t",
-      У: "u",
-      у: "u",
-      Ф: "f",
-      ф: "f",
-      Х: "h",
-      х: "h",
-      Ц: "ts",
-      ц: "ts",
-      Ч: "ch",
-      ч: "ch",
-      Ш: "sh",
-      ш: "sh",
-      Щ: "sht",
-      щ: "sht",
-      Ъ: "a",
-      ъ: "a",
-      Ь: "",
-      ь: "",
-      Ю: "yu",
-      ю: "yu",
-      Я: "ya",
-      я: "ya",
+      А: "A", а: "a", Б: "B", б: "b", В: "V", в: "v", Г: "G", г: "g",
+      Д: "D", д: "d", Е: "E", е: "e", Ж: "zh", ж: "zh", З: "Z", з: "z",
+      И: "i", и: "i", Й: "y", й: "y", К: "k", к: "k", Л: "l", л: "l",
+      М: "m", м: "m", Н: "n", н: "n", О: "o", о: "o", П: "p", п: "p",
+      Р: "r", р: "r", С: "s", с: "s", Т: "t", т: "t", У: "u", у: "u",
+      Ф: "f", ф: "f", Х: "h", х: "h", Ц: "ts", ц: "ts", Ч: "ch", ч: "ch",
+      Ш: "sh", ш: "sh", Щ: "sht", щ: "sht", Ъ: "a", ъ: "a", Ь: "", ь: "",
+      Ю: "yu", ю: "yu", Я: "ya", я: "ya",
     };
     const toAscii = (s: string) =>
       Array.from(String(s))
@@ -123,9 +71,9 @@ export const list = query({
     if (args.unpaidOnly) filtered = filtered.filter((i: any) => !i.paid);
     if (args.includePaid === false)
       filtered = filtered.filter((i: any) => !i.paid);
-    if (args.ownerId)
+    if (args.customerId)
       filtered = filtered.filter(
-        (i: any) => String(i.ownerId) === String(args.ownerId),
+        (i: any) => String(i.customerId) === String(args.customerId),
       );
     if (args.from)
       filtered = filtered.filter((i: any) => i.createdAt >= args.from!);
@@ -135,7 +83,8 @@ export const list = query({
       filtered = filtered.filter((i: any) => {
         const haystacks = [
           i.code ?? i._id,
-          ...(i.items ?? []).map((item: any) => item.description ?? ""),
+          ...(i.parts ?? []).map((item: any) => item.name ?? ""),
+          ...(i.labor ?? []).map((item: any) => item.name ?? ""),
         ];
         return haystacks.some((v: any) => matchesSearch(v));
       });
@@ -145,9 +94,9 @@ export const list = query({
         case "createdAtAsc":
           return a.createdAt - b.createdAt;
         case "totalAsc":
-          return (a.total ?? 0) - (b.total ?? 0);
+          return (a.totalAmount ?? 0) - (b.totalAmount ?? 0);
         case "totalDesc":
-          return (b.total ?? 0) - (a.total ?? 0);
+          return (b.totalAmount ?? 0) - (a.totalAmount ?? 0);
         case "createdAtDesc":
         default:
           return b.createdAt - a.createdAt;
@@ -170,7 +119,7 @@ export const invoicesSummary = query({
     const unpaid = invoices.filter((i: any) => !i.paid);
     const totals = unpaid.reduce(
       (acc: { total: number; latest?: number }, inv: any) => {
-        acc.total += inv.total ?? 0;
+        acc.total += inv.totalAmount ?? 0;
         acc.latest = Math.max(acc.latest ?? 0, inv.createdAt ?? 0);
         return acc;
       },
@@ -186,21 +135,49 @@ export const invoicesSummary = query({
 
 export const create = mutation({
   args: {
-    ownerId: v.id("owners"),
-    animalId: v.optional(v.id("animals")),
+    customerId: v.id("customers"),
+    vehicleId: v.optional(v.id("vehicles")),
     visitId: v.optional(v.id("visits")),
-    items: v.array(
+    parts: v.array(
       v.object({
-        description: v.string(),
+        name: v.string(),
         quantity: v.number(),
         price: v.number(),
-        total: v.number(),
+        // Accepted for backwards compatibility; ignored (totals use price × quantity).
+        total: v.optional(v.number()),
+      }),
+    ),
+    labor: v.array(
+      v.object({
+        name: v.string(),
+        quantity: v.number(),
+        price: v.number(),
+        total: v.optional(v.number()),
       }),
     ),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    const total = args.items.reduce((sum, it) => sum + it.total, 0);
+    const normParts = args.parts.map(({ name, quantity, price }) => ({
+      name,
+      quantity,
+      price,
+    }));
+    const normLabor = args.labor.map(({ name, quantity, price }) => ({
+      name,
+      quantity,
+      price,
+    }));
+    const partsTotal = normParts.reduce(
+      (sum, it) => sum + it.price * it.quantity,
+      0,
+    );
+    const laborTotal = normLabor.reduce(
+      (sum, it) => sum + it.price * it.quantity,
+      0,
+    );
+    const totalAmount = partsTotal + laborTotal;
+    
     // Generate a human-friendly code and attempt to avoid collisions
     const existing = await ctx.db.query("invoices").collect();
     let code = "";
@@ -212,12 +189,13 @@ export const create = mutation({
       }
     }
     const id = await ctx.db.insert("invoices", {
-      ownerId: args.ownerId,
-      animalId: args.animalId ?? null,
+      customerId: args.customerId,
+      vehicleId: args.vehicleId ?? null,
       visitId: args.visitId ?? null,
       code,
-      items: args.items,
-      total,
+      parts: normParts,
+      labor: normLabor,
+      totalAmount,
       paid: false,
       paidAt: null,
       createdAt: now,
@@ -229,7 +207,7 @@ export const create = mutation({
           args.visitId as any,
           {
             invoiceCode: code,
-            outstandingAmount: `${total.toFixed(2)} EUR`,
+            outstandingAmount: `${totalAmount.toFixed(2)} BGN`,
             updatedAt: now,
           } as any,
         );
@@ -285,15 +263,15 @@ export const markPaid = mutation({
               // optional; ignore failures
             }
 
-            // Update procedure/medication catalogs (same logic as visits.finalize)
-            const procedures: string[] = (visit as any).procedures ?? [];
-            const medications: string[] = (visit as any).medications ?? [];
+            // Update service/part catalogs (same logic as visits.finalize)
+            const services: string[] = (visit as any).services ?? [];
+            const parts: string[] = (visit as any).parts ?? [];
 
-            // Update procedure catalog
+            // Update service catalog
             try {
-              for (const name of procedures) {
+              for (const name of services) {
                 const existing = await ctx.db
-                  .query("procedureCatalog")
+                  .query("serviceCatalog")
                   .filter((q: any) => q.eq(q.field("name"), name))
                   .first();
                 if (existing)
@@ -301,7 +279,7 @@ export const markPaid = mutation({
                     count: (existing as any).count + 1,
                   } as any);
                 else
-                  await ctx.db.insert("procedureCatalog", {
+                  await ctx.db.insert("serviceCatalog", {
                     name,
                     count: 1,
                   } as any);
@@ -310,11 +288,11 @@ export const markPaid = mutation({
               // table may not exist; ignore
             }
 
-            // Update medication catalog
+            // Update part catalog
             try {
-              for (const name of medications) {
+              for (const name of parts) {
                 const existing = await ctx.db
-                  .query("medicationCatalog")
+                  .query("partCatalog")
                   .filter((q: any) => q.eq(q.field("name"), name))
                   .first();
                 if (existing)
@@ -322,7 +300,7 @@ export const markPaid = mutation({
                     count: (existing as any).count + 1,
                   } as any);
                 else
-                  await ctx.db.insert("medicationCatalog", {
+                  await ctx.db.insert("partCatalog", {
                     name,
                     count: 1,
                   } as any);
@@ -354,10 +332,10 @@ export const totals = query({
     );
     const paidTotal = rows
       .filter((r: any) => r.paid)
-      .reduce((s: number, r: any) => s + (r.total ?? 0), 0);
+      .reduce((s: number, r: any) => s + (r.totalAmount ?? 0), 0);
     const unpaidTotal = rows
       .filter((r: any) => !r.paid)
-      .reduce((s: number, r: any) => s + (r.total ?? 0), 0);
+      .reduce((s: number, r: any) => s + (r.totalAmount ?? 0), 0);
     return { paidTotal, unpaidTotal, count: rows.length } as const;
   },
 });

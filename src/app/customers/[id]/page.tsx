@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
-import { OwnerDocSchema } from "@/types/owner";
+import { CustomerDocSchema } from "@/types/customer";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -51,28 +51,28 @@ import {
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
 
-export default function OwnerDetailPage() {
+export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>();
-  const id = params.id as Id<"owners">;
-  const ownerUnknown = useQuery(
-    api.owners.getById,
+  const id = params.id as Id<"customers">;
+  const customerUnknown = useQuery(
+    api.customers.getById,
     useMemo(() => ({ id }), [id]),
   ) as unknown;
-  const update = useMutation(api.owners.update);
-  const softDelete = useMutation(api.owners.softDelete);
-  const setLegalHold = useMutation(api.owners.setLegalHold);
-  const animals = useQuery(
-    api.animals.listByOwner,
-    useMemo(() => ({ ownerId: id }), [id]),
-  ) as { _id: string; name: string; species: string }[] | undefined;
-  const ownerUnpaidQuery = useQuery(
+  const update = useMutation(api.customers.update);
+  const softDelete = useMutation(api.customers.softDelete);
+  const setLegalHold = useMutation(api.customers.setLegalHold);
+  const vehicles = useQuery(
+    api.vehicles.listByCustomer,
+    useMemo(() => ({ customerId: id }), [id]),
+  ) as { _id: string; licensePlate: string; make: string }[] | undefined;
+  const customerUnpaidQuery = useQuery(
     api.invoices.list,
-    useMemo(() => ({ ownerId: id, unpaidOnly: true }), [id]),
+    useMemo(() => ({ customerId: id, unpaidOnly: true }), [id]),
   );
-  const ownerUnpaidResult = ownerUnpaidQuery as
-    | { items: { total: number }[]; total: number; hasMore: boolean }
+  const customerUnpaidResult = customerUnpaidQuery as
+    | { items: Pick<InvoiceDoc, "totalAmount">[]; total: number; hasMore: boolean }
     | undefined;
-  const ownerUnpaid = ownerUnpaidResult?.items;
+  const customerUnpaid = customerUnpaidResult?.items;
   const router = useRouter();
   const [showDelete, setShowDelete] = useState(false);
 
@@ -81,41 +81,43 @@ export default function OwnerDetailPage() {
     phone: "",
     email: "",
     address: "",
+    notes: "",
     gdpr: false,
     legalHold: false,
   });
   const [hydrated, setHydrated] = useState(false);
-  const parsed = OwnerDocSchema.safeParse(ownerUnknown);
-  const owner = parsed.success ? parsed.data : null;
+  const parsed = CustomerDocSchema.safeParse(customerUnknown);
+  const customer = parsed.success ? parsed.data : null;
 
   useBreadcrumbRegistration(
     [
       { label: "Начало", href: "/" } satisfies BreadcrumbItem,
-      { label: "Собственици", href: "/owners" } satisfies BreadcrumbItem,
-      owner?.name
+      { label: "Клиенти", href: "/customers" } satisfies BreadcrumbItem,
+      customer?.name
         ? ({
             id: String(id),
-            label: owner.name,
-            href: `/owners/${id}`,
+            label: customer.name,
+            href: `/customers/${id}`,
             current: true,
           } satisfies BreadcrumbItem)
-        : ({ label: "Собственик", current: true } satisfies BreadcrumbItem),
+        : ({ label: "Клиент", current: true } satisfies BreadcrumbItem),
     ].filter(Boolean) as BreadcrumbItem[],
   );
 
   useEffect(() => {
-    if (!hydrated && owner) {
+    if (!hydrated && customer) {
       setForm({
-        name: owner.name ?? "",
-        phone: owner.phone ?? "",
-        email: owner.email ?? "",
-        address: owner.address ?? "",
-        gdpr: !!owner.gdprConsent,
-        legalHold: !!owner.legalHold,
+        name: customer.name ?? "",
+        phone: customer.phone ?? "",
+        email: customer.email ?? "",
+        address: customer.address ?? "",
+        notes: customer.notes ?? "",
+        gdpr: !!customer.gdprConsent,
+        legalHold: !!customer.legalHold,
       });
       setHydrated(true);
     }
-  }, [owner, hydrated]);
+  }, [customer, hydrated]);
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
@@ -125,22 +127,23 @@ export default function OwnerDetailPage() {
       phone: form.phone,
       email: form.email || null,
       address: form.address || null,
+      notes: form.notes || null,
       gdprConsent: form.gdpr,
     });
     if (res?.ok) {
       toast.success("Записът е обновен");
-      router.push("/owners");
+      router.push("/customers");
     }
   }
 
-  if (!owner)
+  if (!customer)
     return <main className="mx-auto max-w-3xl p-6">Зареждане...</main>;
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
-          Собственик: {owner.name}
+          Клиент: {customer.name}
         </h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -153,12 +156,12 @@ export default function OwnerDetailPage() {
             <DropdownMenuItem
               className="gap-2"
               onSelect={() => {
-                const data = JSON.stringify(owner, null, 2);
+                const data = JSON.stringify(customer, null, 2);
                 const blob = new Blob([data], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = `owner-${owner._id}.json`;
+                a.download = `customer-${customer._id}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
               }}
@@ -174,17 +177,19 @@ export default function OwnerDetailPage() {
                   "phone",
                   "email",
                   "address",
+                  "notes",
                   "gdprConsent",
                   "createdAt",
                 ].join(",");
                 const row = [
-                  owner._id,
-                  owner.name ?? "",
-                  owner.phone ?? "",
-                  owner.email ?? "",
-                  owner.address ?? "",
-                  String(!!owner.gdprConsent),
-                  new Date(owner.createdAt).toISOString(),
+                  customer._id,
+                  customer.name ?? "",
+                  customer.phone ?? "",
+                  customer.email ?? "",
+                  customer.address ?? "",
+                  customer.notes ?? "",
+                  String(!!customer.gdprConsent),
+                  new Date(customer.createdAt).toISOString(),
                 ]
                   .map((v: unknown) => `"${String(v).replace(/"/g, '""')}"`)
                   .join(",");
@@ -195,7 +200,7 @@ export default function OwnerDetailPage() {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = `owner-${owner._id}.csv`;
+                a.download = `customer-${customer._id}.csv`;
                 a.click();
                 URL.revokeObjectURL(url);
               }}
@@ -207,14 +212,15 @@ export default function OwnerDetailPage() {
               onSelect={() => {
                 const w = window.open("", "_blank", "noopener,noreferrer");
                 if (!w) return;
-                const html = `<!doctype html><html lang="bg"><head><meta charset="utf-8" /><title>Собственик ${owner.name}</title><style>body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px} h1{font-size:20px;margin:0 0 12px} table{border-collapse:collapse;width:100%} td{border:1px solid #ddd;padding:8px;vertical-align:top} .muted{color:#666}</style></head><body><h1>Данни за собственик</h1><table><tbody>
-                <tr><td class="muted">ID</td><td>${owner._id}</td></tr>
-                <tr><td class="muted">Име</td><td>${owner.name ?? ""}</td></tr>
-                <tr><td class="muted">Телефон</td><td>${owner.phone ?? ""}</td></tr>
-                <tr><td class="muted">Имейл</td><td>${owner.email ?? ""}</td></tr>
-                <tr><td class="muted">Адрес</td><td>${owner.address ?? ""}</td></tr>
-                <tr><td class="muted">Съгласие (GDPR)</td><td>${owner.gdprConsent ? "Да" : "Не"}</td></tr>
-                <tr><td class="muted">Създаден</td><td>${new Date(owner.createdAt).toLocaleString()}</td></tr>
+                const html = `<!doctype html><html lang="bg"><head><meta charset="utf-8" /><title>Клиент ${customer.name}</title><style>body{font-family:ui-sans-serif,system-ui,sans-serif;padding:24px} h1{font-size:20px;margin:0 0 12px} table{border-collapse:collapse;width:100%} td{border:1px solid #ddd;padding:8px;vertical-align:top} .muted{color:#666}</style></head><body><h1>Данни за клиент</h1><table><tbody>
+                <tr><td class="muted">ID</td><td>${customer._id}</td></tr>
+                <tr><td class="muted">Име</td><td>${customer.name ?? ""}</td></tr>
+                <tr><td class="muted">Телефон</td><td>${customer.phone ?? ""}</td></tr>
+                <tr><td class="muted">Имейл</td><td>${customer.email ?? ""}</td></tr>
+                <tr><td class="muted">Адрес</td><td>${customer.address ?? ""}</td></tr>
+                <tr><td class="muted">Бележки</td><td>${customer.notes ?? ""}</td></tr>
+                <tr><td class="muted">Съгласие (GDPR)</td><td>${customer.gdprConsent ? "Да" : "Не"}</td></tr>
+                <tr><td class="muted">Създаден</td><td>${new Date(customer.createdAt).toLocaleString()}</td></tr>
               </tbody></table><script>window.onload = () => window.print()</script></body></html>`;
                 w.document.open();
                 w.document.write(html);
@@ -238,20 +244,22 @@ export default function OwnerDetailPage() {
         </DropdownMenu>
       </div>
       <div className="flex items-center justify-between">
-        {/* when owner has unpaid color it red */}
         <div
-          className={`text-muted-foreground text-sm ${ownerUnpaid?.length && ownerUnpaid.length > 0 ? "font-medium text-red-500" : ""}`}
+          className={`text-muted-foreground text-sm ${customerUnpaid?.length && customerUnpaid.length > 0 ? "font-medium text-red-500" : ""}`}
         >
           Неплатени общо:{" "}
           {fmtNumberBG(
-            (ownerUnpaid ?? []).reduce((s: number, i) => s + (i.total ?? 0), 0),
-            { style: "currency", currency: "EUR" },
+            (customerUnpaid ?? []).reduce(
+              (s: number, i) => s + (i.totalAmount ?? 0),
+              0,
+            ),
+            { style: "currency", currency: "BGN" },
           )}
         </div>
         <div>
           <a
             className="hover:bg-accent inline-flex items-center rounded-md border px-3 py-2 text-sm"
-            href={`/invoices/new?ownerId=${encodeURIComponent(String(id))}`}
+            href={`/invoices/new?customerId=${encodeURIComponent(String(id))}`}
           >
             Нова фактура
           </a>
@@ -302,6 +310,16 @@ export default function OwnerDetailPage() {
             }
           />
         </div>
+        <div>
+          <Label htmlFor="notes">Бележки</Label>
+          <Input
+            id="notes"
+            value={form.notes}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, notes: e.target.value }))
+            }
+          />
+        </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
           <label className="flex items-center gap-2">
             <Checkbox
@@ -340,7 +358,7 @@ export default function OwnerDetailPage() {
             <DialogTitle>Потвърдете изтриване</DialogTitle>
           </DialogHeader>
           <p className="text-muted-foreground text-sm">
-            Това действие ще скрие собственика от списъците (soft delete).
+            Това действие ще скрие клиента от списъците (soft delete).
             Данните няма да са видими в UI. Ако е активиран правен запор,
             изтриването е блокирано.
           </p>
@@ -356,7 +374,7 @@ export default function OwnerDetailPage() {
                   | { ok: false; reason?: string };
                 if ("ok" in r && r.ok) {
                   toast.success("Изтрито");
-                  router.push("/owners");
+                  router.push("/customers");
                 } else {
                   toast.error("Не може да се изтрие поради правен запор");
                 }
@@ -369,29 +387,29 @@ export default function OwnerDetailPage() {
         </DialogContent>
       </Dialog>
       <section className="space-y-2">
-        <h2 className="text-lg font-medium">Животни</h2>
+        <h2 className="text-lg font-medium">Автомобили</h2>
         <div className="divide-y rounded-md border">
-          {(animals ?? []).length === 0 ? (
+          {(vehicles ?? []).length === 0 ? (
             <div className="text-muted-foreground p-3 text-sm">
-              Няма свързани животни
+              Няма свързани автомобили
             </div>
           ) : (
-            (animals ?? []).map((a) => (
+            (vehicles ?? []).map((a) => (
               <div
                 key={a._id}
                 className="flex items-center justify-between p-3 text-sm"
               >
                 <div>
                   <a
-                    href={`/animals/${a._id}`}
+                    href={`/vehicles/${a._id}`}
                     className="underline underline-offset-2"
                   >
-                    {a.name} ({a.species})
+                    {a.licensePlate} ({a.make})
                   </a>
                 </div>
                 <div>
                   <a
-                    href={`/visits?ownerId=${id}&animalId=${a._id}`}
+                    href={`/visits?customerId=${id}&vehicleId=${a._id}`}
                     className="text-primary underline underline-offset-2"
                   >
                     Ново посещение
@@ -402,42 +420,8 @@ export default function OwnerDetailPage() {
           )}
         </div>
       </section>
-      <OwnerInvoices ownerId={id} />
-      <OwnerAuditLog ownerId={id} />
-      <Dialog open={showDelete} onOpenChange={setShowDelete}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Потвърдете изтриване</DialogTitle>
-          </DialogHeader>
-          <p className="text-muted-foreground text-sm">
-            Това действие ще скрие собственика от списъците (soft delete).
-            Данните няма да са видими в UI. Ако е активиран правен запор,
-            изтриването е блокирано.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDelete(false)}>
-              Отказ
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                const r = (await softDelete({ id })) as
-                  | { ok: boolean }
-                  | { ok: false; reason?: string };
-                if ("ok" in r && r.ok) {
-                  toast.success("Изтрито");
-                  router.push("/owners");
-                } else {
-                  toast.error("Не може да се изтрие поради правен запор");
-                }
-                setShowDelete(false);
-              }}
-            >
-              Потвърди
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CustomerInvoices customerId={id} />
+      <CustomerAuditLog customerId={id} />
     </main>
   );
 }
@@ -448,12 +432,12 @@ type AuditLogEntry = {
   actor?: string;
   details?: unknown;
 };
-function OwnerAuditLog({ ownerId }: { ownerId: Id<"owners"> }) {
+function CustomerAuditLog({ customerId }: { customerId: Id<"customers"> }) {
   const logs = useQuery(
     api.auditLogs.listByEntity,
     useMemo(
-      () => ({ entityType: "owner", entityId: String(ownerId), limit: 10 }),
-      [ownerId],
+      () => ({ entityType: "customer", entityId: String(customerId), limit: 10 }),
+      [customerId],
     ),
   ) as AuditLogEntry[] | undefined;
   return (
@@ -485,12 +469,12 @@ function OwnerAuditLog({ ownerId }: { ownerId: Id<"owners"> }) {
   );
 }
 
-function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
+function CustomerInvoices({ customerId }: { customerId: Id<"customers"> }) {
   const [unpaidOnly, setUnpaidOnly] = useState(false);
   const router = useRouter();
   const invoicesQuery = useQuery(
     api.invoices.list,
-    useMemo(() => ({ ownerId, unpaidOnly }), [ownerId, unpaidOnly]),
+    useMemo(() => ({ customerId, unpaidOnly }), [customerId, unpaidOnly]),
   );
   const invoicesResult = invoicesQuery as
     | {
@@ -506,8 +490,8 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
   const [paidLoading, setPaidLoading] = useState<string | null>(null);
   const totals = (invoices ?? []).reduce(
     (acc, inv) => {
-      if (inv.paid) acc.paid += inv.total;
-      else acc.unpaid += inv.total;
+      if (inv.paid) acc.paid += inv.totalAmount;
+      else acc.unpaid += inv.totalAmount;
       return acc;
     },
     { paid: 0, unpaid: 0 },
@@ -519,11 +503,11 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
         <div className="text-muted-foreground flex items-center gap-3 text-sm">
           <span>
             Неплатени:{" "}
-            {fmtNumberBG(totals.unpaid, { style: "currency", currency: "EUR" })}
+            {fmtNumberBG(totals.unpaid, { style: "currency", currency: "BGN" })}
           </span>
           <span>
             Платени:{" "}
-            {fmtNumberBG(totals.paid, { style: "currency", currency: "EUR" })}
+            {fmtNumberBG(totals.paid, { style: "currency", currency: "BGN" })}
           </span>
           <label className="inline-flex items-center gap-2">
             <Checkbox
@@ -558,9 +542,9 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
                   </a>
                   <div className="flex-shrink-0 text-right text-xs font-medium sm:hidden">
                     Общо:{" "}
-                    {fmtNumberBG(inv.total, {
+                    {fmtNumberBG(inv.totalAmount, {
                       style: "currency",
-                      currency: "EUR",
+                      currency: "BGN",
                     })}
                   </div>
                 </div>
@@ -581,12 +565,21 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
                   ) : null}
                 </div>
                 <ul className="text-muted-foreground ml-5 list-disc">
-                  {inv.items.map((it, idx) => (
-                    <li key={idx} className="truncate">
-                      {it.description} × {it.quantity} —{" "}
-                      {fmtNumberBG(it.total, {
+                  {inv.parts?.map((it, idx) => (
+                    <li key={`p-${idx}`} className="truncate">
+                      {it.name} × {it.quantity} —{" "}
+                      {fmtNumberBG(it.price * it.quantity, {
                         style: "currency",
-                        currency: "EUR",
+                        currency: "BGN",
+                      })}
+                    </li>
+                  ))}
+                  {inv.labor?.map((it, idx) => (
+                    <li key={`l-${idx}`} className="truncate">
+                      {it.name} × {it.quantity} —{" "}
+                      {fmtNumberBG(it.price * it.quantity, {
+                        style: "currency",
+                        currency: "BGN",
                       })}
                     </li>
                   ))}
@@ -595,9 +588,9 @@ function OwnerInvoices({ ownerId }: { ownerId: Id<"owners"> }) {
               <div className="flex flex-col gap-2 sm:flex sm:flex-col sm:items-end sm:justify-between">
                 <div className="hidden min-h-[44px] items-center text-right font-medium sm:flex sm:text-right">
                   Общо:{" "}
-                  {fmtNumberBG(inv.total, {
+                  {fmtNumberBG(inv.totalAmount, {
                     style: "currency",
-                    currency: "EUR",
+                    currency: "BGN",
                   })}
                 </div>
                 <div className="mt-2 flex flex-col gap-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-end">

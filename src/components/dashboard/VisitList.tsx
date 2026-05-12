@@ -10,9 +10,9 @@ export type VisitListItem = {
   code: string | null;
   datetime: number;
   status: string;
-  ownerName: string | null;
-  ownerId: string | null;
-  animalId: string | null;
+  customerName: string | null;
+  customerId: string | null;
+  vehicleId: string | null;
   highlight?: boolean;
   badge?: string;
   invoiceId?: string | null;
@@ -77,7 +77,7 @@ export function VisitList({
                         ? "Приключено"
                         : visit.status}
                   </span>
-                  {visit.ownerName ? <span>· {visit.ownerName}</span> : null}
+                  {visit.customerName ? <span>· {visit.customerName}</span> : null}
                   {visit.badge ? (
                     <span className="bg-primary/10 text-primary inline-flex items-center rounded px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
                       {visit.badge}
@@ -93,9 +93,9 @@ export function VisitList({
                 </Link>
               ) : (
                 <Link
-                  href={`/invoices/new?ownerId=${encodeURIComponent(visit.ownerId ?? "")}${
-                    visit.animalId
-                      ? `&animalId=${encodeURIComponent(visit.animalId)}`
+                  href={`/invoices/new?customerId=${encodeURIComponent(visit.customerId ?? "")}${
+                    visit.vehicleId
+                      ? `&vehicleId=${encodeURIComponent(visit.vehicleId)}`
                       : ""
                   }&visitId=${encodeURIComponent(visit._id)}`}
                 >

@@ -22,15 +22,15 @@ async function main() {
   const client = new ConvexHttpClient(url);
   const { api } = await import("../convex/_generated/api");
 
-  const owners = Number(process.env.SEED_OWNERS ?? 5);
-  const animalsPerOwner = Number(process.env.SEED_ANIMALS_PER_OWNER ?? 2);
-  const visitsPerAnimal = Number(process.env.SEED_VISITS_PER_ANIMAL ?? 1);
+  const customers = Number(process.env.SEED_CUSTOMERS ?? 5);
+  const vehiclesPerCustomer = Number(process.env.SEED_VEHICLES_PER_CUSTOMER ?? 2);
+  const visitsPerVehicle = Number(process.env.SEED_VISITS_PER_VEHICLE ?? 1);
   const invoicesPerVisit = Number(process.env.SEED_INVOICES_PER_VISIT ?? 1);
 
   const res = await client.action(api.seed.run, {
-    owners,
-    animalsPerOwner,
-    visitsPerAnimal,
+    customers,
+    vehiclesPerCustomer,
+    visitsPerVehicle,
     invoicesPerVisit,
   } as any);
 

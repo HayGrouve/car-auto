@@ -60,45 +60,44 @@ export default function VisitDetailPage() {
   }) => Promise<{ ok: boolean }>;
   const router = useRouter();
 
-  const [s, setS] = useState("");
-  const [o, setO] = useState("");
-  const [a, setA] = useState("");
-  const [p, setP] = useState("");
+  const [issue, setIssue] = useState("");
+  const [inspection, setInspection] = useState("");
+  const [diagnosis, setDiagnosis] = useState("");
+  const [plan, setPlan] = useState("");
   const [hydrated, setHydrated] = useState(false);
-  const [procedures, setProcedures] = useState<string[]>([]);
-  const [medications, setMedications] = useState<string[]>([]);
-  const [animalId, setAnimalId] = useState<string | null>(null);
-  const ownersQuery = useQuery(
-    api.owners.list,
+  const [services, setServices] = useState<string[]>([]);
+  const [parts, setParts] = useState<string[]>([]);
+  const [vehicleId, setVehicleId] = useState<string | null>(null);
+  const customersQuery = useQuery(
+    api.customers.list,
     useMemo(() => ({ search: "" }), []),
   );
-  const ownersResult = ownersQuery as
+  const customersResult = customersQuery as
     | {
         items: { _id: string; name: string; phone?: string }[];
         total: number;
         hasMore: boolean;
       }
     | undefined;
-  const owners = ownersResult?.items;
-  const animalsQuery = useQuery(
-    api.animals.list,
+  const customers = customersResult?.items;
+  const vehiclesQuery = useQuery(
+    api.vehicles.list,
     useMemo(() => ({ search: "" }), []),
   );
-  const animalsResult = animalsQuery as
+  const vehiclesResult = vehiclesQuery as
     | {
         items: {
           _id: string;
-          name: string;
-          species: string;
-          ownerId?: string | null;
-          sex?: string | null;
+          licensePlate: string;
+          make: string;
+          customerId?: string | null;
         }[];
         total: number;
         hasMore: boolean;
       }
     | undefined;
-  const animals = animalsResult?.items;
-  const [ownerId, setOwnerId] = useState<string>("");
+  const vehicles = vehiclesResult?.items;
+  const [customerId, setCustomerId] = useState<string>("");
   const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
@@ -181,14 +180,14 @@ export default function VisitDetailPage() {
 
   useEffect(() => {
     if (!hydrated && visit) {
-      setS(visit.soap?.s ?? "");
-      setO(visit.soap?.o ?? "");
-      setA(visit.soap?.a ?? "");
-      setP(visit.soap?.p ?? "");
-      setAnimalId(visit.animalId ?? null);
-      setOwnerId(visit.ownerId ?? "");
-      setProcedures(visit.procedures ?? []);
-      setMedications(visit.medications ?? []);
+      setIssue(visit.notes?.issue ?? "");
+      setInspection(visit.notes?.inspection ?? "");
+      setDiagnosis(visit.notes?.diagnosis ?? "");
+      setPlan(visit.notes?.plan ?? "");
+      setVehicleId(visit.vehicleId ?? null);
+      setCustomerId(visit.customerId ?? "");
+      setServices(visit.services ?? []);
+      setParts(visit.parts ?? []);
       setHydrated(true);
     }
   }, [visit, hydrated]);
@@ -264,18 +263,16 @@ export default function VisitDetailPage() {
           ? "Приключено"
           : visit.status;
 
-    const patientName = (animalInfo?.name ?? visit.animalName ?? "").trim();
-    const patientSpecies = (
-      animalInfo?.species ??
-      visit.animalSpecies ??
+    const vehicleName = (vehicleInfo?.licensePlate ?? visit.vehicleName ?? "").trim();
+    const vehicleMake = (
+      vehicleInfo?.make ??
+      visit.vehicleMake ??
       ""
     ).trim();
     const alerts = (visit.alerts ?? []).join(", ");
-    const ownerNameVal = ownerInfo?.name ?? "";
-    const ownerPhoneVal = ownerInfo?.phone ?? "";
-    const weightVal = visit.weight != null ? `${visit.weight} кг` : "—";
-    const tempVal = visit.temperature != null ? `${visit.temperature} °C` : "—";
-    const pulseVal = visit.pulse != null ? String(visit.pulse) : "—";
+    const customerNameVal = customerInfo?.name ?? "";
+    const customerPhoneVal = customerInfo?.phone ?? "";
+    const mileageVal = visit.mileage != null ? `${visit.mileage} км` : "—";
     const invoiceCode = visit.invoiceCode ?? "";
     const outstanding = visit.outstandingAmount ?? "";
 
@@ -298,16 +295,16 @@ export default function VisitDetailPage() {
       isNonEmpty(html)
         ? `<tr><td class=\"label\">${esc(label)}</td><td>${html!}</td></tr>`
         : "";
-    const soapRows = [
-      row("S - Anamnesa vitae", s),
-      row("O - Anamnesa morbi", o),
-      row("A - Лабораторна диагностика", a),
-      row("P - Diagnosis", p),
+    const notesRows = [
+      row("Оплакване", issue),
+      row("Оглед", inspection),
+      row("Диагноза", diagnosis),
+      row("План за ремонт", plan),
     ].join("");
-    const procedureList = (procedures?.length ? procedures : [])
+    const serviceList = (services?.length ? services : [])
       .map((pr) => `<li>${esc(pr)}</li>`)
       .join("");
-    const medicationList = (medications?.length ? medications : [])
+    const partList = (parts?.length ? parts : [])
       .map((md) => `<li>${esc(md)}</li>`)
       .join("");
 
@@ -336,33 +333,31 @@ export default function VisitDetailPage() {
           </tbody></table>
 
           <table class=\"section\"><tbody>
-            <tr><th colspan=2>Пациент и собственик</th></tr>
-            ${row("Пациент", [patientName, patientSpecies].filter(Boolean).join(" · "))}
+            <tr><th colspan=2>Автомобил и клиент</th></tr>
+            ${row("Автомобил", [vehicleName, vehicleMake].filter(Boolean).join(" · "))}
             ${row("Предупреждения", alerts)}
-            ${row("Собственик", ownerNameVal)}
-            ${row("Телефон", ownerPhoneVal)}
+            ${row("Клиент", customerNameVal)}
+            ${row("Телефон", customerPhoneVal)}
           </tbody></table>
 
           <table class=\"section\"><tbody>
-            <tr><th colspan=2>Измервания</th></tr>
-            ${row("Тегло", weightVal)}
-            ${row("Температура", tempVal)}
-            ${row("Пулс", pulseVal)}
+            <tr><th colspan=2>Пробег</th></tr>
+            ${row("Пробег", mileageVal)}
           </tbody></table>
 
           <table class=\"section\"><tbody>
-            <tr><th colspan=2>SOAP бележки</th></tr>
-            ${soapRows || row("—", "Няма бележки")}
+            <tr><th colspan=2>Бележки</th></tr>
+            ${notesRows || row("—", "Няма бележки")}
           </tbody></table>
 
           <table class=\"section\"><tbody>
-            <tr><th colspan=2>Процедури</th></tr>
-            ${rowHtml("Списък", procedureList || '<span class=\"muted\">(няма)</span>')}
+            <tr><th colspan=2>Услуги</th></tr>
+            ${rowHtml("Списък", serviceList || '<span class=\"muted\">(няма)</span>')}
           </tbody></table>
 
           <table class=\"section\"><tbody>
-            <tr><th colspan=2>Медикаменти</th></tr>
-            ${rowHtml("Списък", medicationList || '<span class=\"muted\">(няма)</span>')}
+            <tr><th colspan=2>Части</th></tr>
+            ${rowHtml("Списък", partList || '<span class=\"muted\">(няма)</span>')}
           </tbody></table>
 
           <table class=\"section\"><tbody>
@@ -391,11 +386,11 @@ export default function VisitDetailPage() {
       <main className="mx-auto max-w-3xl p-6">Не е намерено посещение</main>
     );
 
-  const ownerInfo = ownerId
-    ? (owners ?? []).find((o) => o._id === ownerId)
+  const customerInfo = customerId
+    ? (customers ?? []).find((o) => o._id === customerId)
     : null;
-  const animalInfo = animalId
-    ? (animals ?? []).find((a) => a._id === animalId)
+  const vehicleInfo = vehicleId
+    ? (vehicles ?? []).find((a) => a._id === vehicleId)
     : null;
   const visitTimestamp =
     (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
@@ -403,8 +398,8 @@ export default function VisitDetailPage() {
   const deleteConfirmationPhrase = `изтрии ${visitCode}`;
 
   const generateVisitPdf = async () => {
-    const animal = (animals ?? []).find((a) => a._id === visit.animalId);
-    const owner = (owners ?? []).find((o) => o._id === visit.ownerId);
+    const vehicle = (vehicles ?? []).find((a) => a._id === visit.vehicleId);
+    const customer = (customers ?? []).find((o) => o._id === visit.customerId);
     return generateVisitSummaryPdf({
       code: (visit as VisitDoc & { code?: string }).code,
       status:
@@ -415,20 +410,18 @@ export default function VisitDetailPage() {
             : visit.status,
       date: visitTimestamp,
 
-      animalName: animal?.name ?? visit.animalName ?? undefined,
-      animalSpecies: animal?.species ?? visit.animalSpecies ?? undefined,
+      vehicleName: vehicle?.licensePlate ?? visit.vehicleName ?? undefined,
+      vehicleMake: vehicle?.make ?? visit.vehicleMake ?? undefined,
       alerts: visit.alerts ?? [],
-      ownerName: owner?.name,
-      ownerPhone: owner?.phone,
-      weight: visit.weight ?? null,
-      temperature: visit.temperature ?? null,
-      pulse: visit.pulse ?? null,
-      subjective: s,
-      objective: o,
-      assessment: a,
-      plan: p,
-      procedures: visit.procedures ?? [],
-      medications: visit.medications ?? [],
+      customerName: customer?.name,
+      customerPhone: customer?.phone,
+      mileage: visit.mileage ?? null,
+      issue: issue,
+      inspection: inspection,
+      diagnosis: diagnosis,
+      plan: plan,
+      services: visit.services ?? [],
+      parts: visit.parts ?? [],
       invoiceCode: visit.invoiceCode ?? null,
       outstandingAmount: visit.outstandingAmount ?? null,
     });
@@ -446,7 +439,7 @@ export default function VisitDetailPage() {
               onInvoice={() => {
                 const url = `/invoices/new?visitId=${encodeURIComponent(
                   visit._id,
-                )}&ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(String(visit.animalId))}` : ""}`;
+                )}&customerId=${encodeURIComponent(visit.customerId)}${visit.vehicleId ? `&vehicleId=${encodeURIComponent(String(visit.vehicleId))}` : ""}`;
                 void router.push(url);
               }}
               extraActions={[
@@ -465,7 +458,7 @@ export default function VisitDetailPage() {
               onInvoice={() => {
                 const url = `/invoices/new?visitId=${encodeURIComponent(
                   visit._id,
-                )}&ownerId=${encodeURIComponent(visit.ownerId)}${visit.animalId ? `&animalId=${encodeURIComponent(String(visit.animalId))}` : ""}`;
+                )}&customerId=${encodeURIComponent(visit.customerId)}${visit.vehicleId ? `&vehicleId=${encodeURIComponent(String(visit.vehicleId))}` : ""}`;
                 void router.push(url);
               }}
               extraActions={[
@@ -477,16 +470,15 @@ export default function VisitDetailPage() {
               ]}
             />
           }
-          owner={{
-            name: ownerInfo?.name,
-            phone: ownerInfo?.phone,
+          customer={{
+            name: customerInfo?.name,
+            phone: customerInfo?.phone,
           }}
-          animal={{
-            id: visit.animalId ? String(visit.animalId) : undefined,
-            name: animalInfo?.name ?? visit.animalName ?? undefined,
-            species: animalInfo?.species ?? visit.animalSpecies ?? undefined,
+          vehicle={{
+            id: visit.vehicleId ? String(visit.vehicleId) : undefined,
+            name: vehicleInfo?.licensePlate ?? visit.vehicleName ?? undefined,
+            make: vehicleInfo?.make ?? visit.vehicleMake ?? undefined,
             alerts: visit.alerts ?? [],
-            sex: animalInfo?.sex ?? undefined,
           }}
           billing={{
             invoiceCode: visit.invoiceCode ?? null,
@@ -495,11 +487,162 @@ export default function VisitDetailPage() {
         />
       </section>
       <section className="space-y-6 pb-20 lg:pb-0">
-        <SectionCard
+        {!isFinalized ? (
+          <SectionCard
+            title="Ръководен режим"
+            description="Структурирани стъпки за обработка на посещението."
+            headerActions={[
+              {
+                label: showWizard ? "Скрий ръководство" : "Покажи ръководство",
+                onClick: () => setShowWizard((v) => !v),
+                variant: "outline",
+              },
+            ]}
+          >
+            {showWizard ? (
+              <VisitWizard id={id} onClose={() => setShowWizard(false)} />
+            ) : null}
+          </SectionCard>
+        ) : (
+          <SectionCard
+            title="Резюме"
+            description="Обобщение на приключеното посещение"
+            headerActions={[
+              {
+                label: "Печат",
+                onClick: () => onPrint(),
+                variant: "outline",
+              },
+              {
+                label: "PDF",
+                onClick: () => {
+                  void (async () => {
+                    const blob = await generateVisitPdf();
+                    downloadBlob(blob, `visit-${id}.pdf`);
+                  })();
+                },
+                variant: "outline",
+              },
+              {
+                label: visit.invoiceCode ? "Фактура" : "Нова фактура",
+                href: visit.invoiceCode
+                  ? `/invoices/${encodeURIComponent(visit.invoiceCode)}`
+                  : `/invoices/new?visitId=${encodeURIComponent(
+                      visit._id,
+                    )}&customerId=${encodeURIComponent(visit.customerId)}${
+                      visit.vehicleId
+                        ? `&vehicleId=${encodeURIComponent(String(visit.vehicleId))}`
+                        : ""
+                    }`,
+                variant: "ghost",
+              },
+            ]}
+          >
+            <div className="grid gap-6 md:grid-cols-2 md:justify-items-center">
+              <div className="w-full max-w-md space-y-3">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Бележки
+                </p>
+                <div className="space-y-2 text-sm">
+                  {(issue ?? "").trim() ? (
+                    <div>
+                      <span className="text-muted-foreground mr-2 font-medium">
+                        Оплакване:
+                      </span>
+                      <span>{issue}</span>
+                    </div>
+                  ) : null}
+                  {(inspection ?? "").trim() ? (
+                    <div>
+                      <span className="text-muted-foreground mr-2 font-medium">
+                        Оглед:
+                      </span>
+                      <span>{inspection}</span>
+                    </div>
+                  ) : null}
+                  {(diagnosis ?? "").trim() ? (
+                    <div>
+                      <span className="text-muted-foreground mr-2 font-medium">
+                        Диагноза:
+                      </span>
+                      <span>{diagnosis}</span>
+                    </div>
+                  ) : null}
+                  {(plan ?? "").trim() ? (
+                    <div>
+                      <span className="text-muted-foreground mr-2 font-medium">
+                        План за ремонт:
+                      </span>
+                      <span>{plan}</span>
+                    </div>
+                  ) : null}
+                  {!(
+                    (issue ?? "").trim() ||
+                    (inspection ?? "").trim() ||
+                    (diagnosis ?? "").trim() ||
+                    (plan ?? "").trim()
+                  ) ? (
+                    <div className="text-muted-foreground">(няма данни)</div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="w-full max-w-md space-y-3">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Услуги
+                </p>
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  {(visit.services ?? []).length ? (
+                    (visit.services ?? []).map((pr, idx) => (
+                      <li key={idx}>{pr}</li>
+                    ))
+                  ) : (
+                    <li className="text-muted-foreground list-none">(няма)</li>
+                  )}
+                </ul>
+              </div>
+
+              <div className="w-full max-w-md space-y-3">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Части
+                </p>
+                <ul className="list-disc space-y-1 pl-5 text-sm">
+                  {(visit.parts ?? []).length ? (
+                    (visit.parts ?? []).map((md, idx) => (
+                      <li key={idx}>{md}</li>
+                    ))
+                  ) : (
+                    <li className="text-muted-foreground list-none">(няма)</li>
+                  )}
+                </ul>
+              </div>
+
+              <div className="w-full max-w-md space-y-3">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Фактуриране
+                </p>
+                <div className="text-sm">
+                  {visit.invoiceCode ? (
+                    <div>Фактура {visit.invoiceCode}</div>
+                  ) : (
+                    <div className="text-muted-foreground">
+                      Няма издадена фактура
+                    </div>
+                  )}
+                  {visit.outstandingAmount ? (
+                    <div>Дължима сума: {visit.outstandingAmount}</div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        )}
+
+<SectionCard
           title="Прикачени файлове"
           description={
             <>
-              Рентгенови снимки, изследвания и други документи.
+              Снимки от оглед, документи и други файлове.
               <br />
               Позволени формати: JPG, PNG, PDF и други, макс. 25MB
             </>
@@ -636,157 +779,6 @@ export default function VisitDetailPage() {
             )}
           </div>
         </SectionCard>
-
-        {!isFinalized ? (
-          <SectionCard
-            title="Ръководен режим"
-            description="Структурирани стъпки за обработка на посещението."
-            headerActions={[
-              {
-                label: showWizard ? "Скрий ръководство" : "Покажи ръководство",
-                onClick: () => setShowWizard((v) => !v),
-                variant: "outline",
-              },
-            ]}
-          >
-            {showWizard ? (
-              <VisitWizard id={id} onClose={() => setShowWizard(false)} />
-            ) : null}
-          </SectionCard>
-        ) : (
-          <SectionCard
-            title="Резюме"
-            description="Обобщение на приключеното посещение"
-            headerActions={[
-              {
-                label: "Печат",
-                onClick: () => onPrint(),
-                variant: "outline",
-              },
-              {
-                label: "PDF",
-                onClick: () => {
-                  void (async () => {
-                    const blob = await generateVisitPdf();
-                    downloadBlob(blob, `visit-${id}.pdf`);
-                  })();
-                },
-                variant: "outline",
-              },
-              {
-                label: visit.invoiceCode ? "Фактура" : "Нова фактура",
-                href: visit.invoiceCode
-                  ? `/invoices/${encodeURIComponent(visit.invoiceCode)}`
-                  : `/invoices/new?visitId=${encodeURIComponent(
-                      visit._id,
-                    )}&ownerId=${encodeURIComponent(visit.ownerId)}${
-                      visit.animalId
-                        ? `&animalId=${encodeURIComponent(String(visit.animalId))}`
-                        : ""
-                    }`,
-                variant: "ghost",
-              },
-            ]}
-          >
-            <div className="grid gap-6 md:grid-cols-2 md:justify-items-center">
-              <div className="w-full max-w-md space-y-3">
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  SOAP
-                </p>
-                <div className="space-y-2 text-sm">
-                  {(s ?? "").trim() ? (
-                    <div>
-                      <span className="text-muted-foreground mr-2 font-medium">
-                        S:
-                      </span>
-                      <span>{s}</span>
-                    </div>
-                  ) : null}
-                  {(o ?? "").trim() ? (
-                    <div>
-                      <span className="text-muted-foreground mr-2 font-medium">
-                        O:
-                      </span>
-                      <span>{o}</span>
-                    </div>
-                  ) : null}
-                  {(a ?? "").trim() ? (
-                    <div>
-                      <span className="text-muted-foreground mr-2 font-medium">
-                        A:
-                      </span>
-                      <span>{a}</span>
-                    </div>
-                  ) : null}
-                  {(p ?? "").trim() ? (
-                    <div>
-                      <span className="text-muted-foreground mr-2 font-medium">
-                        P:
-                      </span>
-                      <span>{p}</span>
-                    </div>
-                  ) : null}
-                  {!(
-                    (s ?? "").trim() ||
-                    (o ?? "").trim() ||
-                    (a ?? "").trim() ||
-                    (p ?? "").trim()
-                  ) ? (
-                    <div className="text-muted-foreground">(няма данни)</div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="w-full max-w-md space-y-3">
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  Процедури
-                </p>
-                <ul className="list-disc space-y-1 pl-5 text-sm">
-                  {(visit.procedures ?? []).length ? (
-                    (visit.procedures ?? []).map((pr, idx) => (
-                      <li key={idx}>{pr}</li>
-                    ))
-                  ) : (
-                    <li className="text-muted-foreground list-none">(няма)</li>
-                  )}
-                </ul>
-              </div>
-
-              <div className="w-full max-w-md space-y-3">
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  Медикаменти
-                </p>
-                <ul className="list-disc space-y-1 pl-5 text-sm">
-                  {(visit.medications ?? []).length ? (
-                    (visit.medications ?? []).map((md, idx) => (
-                      <li key={idx}>{md}</li>
-                    ))
-                  ) : (
-                    <li className="text-muted-foreground list-none">(няма)</li>
-                  )}
-                </ul>
-              </div>
-
-              <div className="w-full max-w-md space-y-3">
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  Фактуриране
-                </p>
-                <div className="text-sm">
-                  {visit.invoiceCode ? (
-                    <div>Фактура {visit.invoiceCode}</div>
-                  ) : (
-                    <div className="text-muted-foreground">
-                      Няма издадена фактура
-                    </div>
-                  )}
-                  {visit.outstandingAmount ? (
-                    <div>Дължима сума: {visit.outstandingAmount}</div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </SectionCard>
-        )}
       </section>
       <div className="lg:hidden" aria-hidden>
         <div className="bg-background/95 supports-[backdrop-filter]:bg-background/70 fixed inset-x-0 bottom-0 z-20 border-t p-3 shadow-lg shadow-black/5 backdrop-blur">
@@ -862,7 +854,7 @@ export default function VisitDetailPage() {
                   />
                   <div>
                     <span className="font-semibold">Внимание:</span> Посещенията
-                    се записват за всяко животно, за да можем да събираме
+                    се записват за всеки автомобил, за да можем да събираме
                     исторически данни. Изтриването трябва да се извърши
                     внимателно.
                   </div>

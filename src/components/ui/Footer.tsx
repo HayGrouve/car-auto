@@ -26,17 +26,17 @@ export function Footer() {
           <nav aria-label="Навигация" className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm sm:justify-start">
             <Link
               className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none cursor-pointer min-h-[44px] flex items-center"
-              href="/owners"
-              aria-label="Собственици"
+              href="/customers"
+              aria-label="Клиенти"
             >
-              Собственици
+              Клиенти
             </Link>
             <Link
               className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none cursor-pointer min-h-[44px] flex items-center"
-              href="/animals"
-              aria-label="Животни"
+              href="/vehicles"
+              aria-label="Автомобили"
             >
-              Животни
+              Автомобили
             </Link>
             <Link
               className="focus-visible:ring-ring rounded-xs px-0.5 hover:underline focus-visible:ring-2 focus-visible:outline-none cursor-pointer min-h-[44px] flex items-center"
@@ -84,13 +84,13 @@ export function Footer() {
                   <div>
                     <kbd className="rounded border px-1 py-0.5">Ctrl/Cmd</kbd> +{" "}
                     <kbd className="rounded border px-1 py-0.5">Alt</kbd> +{" "}
-                    <kbd className="rounded border px-1 py-0.5">O</kbd> —
-                    Собственици
+                    <kbd className="rounded border px-1 py-0.5">C</kbd> —
+                    Клиенти
                   </div>
                   <div>
                     <kbd className="rounded border px-1 py-0.5">Ctrl/Cmd</kbd> +{" "}
                     <kbd className="rounded border px-1 py-0.5">Alt</kbd> +{" "}
-                    <kbd className="rounded border px-1 py-0.5">A</kbd> — Животни
+                    <kbd className="rounded border px-1 py-0.5">A</kbd> — Автомобили
                   </div>
                   <div>
                     <kbd className="rounded border px-1 py-0.5">Ctrl/Cmd</kbd> +{" "}

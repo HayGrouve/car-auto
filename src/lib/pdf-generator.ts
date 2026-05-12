@@ -1,7 +1,6 @@
 "use client";
 
 import { jsPDF } from "jspdf";
-import type { AnimalDoc } from "@/types/animal";
 import type { InvoiceDoc } from "@/types/visit";
 import { brand } from "@/lib/brand";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -49,14 +48,8 @@ async function ensureFonts(doc: jsPDF): Promise<void> {
   doc.addFont("NotoSans-Bold.ttf", "NotoSans", "bold");
 }
 
-type VaccinationOwnerInfo = {
-  name?: string;
-  phone?: string;
-  email?: string;
-};
-
 type InvoicePdfMeta = {
-  ownerName?: string;
+  customerName?: string;
   issuedAt?: Date | number | string;
   status?: "paid" | "pending" | "cancelled" | "draft";
 };
@@ -67,101 +60,25 @@ type VisitSummaryData = {
   status?: string;
   date: Date | number | string;
   // Parties
-  animalName?: string;
-  animalSpecies?: string;
+  vehicleName?: string;
+  vehicleMake?: string;
   alerts?: string[];
-  ownerName?: string;
-  ownerPhone?: string;
+  customerName?: string;
+  customerPhone?: string;
   // Measurements
-  weight?: string | number | null;
-  temperature?: string | number | null;
-  pulse?: string | number | null;
-  // SOAP
-  subjective?: string;
-  objective?: string;
-  assessment?: string;
+  mileage?: string | number | null;
+  // Notes
+  issue?: string;
+  inspection?: string;
+  diagnosis?: string;
   plan?: string;
   // Lists
-  procedures?: string[];
-  medications?: string[];
+  services?: string[];
+  parts?: string[];
   // Billing
   invoiceCode?: string | null;
   outstandingAmount?: string | null;
 };
-
-export async function generateVaccinationCertificatePdf(
-  animal: AnimalDoc,
-  owner: VaccinationOwnerInfo = {},
-): Promise<Blob> {
-  const doc = new jsPDF();
-  await ensureFonts(doc);
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const centerX = pageWidth / 2;
-
-  doc.setFont("NotoSans", "bold");
-  doc.setFontSize(20);
-  doc.text(brand.nameBg, centerX, 20, { align: "center" });
-
-  doc.setFontSize(16);
-  doc.text("Удостоверение за ваксинация", centerX, 30, { align: "center" });
-
-  doc.setFont("NotoSans", "normal");
-  doc.setFontSize(12);
-
-  let yPos = 50;
-  const microchip = animal.microchip ?? "Няма";
-  const sex =
-    animal.sex === "male"
-      ? "Мъжки"
-      : animal.sex === "female"
-        ? "Женски"
-        : "Неизвестен";
-
-  doc.text(`Име на пациента: ${animal.name}`, 20, yPos);
-  yPos += 10;
-  doc.text(`Вид: ${animal.species}`, 20, yPos);
-  yPos += 10;
-  if (animal.breed) {
-    doc.text(`Порода: ${animal.breed}`, 20, yPos);
-    yPos += 10;
-  }
-  doc.text(`Микрочип: ${microchip}`, 20, yPos);
-  yPos += 10;
-  doc.text(`Пол: ${sex}`, 20, yPos);
-  yPos += 10;
-  if (animal.dob !== undefined && animal.dob !== null) {
-    doc.text(`Дата на раждане: ${formatDate(animal.dob)}`, 20, yPos);
-    yPos += 10;
-  }
-
-  yPos += 10;
-  doc.setFont("NotoSans", "bold");
-  doc.text("Притежател:", 20, yPos);
-  doc.setFont("NotoSans", "normal");
-  yPos += 10;
-  if (owner.name) {
-    doc.text(owner.name, 20, yPos);
-    yPos += 10;
-  }
-  if (owner.phone) {
-    doc.text(`Телефон: ${owner.phone}`, 20, yPos);
-    yPos += 10;
-  }
-  if (owner.email) {
-    doc.text(`Имейл: ${owner.email}`, 20, yPos);
-    yPos += 10;
-  }
-
-  const pageHeight = doc.internal.pageSize.getHeight();
-  doc.setFont("NotoSans", "bold");
-  doc.setFontSize(10);
-  doc.text(`Издадено от ${brand.nameBg}`, centerX, pageHeight - 15, {
-    align: "center",
-  });
-
-  return doc.output("blob");
-}
 
 export async function generateInvoicePdf(
   invoice: InvoiceDoc,
@@ -184,8 +101,8 @@ export async function generateInvoicePdf(
   doc.setFontSize(12);
 
   let yPos = 50;
-  const invoiceNumber = meta.ownerName
-    ? `${meta.ownerName}`
+  const invoiceNumber = meta.customerName
+    ? `${meta.customerName}`
     : `${invoice.code ?? `#${invoice._id}`}`;
   doc.text(`Номер: ${invoiceNumber}`, 20, yPos);
   yPos += 10;
@@ -208,8 +125,8 @@ export async function generateInvoicePdf(
   doc.text("Клиент:", 20, yPos);
   doc.setFont("NotoSans", "normal");
   yPos += 10;
-  if (meta.ownerName) {
-    doc.text(meta.ownerName, 20, yPos);
+  if (meta.customerName) {
+    doc.text(meta.customerName, 20, yPos);
     yPos += 10;
   }
 
@@ -227,20 +144,43 @@ export async function generateInvoicePdf(
 
   doc.setFont("NotoSans", "normal");
   yPos += 10;
-  invoice.items.forEach((item) => {
-    const unitPrice = item.price;
-    const total = item.total;
-    doc.text(item.description, descriptionX, yPos);
-    doc.text(String(item.quantity), quantityX, yPos, { align: "center" });
-    doc.text(formatCurrency(unitPrice), priceX, yPos, { align: "right" });
-    doc.text(formatCurrency(total), amountX, yPos, { align: "right" });
+  
+  if (invoice.parts && invoice.parts.length > 0) {
+    doc.setFont("NotoSans", "bold");
+    doc.text("Части", descriptionX, yPos);
+    doc.setFont("NotoSans", "normal");
     yPos += 10;
-  });
+    invoice.parts.forEach((item) => {
+      const unitPrice = item.price;
+      const total = item.price * item.quantity;
+      doc.text(item.name, descriptionX, yPos);
+      doc.text(String(item.quantity), quantityX, yPos, { align: "center" });
+      doc.text(formatCurrency(unitPrice), priceX, yPos, { align: "right" });
+      doc.text(formatCurrency(total), amountX, yPos, { align: "right" });
+      yPos += 10;
+    });
+  }
+  
+  if (invoice.labor && invoice.labor.length > 0) {
+    doc.setFont("NotoSans", "bold");
+    doc.text("Труд/Услуги", descriptionX, yPos);
+    doc.setFont("NotoSans", "normal");
+    yPos += 10;
+    invoice.labor.forEach((item) => {
+      const unitPrice = item.price;
+      const total = item.price * item.quantity;
+      doc.text(item.name, descriptionX, yPos);
+      doc.text(String(item.quantity), quantityX, yPos, { align: "center" });
+      doc.text(formatCurrency(unitPrice), priceX, yPos, { align: "right" });
+      doc.text(formatCurrency(total), amountX, yPos, { align: "right" });
+      yPos += 10;
+    });
+  }
 
   yPos += 10;
   doc.setFont("NotoSans", "bold");
   doc.text("Общо:", priceX, yPos, { align: "right" });
-  doc.text(formatCurrency(invoice.total), amountX, yPos, { align: "right" });
+  doc.text(formatCurrency(invoice.totalAmount), amountX, yPos, { align: "right" });
 
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFontSize(10);
@@ -312,30 +252,23 @@ export async function generateVisitSummaryPdf(
   addRow("Дата/час", formatDate(data.date));
 
   // Parties
-  addHeading("Пациент и собственик");
+  addHeading("Автомобил и клиент");
   addRow(
-    "Пациент",
-    [data.animalName, data.animalSpecies].filter(Boolean).join(" · "),
+    "Автомобил",
+    [data.vehicleName, data.vehicleMake].filter(Boolean).join(" · "),
   );
   if (data.alerts?.length) addRow("Предупреждения", data.alerts.join(", "));
-  addRow("Собственик", data.ownerName);
-  addRow("Телефон", data.ownerPhone);
+  addRow("Клиент", data.customerName);
+  addRow("Телефон", data.customerPhone);
 
   // Measurements
-  addHeading("Измервания");
+  addHeading("Пробег");
   const w =
-    data.weight != null && data.weight !== "" ? String(data.weight) : "—";
-  const t =
-    data.temperature != null && data.temperature !== ""
-      ? String(data.temperature)
-      : "—";
-  const pu = data.pulse != null && data.pulse !== "" ? String(data.pulse) : "—";
-  addRow("Тегло", w ? `${w} кг` : undefined);
-  addRow("Температура", t ? `${t} °C` : undefined);
-  addRow("Пулс", pu);
+    data.mileage != null && data.mileage !== "" ? String(data.mileage) : "—";
+  addRow("Пробег", w ? `${w} км` : undefined);
 
   // SOAP
-  addHeading("SOAP бележки");
+  addHeading("Бележки");
   const addSection = (title: string, value?: string) => {
     if (!value) return;
     ensureSpace(14);
@@ -350,10 +283,10 @@ export async function generateVisitSummaryPdf(
     doc.text(lines, 25, yPos);
     yPos += lines.length * 7 + 4;
   };
-  addSection("Anamnesa vitae", data.subjective);
-  addSection("Anamnesa morbi", data.objective);
-  addSection("Лабораторна диагностика", data.assessment);
-  addSection("Diagnosis", data.plan);
+  addSection("Оплакване", data.issue);
+  addSection("Оглед", data.inspection);
+  addSection("Диагноза", data.diagnosis);
+  addSection("План за ремонт", data.plan);
 
   // Lists
   const addList = (title: string, items?: string[]) => {
@@ -371,8 +304,8 @@ export async function generateVisitSummaryPdf(
       yPos += 6;
     });
   };
-  addList("Процедури", data.procedures);
-  addList("Медикаменти", data.medications);
+  addList("Услуги", data.services);
+  addList("Части", data.parts);
 
   // Billing
   addHeading("Фактуриране");

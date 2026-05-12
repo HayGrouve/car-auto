@@ -27,12 +27,12 @@ export function KeyboardShortcuts() {
       } else if (k === "v") {
         e.preventDefault();
         router.push("/visits");
-      } else if (k === "o") {
+      } else if (k === "c") {
         e.preventDefault();
-        router.push("/owners");
+        router.push("/customers");
       } else if (k === "a") {
         e.preventDefault();
-        router.push("/animals");
+        router.push("/vehicles");
       }
     };
     window.addEventListener("keydown", onKey);

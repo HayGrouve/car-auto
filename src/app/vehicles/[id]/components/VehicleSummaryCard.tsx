@@ -9,16 +9,10 @@ import { SectionCard } from "@/components/ui/section-card";
 import { Button } from "@/components/ui/button";
 import { fmtDateBG, fmtDateTimeBG } from "@/lib/format";
 
-type OwnerSummary = {
+type CustomerSummary = {
   _id: string;
   name: string;
   phone?: string;
-};
-
-type WeightSummary = {
-  kg: number;
-  notedAt?: number;
-  createdAt: number;
 };
 
 type VisitSummary = {
@@ -26,26 +20,22 @@ type VisitSummary = {
   datetime?: number | null;
   createdAt?: number;
   status: string;
-  procedures?: string[];
-  medications?: string[];
+  services?: string[];
+  parts?: string[];
 };
 
-type AnimalSummary = {
-  name?: string | null;
-  species?: string | null;
-  breed?: string | null;
-  neutered?: boolean | null;
-  microchip?: string | null;
-  dob?: number | string | null;
+type VehicleSummary = {
+  licensePlate?: string | null;
+  make?: string | null;
+  model?: string | null;
+  vin?: string | null;
+  year?: number | string | null;
   updatedAt?: number | null;
-  sex?: string | null;
 };
 
-interface AnimalSummaryCardProps {
-  animal: AnimalSummary;
-  owner?: OwnerSummary;
-  summaryAge: number | null;
-  latestWeight?: WeightSummary;
+interface VehicleSummaryCardProps {
+  vehicle: VehicleSummary;
+  customer?: CustomerSummary;
   lastVisit?: VisitSummary;
   visits?: VisitSummary[];
   isLoading?: boolean;
@@ -55,18 +45,16 @@ type HistoryItem = {
   id: string;
   label: string;
   date?: number;
-  type: "procedure" | "medication";
+  type: "service" | "part";
 };
 
-export function AnimalSummaryCard({
-  animal,
-  owner,
-  summaryAge,
-  latestWeight: _latestWeight,
+export function VehicleSummaryCard({
+  vehicle,
+  customer,
   lastVisit: _lastVisit,
   visits,
   isLoading,
-}: AnimalSummaryCardProps) {
+}: VehicleSummaryCardProps) {
   const historyItems = useMemo<HistoryItem[]>(() => {
     if (!visits) return [];
 
@@ -75,21 +63,21 @@ export function AnimalSummaryCard({
     for (const visit of visits) {
       const baseDate = visit.datetime ?? visit.createdAt ?? undefined;
 
-      for (const procedure of visit.procedures ?? []) {
+      for (const service of visit.services ?? []) {
         items.push({
-          id: `${visit._id}-procedure-${procedure}`,
-          label: procedure,
+          id: `${visit._id}-service-${service}`,
+          label: service,
           date: baseDate,
-          type: "procedure",
+          type: "service",
         });
       }
 
-      for (const medication of visit.medications ?? []) {
+      for (const part of visit.parts ?? []) {
         items.push({
-          id: `${visit._id}-medication-${medication}`,
-          label: medication,
+          id: `${visit._id}-part-${part}`,
+          label: part,
           date: baseDate,
-          type: "medication",
+          type: "part",
         });
       }
     }
@@ -105,13 +93,6 @@ export function AnimalSummaryCard({
       finalized: allVisits.filter((v) => v.status === "finalized").length,
     };
   }, [visits]);
-
-  const latestWeightDisplay = useMemo(() => {
-    if (!_latestWeight) return "Не е записвано тегло";
-    return `${_latestWeight.kg.toFixed(2)} кг (
-      ${fmtDateTimeBG(_latestWeight.notedAt ?? _latestWeight.createdAt)}
-    )`;
-  }, [_latestWeight]);
 
   const recentVisits = useMemo(() => {
     const allVisits = visits ?? [];
@@ -161,146 +142,61 @@ export function AnimalSummaryCard({
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-4">
             <div className="space-y-2">
-              {animal.updatedAt ? (
+              {vehicle.updatedAt ? (
                 <p className="text-muted-foreground text-xs">
-                  Обновено {fmtDateTimeBG(animal.updatedAt)}
+                  Обновено {fmtDateTimeBG(vehicle.updatedAt)}
                 </p>
               ) : null}
               <div className="flex flex-wrap items-baseline gap-3">
                 <span className="text-3xl font-semibold tracking-tight">
-                  {animal.name ?? "Без име"}
+                  {vehicle.licensePlate ?? "Без рег. номер"}
                 </span>
                 <span className="text-muted-foreground text-sm">
-                  {[animal.species, animal.breed].filter(Boolean).join(" · ") ??
+                  {[vehicle.make, vehicle.model].filter(Boolean).join(" · ") ??
                     "Неуточнено"}
-                </span>
-                <span className="bg-muted inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
-                  {animal.sex === "male"
-                    ? "Мъжки"
-                    : animal.sex === "female"
-                      ? "Женски"
-                      : "Неизвестен"}
                 </span>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  className="size-3.5"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                {summaryAge !== null
-                  ? `${summaryAge} г.`
-                  : animal.dob
-                    ? fmtDateBG(new Date(animal.dob))
-                    : "Дата на раждане неизвестна"}
-              </span>
-              <span className="bg-muted inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  className="size-3.5"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4.098 19.902A11.953 11.953 0 0112 17.25c2.818 0 5.414.978 7.402 2.652M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                {animal.neutered
-                  ? animal.sex === "male"
-                    ? "Кастриран"
-                    : animal.sex === "female"
-                      ? "Кастрирана"
-                      : "Кастриран/а"
-                  : animal.sex === "male"
-                    ? "Некастриран"
-                    : animal.sex === "female"
-                      ? "Некастрирана"
-                      : "Некатстриран/а"}
-              </span>
-              {animal.microchip ? (
-                <span className="bg-muted inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    className="size-3.5"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15.75 7.5l-7.5 9M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Микрочип {animal.microchip}
+              {vehicle.year ? (
+                <span className="bg-primary/10 text-primary inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
+                  {vehicle.year} г.
                 </span>
               ) : null}
-              <span className="bg-muted inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  className="size-3.5"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 6v12m6-6H6"
-                  />
-                </svg>
-                {latestWeightDisplay}
-              </span>
+              {vehicle.vin ? (
+                <span className="bg-muted inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium">
+                  VIN {vehicle.vin}
+                </span>
+              ) : null}
             </div>
           </div>
           <div className="border-border/60 bg-card/80 w-full max-w-sm rounded-xl border p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <p className="text-muted-foreground text-xs tracking-wide uppercase">
-                Собственик
+                Клиент
               </p>
-              {owner ? (
+              {customer ? (
                 <Link
-                  href={`/owners/${owner._id}`}
+                  href={`/customers/${customer._id}`}
                   className="text-primary hover:text-primary/80 text-xs font-medium underline underline-offset-4 transition-colors"
                 >
                   Преглед
                 </Link>
               ) : null}
             </div>
-            {owner ? (
+            {customer ? (
               <div className="mt-4 space-y-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">{owner.name}</p>
-                  {owner.phone ? (
+                  <p className="text-sm font-medium">{customer.name}</p>
+                  {customer.phone ? (
                     <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                      <span>{owner.phone}</span>
+                      <span>{customer.phone}</span>
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         className="text-primary hover:text-primary/80 size-7"
-                        onClick={() => handleCopyPhone(owner.phone)}
+                        onClick={() => handleCopyPhone(customer.phone)}
                         aria-label="Копирай телефон"
                       >
                         <Copy className="size-4" aria-hidden="true" />
@@ -342,14 +238,14 @@ export function AnimalSummaryCard({
                   <p className="text-muted-foreground text-xs">
                     {visit.status}
                   </p>
-                  {visit.procedures && visit.procedures.length > 0 && (
+                  {visit.services && visit.services.length > 0 && (
                     <p className="text-muted-foreground text-xs">
-                      Процедури: {visit.procedures.join(", ")}
+                      Услуги: {visit.services.join(", ")}
                     </p>
                   )}
-                  {visit.medications && visit.medications.length > 0 && (
+                  {visit.parts && visit.parts.length > 0 && (
                     <p className="text-muted-foreground text-xs">
-                      Медикаменти: {visit.medications.join(", ")}
+                      Части: {visit.parts.join(", ")}
                     </p>
                   )}
                 </div>

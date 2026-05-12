@@ -11,7 +11,7 @@ export const list = query({
     gdpr: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const all = await ctx.db.query("owners").collect();
+    const all = await ctx.db.query("customers").collect();
     let filtered = all.filter((o: any) => !o.deletedAt);
     if (args.phone) {
       const normalized = args.phone.replace(/\D/g, "");
@@ -25,66 +25,14 @@ export const list = query({
       );
     }
     const translitMap: Record<string, string> = {
-      А: "A",
-      а: "a",
-      Б: "B",
-      б: "b",
-      В: "V",
-      в: "v",
-      Г: "G",
-      г: "g",
-      Д: "D",
-      д: "d",
-      Е: "E",
-      е: "e",
-      Ж: "zh",
-      ж: "zh",
-      З: "Z",
-      з: "z",
-      И: "i",
-      и: "i",
-      Й: "y",
-      й: "y",
-      К: "k",
-      к: "k",
-      Л: "l",
-      л: "l",
-      М: "m",
-      м: "m",
-      Н: "n",
-      н: "n",
-      О: "o",
-      о: "o",
-      П: "p",
-      п: "p",
-      Р: "r",
-      р: "r",
-      С: "s",
-      с: "s",
-      Т: "t",
-      т: "t",
-      У: "u",
-      у: "u",
-      Ф: "f",
-      ф: "f",
-      Х: "h",
-      х: "h",
-      Ц: "ts",
-      ц: "ts",
-      Ч: "ch",
-      ч: "ch",
-      Ш: "sh",
-      ш: "sh",
-      Щ: "sht",
-      щ: "sht",
-      Ъ: "a",
-      ъ: "a",
-      Ь: "",
-      ь: "",
-      Ю: "yu",
-      ю: "yu",
-      Я: "ya",
-      я: "ya",
+      А: "A", а: "a", Б: "B", б: "b", В: "V", в: "v", Г: "G", г: "g",
+      Д: "D", д: "d", Е: "E", е: "e", Ж: "zh", ж: "zh", З: "Z", з: "z",
+      И: "i", и: "i", Й: "y", й: "y", К: "k", к: "k", Л: "l", л: "l",
+      М: "m", м: "m", Н: "n", н: "n", О: "o", о: "o", П: "p", п: "p",
+      Р: "r", р: "r", С: "s", с: "s", Т: "t", т: "t", У: "u", у: "u",
+      Ф: "f", ф: "f", Х: "h", х: "h", Ц: "ts", ц: "ts", Ч: "ch", ч: "ch",
+      Ш: "sh", ш: "sh", Щ: "sht", щ: "sht", Ъ: "a", ъ: "a", Ь: "", ь: "",
+      Ю: "yu", ю: "yu", Я: "ya", я: "ya",
     };
     const toAscii = (s: string) =>
       Array.from(String(s))
@@ -140,25 +88,25 @@ export const list = query({
   },
 });
 
-export const ownersFilters = query({
+export const customersFilters = query({
   args: {},
   handler: async (ctx) => {
-    const owners = await ctx.db.query("owners").collect();
+    const customers = await ctx.db.query("customers").collect();
     const phonePrefixes = new Set<string>();
     let gdprGranted = 0;
-    for (const owner of owners) {
-      const phone = String(owner.phone ?? "");
+    for (const customer of customers) {
+      const phone = String(customer.phone ?? "");
       if (phone.length >= 2) {
         phonePrefixes.add(phone.slice(0, 2));
       }
-      if (owner.gdprConsent) gdprGranted += 1;
+      if (customer.gdprConsent) gdprGranted += 1;
     }
     return {
       phonePrefixes: Array.from(phonePrefixes).sort(),
       statistics: {
-        total: owners.length,
+        total: customers.length,
         gdprGranted,
-        gdprMissing: owners.length - gdprGranted,
+        gdprMissing: customers.length - gdprGranted,
       },
     } as const;
   },
@@ -171,6 +119,7 @@ export const create = mutation({
     email: v.optional(v.string()),
     address: v.optional(v.string()),
     gdprConsent: v.boolean(),
+    notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -178,7 +127,7 @@ export const create = mutation({
     // Prevent duplicates by phone or email (if provided)
     const dupByPhone = (
       await ctx.db
-        .query("owners")
+        .query("customers")
         .filter((q) => q.eq(q.field("phone"), phoneNormalized))
         .collect()
     )[0];
@@ -188,7 +137,7 @@ export const create = mutation({
     if (args.email) {
       const dupByEmail = (
         await ctx.db
-          .query("owners")
+          .query("customers")
           .filter((q) => q.eq(q.field("email"), args.email))
           .collect()
       )[0];
@@ -202,17 +151,18 @@ export const create = mutation({
       email: args.email ?? null,
       address: args.address ?? null,
       gdprConsent: args.gdprConsent,
+      notes: args.notes ?? null,
       createdAt: now,
       deletedAt: null,
       // GDPR: legal hold prevents deletion when enabled
       legalHold: false,
     } as any;
-    const id = await ctx.db.insert("owners", doc);
-    // Audit log: owner created
+    const id = await ctx.db.insert("customers", doc);
+    // Audit log: customer created
     await ctx.db.insert("auditLogs", {
       at: now,
       actor: "system",
-      entityType: "owner",
+      entityType: "customer",
       entityId: id,
       action: "create",
       details: { name: doc.name, phone: doc.phone },
@@ -222,7 +172,7 @@ export const create = mutation({
 });
 
 export const getById = query({
-  args: { id: v.id("owners") },
+  args: { id: v.id("customers") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
   },
@@ -230,12 +180,13 @@ export const getById = query({
 
 export const update = mutation({
   args: {
-    id: v.id("owners"),
+    id: v.id("customers"),
     name: v.optional(v.string()),
     phone: v.optional(v.string()),
     email: v.optional(v.union(v.string(), v.null())),
     address: v.optional(v.union(v.string(), v.null())),
     gdprConsent: v.optional(v.boolean()),
+    notes: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const patch: any = {};
@@ -244,11 +195,12 @@ export const update = mutation({
     if (args.email !== undefined) patch.email = args.email ?? null;
     if (args.address !== undefined) patch.address = args.address ?? null;
     if (args.gdprConsent !== undefined) patch.gdprConsent = args.gdprConsent;
+    if (args.notes !== undefined) patch.notes = args.notes ?? null;
     await ctx.db.patch(args.id, patch);
     await ctx.db.insert("auditLogs", {
       at: Date.now(),
       actor: "system",
-      entityType: "owner",
+      entityType: "customer",
       entityId: args.id,
       action: "update",
       details: Object.keys(patch),
@@ -258,7 +210,7 @@ export const update = mutation({
 });
 
 export const softDelete = mutation({
-  args: { id: v.id("owners") },
+  args: { id: v.id("customers") },
   handler: async (ctx, args) => {
     const current = await ctx.db.get(args.id);
     if (current?.legalHold) {
@@ -268,7 +220,7 @@ export const softDelete = mutation({
     await ctx.db.insert("auditLogs", {
       at: Date.now(),
       actor: "system",
-      entityType: "owner",
+      entityType: "customer",
       entityId: args.id,
       action: "softDelete",
     } as any);
@@ -277,13 +229,13 @@ export const softDelete = mutation({
 });
 
 export const setLegalHold = mutation({
-  args: { id: v.id("owners"), legalHold: v.boolean() },
+  args: { id: v.id("customers"), legalHold: v.boolean() },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { legalHold: args.legalHold } as any);
     await ctx.db.insert("auditLogs", {
       at: Date.now(),
       actor: "system",
-      entityType: "owner",
+      entityType: "customer",
       entityId: args.id,
       action: args.legalHold ? "legalHold:on" : "legalHold:off",
     } as any);

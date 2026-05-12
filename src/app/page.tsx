@@ -49,8 +49,8 @@ const MonthlyRevenueChart = dynamic(
 );
 
 type DashboardCounts = {
-  owners: number;
-  animals: number;
+  customers: number;
+  vehicles: number;
   draftVisits: number;
   unpaidInvoices: number;
 };
@@ -66,9 +66,9 @@ type DashboardVisit = {
   code: string | null;
   datetime: number;
   status: string;
-  ownerId: string | null;
-  ownerName: string | null;
-  animalId: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  vehicleId: string | null;
 };
 
 type DashboardScheduleSlot = {
@@ -78,10 +78,10 @@ type DashboardScheduleSlot = {
   startTime: number;
   endTime: number;
   visitId: string | null;
-  ownerId: string | null;
-  ownerName: string | null;
-  animalId: string | null;
-  animalName: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  vehicleId: string | null;
+  vehicleName: string | null;
 };
 
 type DashboardOverview = {
@@ -112,14 +112,14 @@ export default function HomePage() {
     );
   }, [monthlyRevenue]);
   const createVisit = useMutation(api.visits.create) as unknown as (args: {
-    ownerId: string;
-    animalId?: string;
+    customerId: string;
+    vehicleId?: string;
     datetime?: number;
-    soap: { s?: string; o?: string; a?: string; p?: string };
+    notes: { issue?: string; inspection?: string; diagnosis?: string; plan?: string };
   }) => Promise<{ ok: boolean; id?: string; reason?: string }>;
   const updateScheduleSlot = useMutation(api.schedule.update);
 
-  // Query for draft visits to check if animals have existing visits
+  // Query for draft visits to check if vehicles have existing visits
   const allDraftVisitsQuery = useQuery(
     api.visits.list,
     useMemo(() => ({ status: "draft", limit: 1000 }), []),
@@ -128,7 +128,7 @@ export default function HomePage() {
     | {
         items: {
           _id: string;
-          animalId?: string | null;
+          vehicleId?: string | null;
         }[];
         total: number;
         hasMore: boolean;
@@ -136,13 +136,13 @@ export default function HomePage() {
     | undefined;
   const allDraftVisits = allDraftVisitsResult?.items;
 
-  // Create a map of animalId -> draft visit ID
-  const animalDraftVisitMap = useMemo(() => {
+  // Create a map of vehicleId -> draft visit ID
+  const vehicleDraftVisitMap = useMemo(() => {
     const map = new Map<string, string>();
     if (allDraftVisits) {
       allDraftVisits.forEach((visit) => {
-        if (visit.animalId) {
-          map.set(String(visit.animalId), visit._id);
+        if (visit.vehicleId) {
+          map.set(String(visit.vehicleId), visit._id);
         }
       });
     }
@@ -160,22 +160,22 @@ export default function HomePage() {
       return;
     }
 
-    if (!slot.ownerId) {
-      toast.error("Слотът няма свързан собственик");
+    if (!slot.customerId) {
+      toast.error("Слотът няма свързан клиент");
       return;
     }
 
-    if (!slot.animalId) {
-      toast.error("Слотът няма свързано животно");
+    if (!slot.vehicleId) {
+      toast.error("Слотът няма свързан автомобил");
       return;
     }
 
     try {
       const res = await createVisit({
-        ownerId: slot.ownerId,
-        animalId: slot.animalId,
+        customerId: slot.customerId,
+        vehicleId: slot.vehicleId,
         datetime: slot.startTime,
-        soap: {},
+        notes: {},
       });
 
       if (res?.ok && res.id) {
@@ -192,9 +192,9 @@ export default function HomePage() {
             console.error("Failed to link schedule slot to visit:", error);
           }
         }
-        router.push(`/visits/${res.id}?step=measurements`);
+        router.push(`/visits/${res.id}`);
       } else if (res && res.reason === "draft_exists" && res.id) {
-        toast.info("Има незавършено посещение за това животно");
+        toast.info("Има незавършено посещение за този автомобил");
         router.push(`/visits/${res.id}`);
       } else {
         toast.error("Грешка при създаване на посещение");
@@ -230,9 +230,9 @@ export default function HomePage() {
     code: visit.code ?? null,
     datetime: visit.datetime,
     status: visit.status,
-    ownerName: visit.ownerName,
-    ownerId: visit.ownerId,
-    animalId: visit.animalId,
+    customerName: visit.customerName,
+    customerId: visit.customerId,
+    vehicleId: visit.vehicleId,
     invoiceId: overview.visitInvoiceMap[visit._id] ?? null,
   }));
 
@@ -343,11 +343,11 @@ export default function HomePage() {
                             : slot.description}
                         </span>
                       )}
-                      {slot.ownerName && (
-                        <span className="truncate">· {slot.ownerName}</span>
+                      {slot.customerName && (
+                        <span className="truncate">· {slot.customerName}</span>
                       )}
-                      {slot.animalName && (
-                        <span className="truncate">· {slot.animalName}</span>
+                      {slot.vehicleName && (
+                        <span className="truncate">· {slot.vehicleName}</span>
                       )}
                     </div>
                   </div>
@@ -362,31 +362,31 @@ export default function HomePage() {
                           Отвори посещение
                         </Button>
                       </Link>
-                    ) : slot.animalId &&
-                      animalDraftVisitMap.has(slot.animalId) ? (
+                    ) : slot.vehicleId &&
+                      vehicleDraftVisitMap.has(slot.vehicleId) ? (
                       <div className="flex flex-col gap-1">
                         <Button
                           size="sm"
                           className="min-h-[44px] w-full sm:min-h-0 sm:w-auto"
                           onClick={() => {
-                            const draftVisitId = animalDraftVisitMap.get(
-                              slot.animalId!,
+                            const draftVisitId = vehicleDraftVisitMap.get(
+                              slot.vehicleId!,
                             );
                             if (draftVisitId) {
                               router.push(`/visits/${draftVisitId}`);
                             }
                           }}
-                          disabled={!slot.ownerId || !slot.animalId}
+                          disabled={!slot.customerId || !slot.vehicleId}
                         >
                           Продължи посещение
                         </Button>
-                        {(!slot.ownerId || !slot.animalId) && (
+                        {(!slot.customerId || !slot.vehicleId) && (
                           <p className="text-muted-foreground text-center text-xs sm:text-left">
-                            {!slot.ownerId && !slot.animalId
-                              ? "Добавете собственик и животно в графика"
-                              : !slot.ownerId
-                                ? "Добавете собственик в графика"
-                                : "Добавете животно в графика"}
+                            {!slot.customerId && !slot.vehicleId
+                              ? "Добавете клиент и автомобил в графика"
+                              : !slot.customerId
+                                ? "Добавете клиент в графика"
+                                : "Добавете автомобил в графика"}
                           </p>
                         )}
                       </div>
@@ -396,17 +396,17 @@ export default function HomePage() {
                           size="sm"
                           className="min-h-[44px] w-full sm:min-h-0 sm:w-auto"
                           onClick={() => handleStartVisit(slot)}
-                          disabled={!slot.ownerId || !slot.animalId}
+                          disabled={!slot.customerId || !slot.vehicleId}
                         >
                           Започни посещение
                         </Button>
-                        {(!slot.ownerId || !slot.animalId) && (
+                        {(!slot.customerId || !slot.vehicleId) && (
                           <p className="text-muted-foreground text-center text-xs sm:text-left">
-                            {!slot.ownerId && !slot.animalId
-                              ? "Добавете собственик и животно в графика"
-                              : !slot.ownerId
-                                ? "Добавете собственик в графика"
-                                : "Добавете животно в графика"}
+                            {!slot.customerId && !slot.vehicleId
+                              ? "Добавете клиент и автомобил в графика"
+                              : !slot.customerId
+                                ? "Добавете клиент в графика"
+                                : "Добавете автомобил в графика"}
                           </p>
                         )}
                       </div>

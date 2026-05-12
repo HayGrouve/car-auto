@@ -32,40 +32,40 @@ import {
 function NewInvoicePageInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const [ownerSearch, setOwnerSearch] = useState("");
-  const [animalSearch, setAnimalSearch] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [vehicleSearch, setVehicleSearch] = useState("");
   const [visitSearch, setVisitSearch] = useState("");
-  const [ownerId, setOwnerId] = useState("");
-  const [animalId, setAnimalId] = useState("");
-  const ownersQuery = useQuery(
-    api.owners.list,
-    useMemo(() => ({ search: ownerSearch }), [ownerSearch]),
+  const [customerId, setCustomerId] = useState("");
+  const [vehicleId, setVehicleId] = useState("");
+  const customersQuery = useQuery(
+    api.customers.list,
+    useMemo(() => ({ search: customerSearch }), [customerSearch]),
   );
-  const ownersResult = ownersQuery as
+  const customersResult = customersQuery as
     | {
         items: { _id: string; name: string; phone: string }[];
         total: number;
         hasMore: boolean;
       }
     | undefined;
-  const owners = ownersResult?.items;
-  const animalsQuery = useQuery(
-    api.animals.list,
-    useMemo(() => ({ search: animalSearch }), [animalSearch]),
+  const customers = customersResult?.items;
+  const vehiclesQuery = useQuery(
+    api.vehicles.list,
+    useMemo(() => ({ search: vehicleSearch }), [vehicleSearch]),
   );
-  const animalsResult = animalsQuery as
+  const vehiclesResult = vehiclesQuery as
     | {
         items: {
           _id: string;
-          name: string;
-          species: string;
-          ownerId?: string | null;
+          licensePlate: string;
+          make: string;
+          customerId?: string | null;
         }[];
         total: number;
         hasMore: boolean;
       }
     | undefined;
-  const animals = animalsResult?.items;
+  const vehicles = vehiclesResult?.items;
   const visitsQuery = useQuery(
     api.visits.list,
     useMemo(
@@ -73,10 +73,10 @@ function NewInvoicePageInner() {
         search: visitSearch,
         limit: 50,
         sort: "datetimeDesc",
-        ownerId: ownerId ? (ownerId as Id<"owners">) : undefined,
-        animalId: animalId ? (animalId as Id<"animals">) : undefined,
+        customerId: customerId ? (customerId as Id<"customers">) : undefined,
+        vehicleId: vehicleId ? (vehicleId as Id<"vehicles">) : undefined,
       }),
-      [visitSearch, ownerId, animalId],
+      [visitSearch, customerId, vehicleId],
     ),
   );
   const visitsResult = visitsQuery as
@@ -93,41 +93,41 @@ function NewInvoicePageInner() {
     | undefined;
   const visits = visitsResult?.items;
   const create = useMutation(api.invoices.create) as unknown as (args: {
-    ownerId: string;
-    animalId?: string;
+    customerId: string;
+    vehicleId?: string;
     visitId?: string;
-    items: {
-      description: string;
+    parts: {
+      name: string;
       quantity: number;
       price: number;
-      total: number;
     }[];
-  }) => Promise<{ ok: boolean; id: string }>;
+    labor: {
+      name: string;
+      quantity: number;
+      price: number;
+    }[];
+  }) => Promise<{ ok: boolean; id: string; code?: string }>;
   const markPaid = useMutation(api.invoices.markPaid) as unknown as (args: {
     id: string;
   }) => Promise<{ ok: boolean }>;
 
-  const [items, setItems] = useState<
-    { description: string; quantity: string; price: string; total: number }[]
-  >([{ description: "", quantity: "1", price: "0", total: 0 }]);
+  const [parts, setParts] = useState<
+    { name: string; quantity: string; price: string; total: number }[]
+  >([{ name: "", quantity: "1", price: "0", total: 0 }]);
+  const [labor, setLabor] = useState<
+    { name: string; quantity: string; price: string; total: number }[]
+  >([{ name: "", quantity: "1", price: "0", total: 0 }]);
+  
   const [visitId, setVisitId] = useState("");
   const visit = useQuery(
     api.visits.getById,
     visitId ? { id: visitId as Id<"visits"> } : "skip",
-  ) as { procedures?: string[]; medications?: string[] } | undefined;
-  const procSuggestions = useQuery(
-    api.visits.suggestProcedures,
-    useMemo(() => ({ limit: 8 }), []),
-  ) as string[] | undefined;
-  const medSuggestions = useQuery(
-    api.visits.suggestMedications,
-    useMemo(() => ({ limit: 8 }), []),
-  ) as string[] | undefined;
+  ) as { services?: string[]; parts?: string[] } | undefined;
   const [markPaidNow, setMarkPaidNow] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [prefilledFromVisit, setPrefilledFromVisit] = useState(false);
-  const [ownerPopoverOpen, setOwnerPopoverOpen] = useState(false);
-  const [animalPopoverOpen, setAnimalPopoverOpen] = useState(false);
+  const [customerPopoverOpen, setCustomerPopoverOpen] = useState(false);
+  const [vehiclePopoverOpen, setVehiclePopoverOpen] = useState(false);
   const [visitPopoverOpen, setVisitPopoverOpen] = useState(false);
 
   useBreadcrumbRegistration([
@@ -142,24 +142,26 @@ function NewInvoicePageInner() {
 
   // Prefill from query params
   useEffect(() => {
-    const qpOwner = params.get("ownerId") ?? "";
-    const qpAnimal = params.get("animalId") ?? "";
+    const qpCustomer = params.get("customerId") ?? "";
+    const qpVehicle = params.get("vehicleId") ?? "";
     const qpVisit = params.get("visitId") ?? "";
-    if (qpOwner) setOwnerId(qpOwner);
-    if (qpAnimal) setAnimalId(qpAnimal);
+    if (qpCustomer) setCustomerId(qpCustomer);
+    if (qpVehicle) setVehicleId(qpVehicle);
     if (qpVisit) setVisitId(qpVisit);
   }, [params]);
 
   function recalcTotal(
     idx: number,
-    next?: Partial<{ description: string; quantity: string; price: string }>,
+    type: "parts" | "labor",
+    next?: Partial<{ name: string; quantity: string; price: string }>,
   ) {
-    setItems((arr) => {
+    const setter = type === "parts" ? setParts : setLabor;
+    setter((arr) => {
       const copy = arr.map((it) => ({ ...it }));
       const target = copy[idx];
       if (!target) return arr;
-      if (next?.description !== undefined)
-        target.description = next.description;
+      if (next?.name !== undefined)
+        target.name = next.name;
       if (next?.quantity !== undefined) target.quantity = next.quantity;
       if (next?.price !== undefined) target.price = next.price;
       const q = parseFloat(target.quantity || "0");
@@ -172,64 +174,86 @@ function NewInvoicePageInner() {
   // Auto-prefill items from visit once when visitId is provided and visit data loads
   useEffect(() => {
     if (!visitId || !visit || prefilledFromVisit) return;
-    const baseItems = [
-      ...(visit.procedures ?? []).map((name) => ({
-        description: name,
-        quantity: "1",
-        price: "0",
-        total: 0,
-      })),
-      ...(visit.medications ?? []).map((name) => ({
-        description: name,
-        quantity: "1",
-        price: "0",
-        total: 0,
-      })),
-    ];
-    // Only override initial blank row to avoid clobbering user edits
-    const first = items[0];
-    const isPristine =
-      items.length === 1 &&
-      first &&
-      !first.description.trim() &&
-      parseFloat(first.price || "0") === 0 &&
-      parseFloat(first.quantity || "1") === 1 &&
-      first.total === 0;
-    if (baseItems.length > 0 && isPristine) {
-      setItems(baseItems);
+    const baseParts = (visit.parts ?? []).map((name) => ({
+      name,
+      quantity: "1",
+      price: "0",
+      total: 0,
+    }));
+    const baseLabor = (visit.services ?? []).map((name) => ({
+      name,
+      quantity: "1",
+      price: "0",
+      total: 0,
+    }));
+
+    const firstPart = parts[0];
+    const isPartsPristine =
+      parts.length === 1 &&
+      firstPart &&
+      !firstPart.name.trim() &&
+      parseFloat(firstPart.price || "0") === 0 &&
+      parseFloat(firstPart.quantity || "1") === 1 &&
+      firstPart.total === 0;
+
+    const firstLabor = labor[0];
+    const isLaborPristine =
+      labor.length === 1 &&
+      firstLabor &&
+      !firstLabor.name.trim() &&
+      parseFloat(firstLabor.price || "0") === 0 &&
+      parseFloat(firstLabor.quantity || "1") === 1 &&
+      firstLabor.total === 0;
+
+    if (baseParts.length > 0 && isPartsPristine) {
+      setParts(baseParts);
+    }
+    if (baseLabor.length > 0 && isLaborPristine) {
+      setLabor(baseLabor);
+    }
+
+    if ((baseParts.length > 0 && isPartsPristine) || (baseLabor.length > 0 && isLaborPristine)) {
       setPrefilledFromVisit(true);
       toast.success("Добавени редове от посещението");
     }
-  }, [visitId, visit, prefilledFromVisit, items]);
+  }, [visitId, visit, prefilledFromVisit, parts, labor]);
 
   // Prefill from query params (single-run during first render)
-  if (!ownerId) {
-    const qpOwner = params.get("ownerId") ?? "";
-    if (qpOwner) setOwnerId(qpOwner);
+  if (!customerId) {
+    const qpCustomer = params.get("customerId") ?? "";
+    if (qpCustomer) setCustomerId(qpCustomer);
   }
-  if (!animalId) {
-    const qpAnimal = params.get("animalId") ?? "";
-    if (qpAnimal) setAnimalId(qpAnimal);
+  if (!vehicleId) {
+    const qpVehicle = params.get("vehicleId") ?? "";
+    if (qpVehicle) setVehicleId(qpVehicle);
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     // Validate invoice data
-    const payloadItems = items
-      .filter((it) => it.description.trim())
+    const payloadParts = parts
+      .filter((it) => it.name.trim())
       .map((it) => ({
-        description: it.description.trim(),
+        name: it.name.trim(),
         quantity: parseFloat(it.quantity || "0"),
         price: parseFloat(it.price || "0"),
-        total: it.total,
+      }));
+
+    const payloadLabor = labor
+      .filter((it) => it.name.trim())
+      .map((it) => ({
+        name: it.name.trim(),
+        quantity: parseFloat(it.quantity || "0"),
+        price: parseFloat(it.price || "0"),
       }));
 
     const invoiceData = {
-      ownerId: ownerId || "",
-      animalId: animalId || "",
+      customerId: customerId || "",
+      vehicleId: vehicleId || "",
       visitId: visitId || "",
-      items: payloadItems,
+      parts: payloadParts,
+      labor: payloadLabor,
     };
 
     // Validate using schema
@@ -245,16 +269,17 @@ function NewInvoicePageInner() {
 
     try {
       setSubmitting(true);
-      const res = (await create({
-        ownerId: validationResult.data.ownerId,
-        animalId: validationResult.data.animalId?.trim()
-          ? validationResult.data.animalId
+      const res = await create({
+        customerId: validationResult.data.customerId,
+        vehicleId: validationResult.data.vehicleId?.trim()
+          ? validationResult.data.vehicleId
           : undefined,
         visitId: validationResult.data.visitId?.trim()
           ? validationResult.data.visitId
           : undefined,
-        items: validationResult.data.items,
-      })) as { ok: boolean; id: string; code?: string };
+        parts: validationResult.data.parts ?? [],
+        labor: validationResult.data.labor ?? [],
+      });
       if (res?.ok && res.id) {
         if (markPaidNow) {
           await markPaid({ id: res.id });
@@ -280,31 +305,31 @@ function NewInvoicePageInner() {
       <form onSubmit={onSubmit} className="grid gap-3">
         <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
           <div>
-            <Label>Собственик</Label>
-            <Popover open={ownerPopoverOpen} onOpenChange={setOwnerPopoverOpen}>
+            <Label>Клиент</Label>
+            <Popover open={customerPopoverOpen} onOpenChange={setCustomerPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
-                  {ownerId
-                    ? (owners ?? []).find((o) => o._id === ownerId)?.name
-                    : "Изберете собственик"}
+                  {customerId
+                    ? (customers ?? []).find((o) => o._id === customerId)?.name
+                    : "Изберете клиент"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
                   <CommandInput
-                    placeholder="Търси собственик..."
-                    value={ownerSearch}
-                    onValueChange={setOwnerSearch}
+                    placeholder="Търси клиент..."
+                    value={customerSearch}
+                    onValueChange={setCustomerSearch}
                   />
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
-                    {(owners ?? []).map((o) => (
+                    {(customers ?? []).map((o) => (
                       <CommandItem
                         key={o._id}
                         value={o._id}
                         onSelect={(v) => {
-                          setOwnerId(v);
-                          setOwnerPopoverOpen(false);
+                          setCustomerId(v);
+                          setCustomerPopoverOpen(false);
                         }}
                       >
                         {o.name} · {o.phone}
@@ -316,42 +341,42 @@ function NewInvoicePageInner() {
             </Popover>
           </div>
           <div>
-            <Label>Животно</Label>
+            <Label>Автомобил</Label>
             <Popover
-              open={animalPopoverOpen}
-              onOpenChange={setAnimalPopoverOpen}
+              open={vehiclePopoverOpen}
+              onOpenChange={setVehiclePopoverOpen}
             >
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
-                  {animalId
-                    ? (animals ?? []).find((a) => a._id === animalId)?.name
-                    : "Без животно"}
+                  {vehicleId
+                    ? (vehicles ?? []).find((a) => a._id === vehicleId)?.licensePlate
+                    : "Без автомобил"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
                   <CommandInput
-                    placeholder="Търси животно..."
-                    value={animalSearch}
-                    onValueChange={setAnimalSearch}
+                    placeholder="Търси автомобил..."
+                    value={vehicleSearch}
+                    onValueChange={setVehicleSearch}
                   />
                   <CommandList>
                     <CommandEmpty>Няма резултати</CommandEmpty>
-                    {(animals ?? [])
+                    {(vehicles ?? [])
                       .filter(
                         (an) =>
-                          !ownerId || String(an.ownerId) === String(ownerId),
+                          !customerId || String(an.customerId) === String(customerId),
                       )
                       .map((an) => (
                         <CommandItem
                           key={an._id}
                           value={an._id}
                           onSelect={(v) => {
-                            setAnimalId(v);
-                            setAnimalPopoverOpen(false);
+                            setVehicleId(v);
+                            setVehiclePopoverOpen(false);
                           }}
                         >
-                          {an.name} ({an.species})
+                          {an.licensePlate} ({an.make})
                         </CommandItem>
                       ))}
                   </CommandList>
@@ -424,8 +449,9 @@ function NewInvoicePageInner() {
           </div>
         </div>
 
-        <div className="divide-y rounded-md border">
-          {items.map((it, idx) => {
+        <div className="divide-y rounded-md border mt-4">
+          <div className="bg-muted/50 p-2 font-semibold">Части</div>
+          {parts.map((it, idx) => {
             const qtyNum = parseFloat(it.quantity || "0");
             const priceNum = parseFloat(it.price || "0");
             const hasQtyError =
@@ -440,32 +466,32 @@ function NewInvoicePageInner() {
 
             return (
               <div
-                key={idx}
+                key={`part-${idx}`}
                 className="grid items-end gap-2 p-3 md:grid-cols-5"
               >
                 <div className="md:col-span-2">
                   <FormField
                     label="Описание"
-                    htmlFor={`desc-${idx}`}
+                    htmlFor={`part-desc-${idx}`}
                     error={
-                      it.description.trim() && it.description.length > 200
+                      it.name.trim() && it.name.length > 200
                         ? "Описанието не може да надвишава 200 символа"
                         : undefined
                     }
                     hint={
                       idx === 0
-                        ? "Въведете описание на услугата или продукта"
+                        ? "Въведете описание на частта"
                         : undefined
                     }
                   >
                     <Input
-                      id={`desc-${idx}`}
-                      value={it.description}
+                      id={`part-desc-${idx}`}
+                      value={it.name}
                       onChange={(e) =>
-                        recalcTotal(idx, { description: e.target.value })
+                        recalcTotal(idx, "parts", { name: e.target.value })
                       }
                       aria-invalid={
-                        it.description.trim() && it.description.length > 200
+                        it.name.trim() && it.name.length > 200
                           ? true
                           : undefined
                       }
@@ -475,7 +501,7 @@ function NewInvoicePageInner() {
                 <div>
                   <FormField
                     label="Кол-во"
-                    htmlFor={`qty-${idx}`}
+                    htmlFor={`part-qty-${idx}`}
                     error={
                       hasQtyError
                         ? "Количеството трябва да е положително цяло число (макс. 9999)"
@@ -484,11 +510,11 @@ function NewInvoicePageInner() {
                     hint="Въведете количество"
                   >
                     <Input
-                      id={`qty-${idx}`}
+                      id={`part-qty-${idx}`}
                       inputMode="decimal"
                       value={it.quantity}
                       onChange={(e) =>
-                        recalcTotal(idx, { quantity: e.target.value })
+                        recalcTotal(idx, "parts", { quantity: e.target.value })
                       }
                       aria-invalid={!!hasQtyError}
                     />
@@ -497,20 +523,20 @@ function NewInvoicePageInner() {
                 <div>
                   <FormField
                     label="Цена"
-                    htmlFor={`price-${idx}`}
+                    htmlFor={`part-price-${idx}`}
                     error={
                       hasPriceError
                         ? "Цената трябва да е неотрицателно число (макс. 999999.99)"
                         : undefined
                     }
-                    hint="Въведете цена в EUR"
+                    hint="Въведете цена в BGN"
                   >
                     <Input
-                      id={`price-${idx}`}
+                      id={`part-price-${idx}`}
                       inputMode="decimal"
                       value={it.price}
                       onChange={(e) =>
-                        recalcTotal(idx, { price: e.target.value })
+                        recalcTotal(idx, "parts", { price: e.target.value })
                       }
                       aria-invalid={!!hasPriceError}
                     />
@@ -519,7 +545,7 @@ function NewInvoicePageInner() {
                 <div className="text-right">
                   {fmtNumberBG(it.total, {
                     style: "currency",
-                    currency: "EUR",
+                    currency: "BGN",
                   })}
                 </div>
               </div>
@@ -530,32 +556,31 @@ function NewInvoicePageInner() {
               type="button"
               variant="secondary"
               onClick={() =>
-                setItems((arr) => [
+                setParts((arr) => [
                   ...arr,
-                  { description: "", quantity: "1", price: "0", total: 0 },
+                  { name: "", quantity: "1", price: "0", total: 0 },
                 ])
               }
             >
-              Добави ред
+              Добави ред за част
             </Button>
             {visit &&
-            (visit.procedures?.length || visit.medications?.length) ? (
+            (visit.parts?.length) ? (
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setItems((arr) => {
+                  setParts((arr) => {
                     const next = [...arr];
                     const add = (name: string) => {
                       next.push({
-                        description: name,
+                        name: name,
                         quantity: "1",
                         price: "0",
                         total: 0,
                       });
                     };
-                    (visit.procedures ?? []).forEach(add);
-                    (visit.medications ?? []).forEach(add);
+                    (visit.parts ?? []).forEach(add);
                     return next;
                   });
                 }}
@@ -564,70 +589,159 @@ function NewInvoicePageInner() {
               </Button>
             ) : null}
           </div>
-          {(procSuggestions ?? []).length > 0 ||
-          (medSuggestions ?? []).length > 0 ? (
-            <div className="space-y-2 p-3">
-              {(procSuggestions ?? []).length > 0 ? (
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {(procSuggestions ?? []).map((name, i) => (
-                    <button
-                      key={`proc-${i}`}
-                      type="button"
-                      className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
-                      onClick={() =>
-                        setItems((arr) => [
-                          ...arr,
-                          {
-                            description: name,
-                            quantity: "1",
-                            price: "0",
-                            total: 0,
-                          },
-                        ])
-                      }
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              {(medSuggestions ?? []).length > 0 ? (
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {(medSuggestions ?? []).map((name, i) => (
-                    <button
-                      key={`med-${i}`}
-                      type="button"
-                      className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
-                      onClick={() =>
-                        setItems((arr) => [
-                          ...arr,
-                          {
-                            description: name,
-                            quantity: "1",
-                            price: "0",
-                            total: 0,
-                          },
-                        ])
-                      }
-                    >
-                      {name}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="divide-y rounded-md border mt-2">
+          <div className="bg-muted/50 p-2 font-semibold">Труд/Услуги</div>
+          {labor.map((it, idx) => {
+            const qtyNum = parseFloat(it.quantity || "0");
+            const priceNum = parseFloat(it.price || "0");
+            const hasQtyError =
+              it.quantity &&
+              (isNaN(qtyNum) ||
+                qtyNum <= 0 ||
+                !Number.isInteger(qtyNum) ||
+                qtyNum > 9999);
+            const hasPriceError =
+              it.price &&
+              (isNaN(priceNum) || priceNum < 0 || priceNum > 999999.99);
+
+            return (
+              <div
+                key={`labor-${idx}`}
+                className="grid items-end gap-2 p-3 md:grid-cols-5"
+              >
+                <div className="md:col-span-2">
+                  <FormField
+                    label="Описание"
+                    htmlFor={`labor-desc-${idx}`}
+                    error={
+                      it.name.trim() && it.name.length > 200
+                        ? "Описанието не може да надвишава 200 символа"
+                        : undefined
+                    }
+                    hint={
+                      idx === 0
+                        ? "Въведете описание на услугата"
+                        : undefined
+                    }
+                  >
+                    <Input
+                      id={`labor-desc-${idx}`}
+                      value={it.name}
+                      onChange={(e) =>
+                        recalcTotal(idx, "labor", { name: e.target.value })
+                      }
+                      aria-invalid={
+                        it.name.trim() && it.name.length > 200
+                          ? true
+                          : undefined
+                      }
+                    />
+                  </FormField>
+                </div>
+                <div>
+                  <FormField
+                    label="Кол-во"
+                    htmlFor={`labor-qty-${idx}`}
+                    error={
+                      hasQtyError
+                        ? "Количеството трябва да е положително цяло число (макс. 9999)"
+                        : undefined
+                    }
+                    hint="Въведете количество"
+                  >
+                    <Input
+                      id={`labor-qty-${idx}`}
+                      inputMode="decimal"
+                      value={it.quantity}
+                      onChange={(e) =>
+                        recalcTotal(idx, "labor", { quantity: e.target.value })
+                      }
+                      aria-invalid={!!hasQtyError}
+                    />
+                  </FormField>
+                </div>
+                <div>
+                  <FormField
+                    label="Цена"
+                    htmlFor={`labor-price-${idx}`}
+                    error={
+                      hasPriceError
+                        ? "Цената трябва да е неотрицателно число (макс. 999999.99)"
+                        : undefined
+                    }
+                    hint="Въведете цена в BGN"
+                  >
+                    <Input
+                      id={`labor-price-${idx}`}
+                      inputMode="decimal"
+                      value={it.price}
+                      onChange={(e) =>
+                        recalcTotal(idx, "labor", { price: e.target.value })
+                      }
+                      aria-invalid={!!hasPriceError}
+                    />
+                  </FormField>
+                </div>
+                <div className="text-right">
+                  {fmtNumberBG(it.total, {
+                    style: "currency",
+                    currency: "BGN",
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          <div className="flex flex-wrap items-center gap-2 p-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                setLabor((arr) => [
+                  ...arr,
+                  { name: "", quantity: "1", price: "0", total: 0 },
+                ])
+              }
+            >
+              Добави ред за труд
+            </Button>
+            {visit &&
+            (visit.services?.length) ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setLabor((arr) => {
+                    const next = [...arr];
+                    const add = (name: string) => {
+                      next.push({
+                        name: name,
+                        quantity: "1",
+                        price: "0",
+                        total: 0,
+                      });
+                    };
+                    (visit.services ?? []).forEach(add);
+                    return next;
+                  });
+                }}
+              >
+                Добави от посещение
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-4">
           <div className="text-muted-foreground text-sm">
             Общо:{" "}
             {fmtNumberBG(
-              items.reduce(
+              [...parts, ...labor].reduce(
                 (s, it) => s + (Number.isFinite(it.total) ? it.total : 0),
                 0,
               ),
-              { style: "currency", currency: "EUR" },
+              { style: "currency", currency: "BGN" },
             )}
           </div>
           <div className="flex items-center gap-3">
@@ -641,8 +755,8 @@ function NewInvoicePageInner() {
             </label>
             <Button
               type="submit"
-              disabled={!ownerId || submitting}
-              aria-disabled={!ownerId || submitting}
+              disabled={!customerId || submitting}
+              aria-disabled={!customerId || submitting}
             >
               {submitting ? "Създаване..." : "Създай"}
             </Button>
