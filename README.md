@@ -1,4 +1,4 @@
-# Alisa (Алиса) — Car Service CRM
+# Car Service CRM
 
 A CRM and workshop operations app for **car services** (auto repair, maintenance, and scheduling), built with Next.js 15, React 19, and Convex. This repository is being **refactored** from a veterinary (“zoo”) product: domain names in code and routes still say owners/animals in places, but the product direction is car service—customers, vehicles, jobs, appointments, and billing.
 
