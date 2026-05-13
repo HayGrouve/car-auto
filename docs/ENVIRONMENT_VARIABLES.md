@@ -1,6 +1,6 @@
 # Environment Variables Documentation
 
-This document describes all environment variables required for the Alisa veterinary clinic CRM application.
+This document describes all environment variables required for the car service CRM veterinary clinic CRM application.
 
 ## Required Variables
 

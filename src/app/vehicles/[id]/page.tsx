@@ -43,6 +43,7 @@ import {
 import { SkeletonList } from "@/components/SkeletonList";
 import { VehicleSummaryCard } from "./components/VehicleSummaryCard";
 import { VehicleControlsCard } from "./components/VehicleControlsCard";
+import { VisitStatusBadge } from "@/components/StatusBadge";
 import { Save } from "lucide-react";
 import { SectionCard } from "@/components/ui/section-card";
 import Link from "next/link";
@@ -98,7 +99,12 @@ export default function VehicleDetailPage() {
   const draftVisitsQuery = useQuery(
     api.visits.list,
     useMemo(
-      () => ({ vehicleId: id, status: "draft", limit: 1, sort: "datetimeDesc" }),
+      () => ({
+        vehicleId: id,
+        statuses: ["draft", "in_progress", "ready"],
+        limit: 1,
+        sort: "datetimeDesc",
+      }),
       [id],
     ),
   );
@@ -249,7 +255,7 @@ export default function VehicleDetailPage() {
   const filteredVisits = useMemo(() => {
     const allVisits = visits ?? [];
     return showIncompleteVisits
-      ? allVisits.filter((visit) => visit.status === "draft")
+      ? allVisits.filter((visit) => visit.status !== "finalized")
       : allVisits;
   }, [visits, showIncompleteVisits]);
 
@@ -279,7 +285,7 @@ export default function VehicleDetailPage() {
                 : undefined
             }
             hasIncompleteVisit={(visits ?? []).some(
-              (visit) => visit.status === "draft",
+              (visit) => visit.status !== "finalized",
             )}
             onConfirmDelete={() => setConfirmDeleteOpen(true)}
             onBack={() => router.push("/vehicles")}
@@ -349,9 +355,7 @@ export default function VehicleDetailPage() {
                     </Link>
                     <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
                       <span>{fmtDateTimeBG(visit.datetime ?? Date.now())}</span>
-                      <span>
-                        · {visit.status === "draft" ? "Чернова" : visit.status}
-                      </span>
+                      <VisitStatusBadge status={visit.status} />
                       {customer?.name ? <span>· {customer.name}</span> : null}
                     </div>
                   </div>

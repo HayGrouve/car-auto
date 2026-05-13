@@ -136,7 +136,13 @@ function SchedulePageContent() {
   // Query for draft visits to create vehicle -> draft visit map
   const draftVisitsQuery = useQuery(
     api.visits.list,
-    useMemo(() => ({ status: "draft", limit: 1000 }), []),
+    useMemo(
+      () => ({
+        statuses: ["draft", "in_progress", "ready"],
+        limit: 1000,
+      }),
+      [],
+    ),
   );
   const draftVisitsResult = draftVisitsQuery as
     | {

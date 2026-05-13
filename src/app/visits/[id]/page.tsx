@@ -6,7 +6,16 @@ import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { type VisitDoc } from "@/types/visit";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,9 +35,11 @@ import {
   Download,
   Loader2,
   Image as ImageIcon,
+  MessageCircle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { generateVisitSummaryPdf } from "@/lib/pdf-generator";
+import { visitStatusLabelBg } from "@/lib/visit-status";
 import VisitWizard from "./VisitWizard";
 import {
   useBreadcrumbRegistration,
@@ -38,14 +49,35 @@ import { VisitHero } from "@/components/visits/VisitHero";
 import {
   VisitActionsMenuDesktop,
   VisitActionsMenuMobile,
+  type VisitAction,
 } from "@/components/visits/VisitActionsMenu";
 import { SectionCard } from "@/components/ui/section-card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  formatBulgariaPhoneE164,
+  viberChatUrl,
+  whatsappSendUrl,
+} from "@/lib/phone-messaging";
 
 // Lazy load PDF button component
 const PdfDownloadButton = dynamic(
   () => import("@/components/pdf/PdfDownloadButton"),
   { ssr: false },
 );
+
+const VISIT_WORKFLOW_STATUSES = ["draft", "in_progress", "ready"] as const;
+type VisitWorkflowStatus = (typeof VISIT_WORKFLOW_STATUSES)[number];
+
+function coerceVisitWorkflowStatus(status: string): VisitWorkflowStatus {
+  return VISIT_WORKFLOW_STATUSES.includes(status as VisitWorkflowStatus)
+    ? (status as VisitWorkflowStatus)
+    : "draft";
+}
 
 export default function VisitDetailPage() {
   const params = useParams<{ id: string }>();
@@ -55,16 +87,14 @@ export default function VisitDetailPage() {
     useMemo(() => ({ id }), [id]),
   ) as VisitDoc | null | undefined;
   const finalize = useMutation(api.visits.finalize);
+  const updateVisit = useMutation(api.visits.update);
   const removeVisit = useMutation(api.visits.remove) as unknown as (args: {
     id: string;
   }) => Promise<{ ok: boolean }>;
   const router = useRouter();
 
   const [issue, setIssue] = useState("");
-  const [inspection, setInspection] = useState("");
-  const [diagnosis, setDiagnosis] = useState("");
   const [plan, setPlan] = useState("");
-  const [hydrated, setHydrated] = useState(false);
   const [services, setServices] = useState<string[]>([]);
   const [parts, setParts] = useState<string[]>([]);
   const [vehicleId, setVehicleId] = useState<string | null>(null);
@@ -106,6 +136,7 @@ export default function VisitDetailPage() {
   const addAttachment = useMutation(api.visits.addAttachment);
   const removeAttachment = useMutation(api.visits.removeAttachment);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const visit: VisitDoc | null = visitUnknown ?? null;
 
@@ -160,8 +191,10 @@ export default function VisitDetailPage() {
     }
   }
 
-  // Wizard visibility
-  const [showWizard, setShowWizard] = useState(true);
+  const [lightbox, setLightbox] = useState<{
+    url: string;
+    name: string;
+  } | null>(null);
   useBreadcrumbRegistration(
     [
       { label: "Начало", href: "/" } satisfies BreadcrumbItem,
@@ -176,21 +209,19 @@ export default function VisitDetailPage() {
         : ({ label: "Посещение", current: true } satisfies BreadcrumbItem),
     ].filter(Boolean) as BreadcrumbItem[],
   );
-  const isFinalized = !!visit && visit.status !== "draft";
+  const isFinalized = !!visit && visit.status === "finalized";
 
   useEffect(() => {
-    if (!hydrated && visit) {
-      setIssue(visit.notes?.issue ?? "");
-      setInspection(visit.notes?.inspection ?? "");
-      setDiagnosis(visit.notes?.diagnosis ?? "");
-      setPlan(visit.notes?.plan ?? "");
-      setVehicleId(visit.vehicleId ?? null);
-      setCustomerId(visit.customerId ?? "");
-      setServices(visit.services ?? []);
-      setParts(visit.parts ?? []);
-      setHydrated(true);
-    }
-  }, [visit, hydrated]);
+    if (!visit) return;
+    setIssue(visit.notes?.issue ?? "");
+    setPlan(visit.notes?.plan ?? "");
+    setVehicleId(visit.vehicleId ?? null);
+    setCustomerId(visit.customerId ?? "");
+    setServices(visit.services ?? []);
+    setParts(visit.parts ?? []);
+    // Intentionally depend on server revision only, not full visit identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when _id or updatedAt changes
+  }, [visit?._id, visit?.updatedAt]);
 
   async function onFinalize() {
     // Check if visit has an invoice
@@ -239,6 +270,20 @@ export default function VisitDetailPage() {
     setDeleteConfirmationText("");
   }
 
+  async function onWorkflowStatusChange(next: VisitWorkflowStatus) {
+    if (!visit || visit.status === "finalized" || next === visit.status) return;
+    setIsUpdatingStatus(true);
+    try {
+      await updateVisit({ id, status: next });
+      toast.success("Статусът е обновен");
+    } catch (e) {
+      console.error(e);
+      toast.error("Неуспешна промяна на статуса");
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  }
+
   function downloadBlob(blob: Blob, fileName: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -256,12 +301,7 @@ export default function VisitDetailPage() {
       (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
     const code =
       (visit as VisitDoc & { code?: string }).code ?? `#${String(visit._id)}`;
-    const statusLabel =
-      visit.status === "draft"
-        ? "Чернова"
-        : visit.status === "finalized"
-          ? "Приключено"
-          : visit.status;
+    const statusLabel = visitStatusLabelBg(visit.status);
 
     const vehicleName = (vehicleInfo?.licensePlate ?? visit.vehicleName ?? "").trim();
     const vehicleMake = (
@@ -297,8 +337,6 @@ export default function VisitDetailPage() {
         : "";
     const notesRows = [
       row("Оплакване", issue),
-      row("Оглед", inspection),
-      row("Диагноза", diagnosis),
       row("План за ремонт", plan),
     ].join("");
     const serviceList = (services?.length ? services : [])
@@ -379,6 +417,71 @@ export default function VisitDetailPage() {
     } catch {}
   }
 
+  const customerInfo = customerId
+    ? (customers ?? []).find((o) => o._id === customerId)
+    : null;
+  const vehicleInfo = vehicleId
+    ? (vehicles ?? []).find((a) => a._id === vehicleId)
+    : null;
+  const visitTimestamp = visit
+    ? ((visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt)
+    : 0;
+  const deleteConfirmationPhrase =
+    visit != null ? `изтрии ${visit.code ?? String(visit._id)}` : "";
+
+  const notifyCustomerActions = useMemo((): VisitAction[] => {
+    if (!visit) return [];
+    const phone = formatBulgariaPhoneE164(customerInfo?.phone);
+    if (!phone) return [];
+    const plate =
+      (
+        vehicleInfo?.licensePlate ??
+        visit.vehicleName ??
+        ""
+      ).trim() || "—";
+    const amt = (visit.outstandingAmount ?? "—").trim() || "—";
+    const code = visit.code ?? String(visit._id);
+    const msg = `Здравейте, автомобилът Ви (${plate}) е готов за взимане. Дължима сума: ${amt}. Посещение: ${code}.`;
+    return [
+      {
+        label: "WhatsApp към клиент",
+        onSelect: () => {
+          window.open(
+            whatsappSendUrl(phone, msg),
+            "_blank",
+            "noopener,noreferrer",
+          );
+        },
+        icon: <MessageCircle className="h-4 w-4" aria-hidden="true" />,
+      },
+      {
+        label: "Viber към клиент",
+        onSelect: () => {
+          void navigator.clipboard
+            .writeText(msg)
+            .then(() =>
+              toast.success("Съобщението е копирано в клипборда"),
+            )
+            .catch(() => undefined);
+          window.location.href = viberChatUrl(phone, msg);
+        },
+        icon: <MessageCircle className="h-4 w-4" aria-hidden="true" />,
+      },
+    ];
+  }, [visit, customerInfo?.phone, vehicleInfo?.licensePlate]);
+
+  const heroExtraActions = useMemo(
+    (): VisitAction[] => [
+      ...notifyCustomerActions,
+      {
+        label: "Изтрий",
+        onSelect: onDelete,
+        icon: <Trash className="h-4 w-4" aria-hidden="true" />,
+      },
+    ],
+    [notifyCustomerActions, onDelete],
+  );
+
   if (visitUnknown === undefined)
     return <main className="mx-auto max-w-3xl p-6">Зареждане...</main>;
   if (!visit)
@@ -386,28 +489,19 @@ export default function VisitDetailPage() {
       <main className="mx-auto max-w-3xl p-6">Не е намерено посещение</main>
     );
 
-  const customerInfo = customerId
-    ? (customers ?? []).find((o) => o._id === customerId)
-    : null;
-  const vehicleInfo = vehicleId
-    ? (vehicles ?? []).find((a) => a._id === vehicleId)
-    : null;
-  const visitTimestamp =
-    (visit as VisitDoc & { datetime?: number }).datetime ?? visit.createdAt;
-  const visitCode = visit.code ?? String(visit._id);
-  const deleteConfirmationPhrase = `изтрии ${visitCode}`;
-
   const generateVisitPdf = async () => {
     const vehicle = (vehicles ?? []).find((a) => a._id === visit.vehicleId);
     const customer = (customers ?? []).find((o) => o._id === visit.customerId);
+    const imageAttachments = (visit.documents ?? [])
+      .filter((d) => {
+        if (!d.url) return false;
+        if (d.type?.startsWith("image/")) return true;
+        return /\.(jpe?g|png|gif|webp)$/i.test(d.name);
+      })
+      .map((d) => ({ url: d.url!, name: d.name }));
     return generateVisitSummaryPdf({
       code: (visit as VisitDoc & { code?: string }).code,
-      status:
-        visit.status === "draft"
-          ? "Чернова"
-          : visit.status === "finalized"
-            ? "Приключено"
-            : visit.status,
+      status: visitStatusLabelBg(visit.status),
       date: visitTimestamp,
 
       vehicleName: vehicle?.licensePlate ?? visit.vehicleName ?? undefined,
@@ -417,13 +511,13 @@ export default function VisitDetailPage() {
       customerPhone: customer?.phone,
       mileage: visit.mileage ?? null,
       issue: issue,
-      inspection: inspection,
-      diagnosis: diagnosis,
       plan: plan,
       services: visit.services ?? [],
       parts: visit.parts ?? [],
       invoiceCode: visit.invoiceCode ?? null,
       outstandingAmount: visit.outstandingAmount ?? null,
+      imageAttachments:
+        imageAttachments.length > 0 ? imageAttachments : undefined,
     });
   };
 
@@ -442,13 +536,7 @@ export default function VisitDetailPage() {
                 )}&customerId=${encodeURIComponent(visit.customerId)}${visit.vehicleId ? `&vehicleId=${encodeURIComponent(String(visit.vehicleId))}` : ""}`;
                 void router.push(url);
               }}
-              extraActions={[
-                {
-                  label: "Изтрий",
-                  onSelect: onDelete,
-                  icon: <Trash className="h-4 w-4" aria-hidden="true" />,
-                },
-              ]}
+              extraActions={heroExtraActions}
             />
           }
           actionsMenuMobile={
@@ -461,13 +549,7 @@ export default function VisitDetailPage() {
                 )}&customerId=${encodeURIComponent(visit.customerId)}${visit.vehicleId ? `&vehicleId=${encodeURIComponent(String(visit.vehicleId))}` : ""}`;
                 void router.push(url);
               }}
-              extraActions={[
-                {
-                  label: "Изтрий",
-                  onSelect: onDelete,
-                  icon: <Trash className="h-4 w-4" aria-hidden="true" />,
-                },
-              ]}
+              extraActions={heroExtraActions}
             />
           }
           customer={{
@@ -486,22 +568,54 @@ export default function VisitDetailPage() {
           }}
         />
       </section>
+      {!isFinalized ? (
+        <Card className="shadow-sm">
+          <CardContent className="flex flex-col gap-4 pt-6 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0 flex-1 space-y-2">
+              <Label htmlFor="visit-workflow-status">Етап на посещението</Label>
+              <Select
+                value={coerceVisitWorkflowStatus(visit.status)}
+                onValueChange={(v) =>
+                  void onWorkflowStatusChange(coerceVisitWorkflowStatus(v))
+                }
+                disabled={isUpdatingStatus}
+              >
+                <SelectTrigger
+                  id="visit-workflow-status"
+                  className="h-10 min-h-[44px] w-full sm:max-w-xs"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VISIT_WORKFLOW_STATUSES.map((st) => (
+                    <SelectItem key={st} value={st}>
+                      {visitStatusLabelBg(st)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {visit.status !== "ready" ? (
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full shrink-0 sm:w-auto"
+                disabled={isUpdatingStatus}
+                onClick={() => void onWorkflowStatusChange("ready")}
+              >
+                Маркирай като готов
+              </Button>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
       <section className="space-y-6 pb-20 lg:pb-0">
         {!isFinalized ? (
           <SectionCard
             title="Ръководен режим"
             description="Структурирани стъпки за обработка на посещението."
-            headerActions={[
-              {
-                label: showWizard ? "Скрий ръководство" : "Покажи ръководство",
-                onClick: () => setShowWizard((v) => !v),
-                variant: "outline",
-              },
-            ]}
           >
-            {showWizard ? (
-              <VisitWizard id={id} onClose={() => setShowWizard(false)} />
-            ) : null}
+            <VisitWizard id={id} />
           </SectionCard>
         ) : (
           <SectionCard
@@ -552,22 +666,6 @@ export default function VisitDetailPage() {
                       <span>{issue}</span>
                     </div>
                   ) : null}
-                  {(inspection ?? "").trim() ? (
-                    <div>
-                      <span className="text-muted-foreground mr-2 font-medium">
-                        Оглед:
-                      </span>
-                      <span>{inspection}</span>
-                    </div>
-                  ) : null}
-                  {(diagnosis ?? "").trim() ? (
-                    <div>
-                      <span className="text-muted-foreground mr-2 font-medium">
-                        Диагноза:
-                      </span>
-                      <span>{diagnosis}</span>
-                    </div>
-                  ) : null}
                   {(plan ?? "").trim() ? (
                     <div>
                       <span className="text-muted-foreground mr-2 font-medium">
@@ -578,8 +676,6 @@ export default function VisitDetailPage() {
                   ) : null}
                   {!(
                     (issue ?? "").trim() ||
-                    (inspection ?? "").trim() ||
-                    (diagnosis ?? "").trim() ||
                     (plan ?? "").trim()
                   ) ? (
                     <div className="text-muted-foreground">(няма данни)</div>
@@ -685,14 +781,21 @@ export default function VisitDetailPage() {
                   className="group bg-background relative flex flex-col overflow-hidden rounded-lg border transition-all hover:shadow-md"
                 >
                   {doc.type?.startsWith("image/") && doc.url ? (
-                    <div className="bg-muted aspect-video w-full overflow-hidden">
+                    <button
+                      type="button"
+                      className="bg-muted group aspect-video w-full cursor-zoom-in overflow-hidden border-0 p-0 text-left"
+                      onClick={() =>
+                        setLightbox({ url: doc.url!, name: doc.name })
+                      }
+                      aria-label={`Увеличи изображение ${doc.name}`}
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={doc.url}
                         alt={doc.name}
                         className="h-full w-full object-cover transition-transform group-hover:scale-105"
                       />
-                    </div>
+                    </button>
                   ) : (
                     <div className="bg-muted flex aspect-video w-full items-center justify-center">
                       <File className="text-muted-foreground/40 h-10 w-10" />
@@ -787,9 +890,9 @@ export default function VisitDetailPage() {
               className="flex-1"
               size="sm"
               onClick={() => onFinalize()}
-              disabled={visit.status !== "draft"}
+              disabled={isFinalized}
             >
-              {visit.status !== "draft" ? "Приключено" : "Приключи"}
+              {isFinalized ? "Приключено" : "Приключи"}
             </Button>
             <Button
               variant="outline"
@@ -897,6 +1000,28 @@ export default function VisitDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Dialog
+        open={lightbox !== null}
+        onOpenChange={(open) => {
+          if (!open) setLightbox(null);
+        }}
+      >
+        <DialogContent className="max-w-5xl sm:max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>{lightbox?.name ?? "Снимка"}</DialogTitle>
+          </DialogHeader>
+          {lightbox ? (
+            <div className="max-h-[85vh] overflow-auto">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightbox.url}
+                alt={lightbox.name}
+                className="mx-auto max-h-[80vh] w-full object-contain"
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

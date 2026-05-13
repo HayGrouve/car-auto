@@ -1,6 +1,7 @@
 "use client";
 
 import { jsPDF } from "jspdf";
+import imageCompression from "browser-image-compression";
 import type { InvoiceDoc } from "@/types/visit";
 import { brand } from "@/lib/brand";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -69,8 +70,6 @@ type VisitSummaryData = {
   mileage?: string | number | null;
   // Notes
   issue?: string;
-  inspection?: string;
-  diagnosis?: string;
   plan?: string;
   // Lists
   services?: string[];
@@ -78,7 +77,42 @@ type VisitSummaryData = {
   // Billing
   invoiceCode?: string | null;
   outstandingAmount?: string | null;
+  /** Image URLs (e.g. Convex storage); fetched and compressed in the browser. */
+  imageAttachments?: Array<{ url: string; name: string }>;
 };
+
+async function fetchCompressedImageDataUrl(
+  url: string,
+): Promise<{ dataUrl: string; format: "JPEG" | "PNG" } | null> {
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const blob = await res.blob();
+  if (!blob.type.startsWith("image/")) return null;
+  const ext = blob.type.includes("png") ? "png" : "jpg";
+  const file = new File([blob], `attach.${ext}`, { type: blob.type });
+  try {
+    const compressed = await imageCompression(file, {
+      maxWidthOrHeight: 1200,
+      maxSizeMB: 0.35,
+      useWebWorker: true,
+      initialQuality: 0.82,
+      fileType: blob.type.includes("png") ? "image/png" : "image/jpeg",
+    });
+    const dataUrl = await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () =>
+        resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.readAsDataURL(compressed);
+    });
+    if (!dataUrl) return null;
+    const format: "JPEG" | "PNG" = dataUrl.includes("image/png")
+      ? "PNG"
+      : "JPEG";
+    return { dataUrl, format };
+  } catch {
+    return null;
+  }
+}
 
 export async function generateInvoicePdf(
   invoice: InvoiceDoc,
@@ -284,8 +318,6 @@ export async function generateVisitSummaryPdf(
     yPos += lines.length * 7 + 4;
   };
   addSection("Оплакване", data.issue);
-  addSection("Оглед", data.inspection);
-  addSection("Диагноза", data.diagnosis);
   addSection("План за ремонт", data.plan);
 
   // Lists
@@ -311,6 +343,29 @@ export async function generateVisitSummaryPdf(
   addHeading("Фактуриране");
   addRow("Номер на фактура", data.invoiceCode ?? undefined);
   addRow("Дължима сума", data.outstandingAmount ?? undefined);
+
+  if (data.imageAttachments && data.imageAttachments.length > 0) {
+    addHeading("Снимки от посещението");
+    for (const att of data.imageAttachments) {
+      const compressed = await fetchCompressedImageDataUrl(att.url);
+      if (!compressed) continue;
+      try {
+        const props = doc.getImageProperties(compressed.dataUrl);
+        const maxW = pageWidth - 40;
+        const w = Math.min(maxW, props.width);
+        const h = (props.height * w) / props.width;
+        ensureSpace(h + 24);
+        doc.setFont("NotoSans", "normal");
+        doc.setFontSize(9);
+        doc.text(att.name || "Снимка", 20, yPos);
+        yPos += 6;
+        doc.addImage(compressed.dataUrl, compressed.format, 20, yPos, w, h);
+        yPos += h + 10;
+      } catch {
+        // skip invalid image data
+      }
+    }
+  }
 
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFont("NotoSans", "bold");

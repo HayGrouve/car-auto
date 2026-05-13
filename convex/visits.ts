@@ -1,6 +1,37 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+/** Non-final visit statuses — only one active visit per vehicle allowed. */
+export const ACTIVE_VISIT_STATUSES = [
+  "draft",
+  "in_progress",
+  "ready",
+] as const;
+
+function isActiveVisitStatus(status: string | undefined): boolean {
+  return (
+    status === "draft" ||
+    status === "in_progress" ||
+    status === "ready"
+  );
+}
+
+/** After any content edit on a draft visit, treat it as started (unless `status` was set explicitly, e.g. Kanban). */
+function promoteDraftToInProgressOnContentEdit(
+  visit: { status?: string },
+  patch: Record<string, unknown>,
+  explicitStatusInRequest: boolean,
+): void {
+  if ((visit as { status?: string }).status !== "draft") return;
+  if (explicitStatusInRequest) return;
+  const keys = Object.keys(patch).filter((k) => k !== "updatedAt");
+  if (keys.length === 0) return;
+  patch.status = "in_progress";
+}
+
+const KANBAN_ACTIVE = new Set<string>(ACTIVE_VISIT_STATUSES);
+const KANBAN_FINALIZED_CUTOFF_MS = 7 * 24 * 60 * 60 * 1000;
+
 function generateHumanCode(prefix: string): string {
   const num = Math.floor(100000 + Math.random() * 900000);
   const letters =
@@ -15,6 +46,8 @@ export const list = query({
     offset: v.optional(v.number()),
     sort: v.optional(v.string()), // 'datetimeAsc' | 'datetimeDesc'
     status: v.optional(v.string()),
+    /** If set, visit status must be one of these (overrides single `status` when both passed — prefer passing only one). */
+    statuses: v.optional(v.array(v.string())),
     customerId: v.optional(v.id("customers")),
     vehicleId: v.optional(v.id("vehicles")),
     from: v.optional(v.number()),
@@ -61,7 +94,9 @@ export const list = query({
     };
 
     const filtered = allVisits.filter((vDoc: any) => {
-      if (args.status && vDoc.status !== args.status) return false;
+      if (args.statuses && args.statuses.length > 0) {
+        if (!args.statuses.includes(String(vDoc.status ?? ""))) return false;
+      } else if (args.status && vDoc.status !== args.status) return false;
       if (args.customerId && String(vDoc.customerId) !== String(args.customerId))
         return false;
       if (args.vehicleId && String(vDoc.vehicleId) !== String(args.vehicleId))
@@ -73,8 +108,6 @@ export const list = query({
         const haystacks = [
           vDoc.code ?? vDoc._id,
           vDoc.notes?.issue,
-          vDoc.notes?.inspection,
-          vDoc.notes?.diagnosis,
           vDoc.notes?.plan,
           ...(vDoc.services ?? []),
           ...(vDoc.parts ?? []),
@@ -121,6 +154,60 @@ export const visitsFilters = query({
   },
 });
 
+export const kanbanBoard = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const cutoff = now - KANBAN_FINALIZED_CUTOFF_MS;
+    const allVisits = await ctx.db.query("visits").collect();
+    const customerDocs = await ctx.db.query("customers").collect();
+    const vehicleDocs = await ctx.db.query("vehicles").collect();
+    const customerMap = new Map<string, string>();
+    for (const c of customerDocs) {
+      if (!(c as { deletedAt?: number }).deletedAt) {
+        customerMap.set(String(c._id), (c as { name?: string }).name ?? "");
+      }
+    }
+    const vehicleMap = new Map<string, string>();
+    for (const veh of vehicleDocs) {
+      vehicleMap.set(
+        String(veh._id),
+        (veh as { licensePlate?: string }).licensePlate ?? "",
+      );
+    }
+
+    const filtered = allVisits.filter((vDoc: any) => {
+      const st = String(vDoc.status ?? "");
+      if (KANBAN_ACTIVE.has(st)) return true;
+      if (st === "finalized") {
+        const t = vDoc.updatedAt ?? vDoc.createdAt ?? 0;
+        return t >= cutoff;
+      }
+      return false;
+    });
+
+    const sorted = filtered.sort(
+      (a: any, b: any) =>
+        (b.datetime ?? b.createdAt ?? 0) - (a.datetime ?? a.createdAt ?? 0),
+    );
+
+    return sorted.map((vDoc: any) => ({
+      _id: String(vDoc._id),
+      code: vDoc.code ?? null,
+      datetime: vDoc.datetime ?? vDoc.createdAt ?? now,
+      status: String(vDoc.status ?? "draft"),
+      customerId: vDoc.customerId ? String(vDoc.customerId) : null,
+      customerName: vDoc.customerId
+        ? (customerMap.get(String(vDoc.customerId)) ?? null)
+        : null,
+      vehicleId: vDoc.vehicleId ? String(vDoc.vehicleId) : null,
+      vehiclePlate: vDoc.vehicleId
+        ? (vehicleMap.get(String(vDoc.vehicleId)) ?? null)
+        : null,
+    }));
+  },
+});
+
 export const create = mutation({
   args: {
     customerId: v.id("customers"),
@@ -129,8 +216,6 @@ export const create = mutation({
     mileage: v.optional(v.number()),
     notes: v.object({
       issue: v.optional(v.string()),
-      inspection: v.optional(v.string()),
-      diagnosis: v.optional(v.string()),
       plan: v.optional(v.string()),
     }),
     services: v.optional(v.array(v.string())),
@@ -138,18 +223,19 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    // Prevent multiple draft visits per vehicle
+    // Prevent multiple active (non-finalized) visits per vehicle
     if (args.vehicleId) {
       const existing = await ctx.db.query("visits").collect();
-      const existingDraft = existing.find(
+      const existingActive = existing.find(
         (vDoc: any) =>
-          vDoc.status === "draft" && String(vDoc.vehicleId) === String(args.vehicleId),
+          isActiveVisitStatus(vDoc.status) &&
+          String(vDoc.vehicleId) === String(args.vehicleId),
       );
-      if (existingDraft) {
+      if (existingActive) {
         return {
           ok: false,
           reason: "draft_exists",
-          id: existingDraft._id,
+          id: existingActive._id,
         } as const;
       }
     }
@@ -185,6 +271,9 @@ export const finalize = mutation({
   handler: async (ctx, args) => {
     const visit = await ctx.db.get(args.id);
     if (!visit) return { ok: false } as const;
+    if ((visit as { status?: string }).status === "finalized") {
+      return { ok: false, reason: "already_finalized" } as const;
+    }
     await ctx.db.patch(args.id, { status: "finalized", updatedAt: Date.now() });
 
     // Update schedule slot status to "completed" if linked to this visit
@@ -273,8 +362,6 @@ export const update = mutation({
     notes: v.optional(
       v.object({
         issue: v.optional(v.string()),
-        inspection: v.optional(v.string()),
-        diagnosis: v.optional(v.string()),
         plan: v.optional(v.string()),
       }),
     ),
@@ -287,18 +374,41 @@ export const update = mutation({
     outstandingAmount: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
+    const visit = await ctx.db.get(args.id);
+    if (!visit) throw new Error("Visit not found");
+    if ((visit as { status?: string }).status === "finalized") {
+      throw new Error("Completed visits cannot be modified");
+    }
+    if (args.status === "finalized") {
+      throw new Error("Use the finalize action to complete a visit");
+    }
     const patch: any = { updatedAt: Date.now() };
     if (args.datetime !== undefined) patch.datetime = args.datetime;
     if (args.mileage !== undefined) patch.mileage = args.mileage;
     if (args.notes !== undefined) patch.notes = args.notes;
     if (args.vehicleId !== undefined) patch.vehicleId = args.vehicleId;
-    if (args.status !== undefined) patch.status = args.status;
+    if (args.status !== undefined) {
+      const allowed = new Set([
+        "draft",
+        "in_progress",
+        "ready",
+      ]);
+      if (!allowed.has(args.status)) {
+        throw new Error("Invalid status transition");
+      }
+      patch.status = args.status;
+    }
     if (args.services !== undefined) patch.services = args.services;
     if (args.parts !== undefined) patch.parts = args.parts;
     if (args.customerId !== undefined) patch.customerId = args.customerId;
     if (args.invoiceCode !== undefined) patch.invoiceCode = args.invoiceCode;
     if (args.outstandingAmount !== undefined)
       patch.outstandingAmount = args.outstandingAmount;
+    promoteDraftToInProgressOnContentEdit(
+      visit,
+      patch,
+      args.status !== undefined,
+    );
     await ctx.db.patch(args.id, patch);
     return { ok: true } as const;
   },
@@ -348,7 +458,7 @@ export const addAttachment = mutation({
   handler: async (ctx, args) => {
     const visit = await ctx.db.get(args.visitId);
     if (!visit) throw new Error("Visit not found");
-    if (visit.status !== "draft")
+    if ((visit as { status?: string }).status === "finalized")
       throw new Error("Cannot add attachments to finalized visits");
 
     const documents = (visit as any).documents ?? [];
@@ -361,10 +471,12 @@ export const addAttachment = mutation({
       uploadedAt: Date.now(),
     };
 
-    await ctx.db.patch(args.visitId, {
+    const patch: Record<string, unknown> = {
       documents: [...documents, newDoc],
       updatedAt: Date.now(),
-    });
+    };
+    promoteDraftToInProgressOnContentEdit(visit, patch, false);
+    await ctx.db.patch(args.visitId, patch as any);
 
     return { ok: true };
   },
@@ -378,7 +490,7 @@ export const removeAttachment = mutation({
   handler: async (ctx, args) => {
     const visit = await ctx.db.get(args.visitId);
     if (!visit) throw new Error("Visit not found");
-    if (visit.status !== "draft")
+    if ((visit as { status?: string }).status === "finalized")
       throw new Error("Cannot remove attachments from finalized visits");
 
     const documents = (visit as any).documents ?? [];
@@ -392,10 +504,12 @@ export const removeAttachment = mutation({
       (d: any) => d.id !== args.attachmentId,
     );
 
-    await ctx.db.patch(args.visitId, {
+    const patch: Record<string, unknown> = {
       documents: newDocuments,
       updatedAt: Date.now(),
-    });
+    };
+    promoteDraftToInProgressOnContentEdit(visit, patch, false);
+    await ctx.db.patch(args.visitId, patch as any);
 
     return { ok: true };
   },

@@ -7,6 +7,7 @@ import type { Id } from "@/../convex/_generated/dataModel";
 import { CustomerDocSchema } from "@/types/customer";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -137,10 +138,10 @@ export default function CustomerDetailPage() {
   }
 
   if (!customer)
-    return <main className="mx-auto max-w-3xl p-6">Зареждане...</main>;
+    return <main className="mx-auto max-w-5xl p-6">Зареждане...</main>;
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-6">
+    <main className="mx-auto max-w-5xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
           Клиент: {customer.name}
@@ -275,50 +276,62 @@ export default function CustomerDetailPage() {
         </Link>
         .
       </p>
-      <form onSubmit={onSave} className="grid gap-3">
-        <div>
-          <Label htmlFor="name">Име</Label>
-          <Input
-            id="name"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          />
-        </div>
-        <div>
-          <Label htmlFor="phone">Телефон</Label>
-          <Input
-            id="phone"
-            value={form.phone}
-            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-          />
-        </div>
-        <div>
-          <Label htmlFor="email">Имейл</Label>
-          <Input
-            id="email"
-            value={form.email}
-            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-          />
-        </div>
-        <div>
-          <Label htmlFor="address">Адрес</Label>
-          <Input
-            id="address"
-            value={form.address}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, address: e.target.value }))
-            }
-          />
-        </div>
-        <div>
-          <Label htmlFor="notes">Бележки</Label>
-          <Input
-            id="notes"
-            value={form.notes}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, notes: e.target.value }))
-            }
-          />
+      <form onSubmit={onSave} className="grid gap-6">
+        <div className="grid gap-6 lg:grid-cols-2 items-center">
+          <div className="grid gap-3">
+            <div>
+              <Label htmlFor="name">Име</Label>
+              <Input
+                id="name"
+                value={form.name}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="phone">Телефон</Label>
+              <Input
+                id="phone"
+                value={form.phone}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, phone: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Имейл</Label>
+              <Input
+                id="email"
+                value={form.email}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, email: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="address">Адрес</Label>
+              <Input
+                id="address"
+                value={form.address}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, address: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+          <div className="grid gap-3">
+            <Label htmlFor="notes">Бележки</Label>
+            <Textarea
+              id="notes"
+              rows={4}
+              className="min-h-[160px] lg:min-h-[260px]"
+              value={form.notes}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, notes: e.target.value }))
+              }
+            />
+          </div>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
           <label className="flex items-center gap-2">

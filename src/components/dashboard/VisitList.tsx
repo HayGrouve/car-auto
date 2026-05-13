@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { fmtDateTimeBG } from "@/lib/format";
+import { visitStatusLabelBg } from "@/lib/visit-status";
 import { cn } from "@/lib/utils";
 
 export type VisitListItem = {
@@ -69,14 +70,7 @@ export function VisitList({
                 </Link>
                 <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
                   <span>{fmtDateTimeBG(visit.datetime)}</span>
-                  <span>
-                    ·{" "}
-                    {visit.status === "draft"
-                      ? "Чернова"
-                      : visit.status === "finalized"
-                        ? "Приключено"
-                        : visit.status}
-                  </span>
+                  <span>· {visitStatusLabelBg(visit.status)}</span>
                   {visit.customerName ? <span>· {visit.customerName}</span> : null}
                   {visit.badge ? (
                     <span className="bg-primary/10 text-primary inline-flex items-center rounded px-1.5 py-0.5 text-[10px] tracking-wide uppercase">

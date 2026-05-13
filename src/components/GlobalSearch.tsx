@@ -31,10 +31,11 @@ import {
 } from "lucide-react";
 import { fmtDateTimeBG } from "@/lib/format";
 import { highlightMatch } from "@/lib/search-utils";
+import { visitStatusLabelBg } from "@/lib/visit-status";
 import { Badge } from "@/components/ui/badge";
 import { fmtNumberBG } from "@/lib/format";
 
-const HISTORY_STORAGE_KEY = "alisa.searchHistory.v1";
+const HISTORY_STORAGE_KEY = "car-service-crm.searchHistory.v1";
 const HISTORY_LIMIT = 8;
 const MIN_QUERY_LENGTH = 2;
 
@@ -128,6 +129,8 @@ function getStatusVariant(
     case "finalized":
       return "default";
     case "draft":
+    case "in_progress":
+    case "ready":
       return "secondary";
     default:
       return "default";
@@ -629,7 +632,7 @@ export function GlobalSearch({
                       variant={getStatusVariant(v.status)}
                       className="ml-2"
                     >
-                      {v.status === "finalized" ? "Завършено" : "Чернова"}
+                      {visitStatusLabelBg(v.status)}
                     </Badge>
                   </CommandItem>
                 );

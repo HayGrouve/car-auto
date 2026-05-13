@@ -43,7 +43,9 @@ type InvoiceDoc = {
   _id: string;
   code?: string | null;
   createdAt: number;
+  /** Legacy field; prefer totalAmount when present */
   total?: number | null;
+  totalAmount?: number | null;
   paid?: boolean | null;
   visitId?: string | null;
 };
@@ -103,8 +105,8 @@ export const overview = query({
     const vehicleCount = vehicleDocs.length;
     const customerCount = customerDocs.filter((o) => !o?.deletedAt).length;
 
-    const draftVisitsCount = visitDocs.filter(
-      (v) => v.status === "draft",
+  const draftVisitsCount = visitDocs.filter(
+      (v) => v.status !== "finalized",
     ).length;
     const todayVisits = visitDocs
       .filter((v) => {
@@ -137,7 +139,7 @@ export const overview = query({
 
     const unpaidInvoices = invoiceDocs.filter((inv) => !inv.paid);
     const unpaidInvoicesTotal = unpaidInvoices.reduce(
-      (sum: number, inv) => sum + (inv.total ?? 0),
+      (sum: number, inv) => sum + (inv.totalAmount ?? inv.total ?? 0),
       0,
     );
 
@@ -146,20 +148,20 @@ export const overview = query({
     );
     const todayPaidTotal = todayInvoices
       .filter((inv) => inv.paid)
-      .reduce((sum, inv) => sum + (inv.total ?? 0), 0);
+      .reduce((sum, inv) => sum + (inv.totalAmount ?? inv.total ?? 0), 0);
     const todayUnpaidTotal = todayInvoices
       .filter((inv) => !inv.paid)
-      .reduce((sum, inv) => sum + (inv.total ?? 0), 0);
+      .reduce((sum, inv) => sum + (inv.totalAmount ?? inv.total ?? 0), 0);
 
     const weekInvoices = invoiceDocs.filter(
       (inv) => inv.createdAt >= weekStart && inv.createdAt <= todayEnd,
     );
     const weekPaidTotal = weekInvoices
       .filter((inv) => inv.paid)
-      .reduce((sum, inv) => sum + (inv.total ?? 0), 0);
+      .reduce((sum, inv) => sum + (inv.totalAmount ?? inv.total ?? 0), 0);
     const weekUnpaidTotal = weekInvoices
       .filter((inv) => !inv.paid)
-      .reduce((sum, inv) => sum + (inv.total ?? 0), 0);
+      .reduce((sum, inv) => sum + (inv.totalAmount ?? inv.total ?? 0), 0);
 
     // Get today's schedule slots
     // Filter by startTime (actual appointment time) to ensure we only show today's slots
@@ -266,9 +268,9 @@ export const monthlyRevenue = query({
       const monthData = data[monthIndex];
       if (monthData) {
         if (inv.paid) {
-          monthData.paid += inv.total ?? 0;
+          monthData.paid += inv.totalAmount ?? inv.total ?? 0;
         } else {
-          monthData.unpaid += inv.total ?? 0;
+          monthData.unpaid += inv.totalAmount ?? inv.total ?? 0;
         }
       }
     });

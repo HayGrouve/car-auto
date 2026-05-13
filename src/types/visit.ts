@@ -16,8 +16,6 @@ export const VisitDocSchema = z.object({
   notes: z
     .object({
       issue: z.string().optional(),
-      inspection: z.string().optional(),
-      diagnosis: z.string().optional(),
       plan: z.string().optional(),
     })
     .optional(),

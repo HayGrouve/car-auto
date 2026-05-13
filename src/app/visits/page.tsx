@@ -19,13 +19,14 @@ import {
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { CalendarCheck, CheckCircle, FilePlus, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { CalendarCheck, CheckCircle, FilePlus, ChevronLeft, ChevronRight, Eye, LayoutGrid, List } from "lucide-react";
 import type { VisitDoc } from "@/types/visit";
 import { fmtDateTimeBG } from "@/lib/format";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { EmptyState } from "@/components/EmptyState";
 import { VisitStatusBadge } from "@/components/StatusBadge";
 import { SkeletonList } from "../../components/SkeletonList";
+import { VisitsKanbanBoard } from "@/components/visits/VisitsKanbanBoard";
 import {
   Select,
   SelectContent,
@@ -37,8 +38,30 @@ import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
+import { visitStatusLabelBg } from "@/lib/visit-status";
+
+const VISITS_PAGE_VIEW_STORAGE_KEY = "car-service:visits:view";
 
 function VisitsPageInner() {
+  const [view, setView] = useState<"list" | "board">("list");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(VISITS_PAGE_VIEW_STORAGE_KEY);
+      if (raw === "list" || raw === "board") setView(raw);
+    } catch {
+      /* ignore (private mode, etc.) */
+    }
+  }, []);
+
+  function setViewPersisted(next: "list" | "board") {
+    setView(next);
+    try {
+      localStorage.setItem(VISITS_PAGE_VIEW_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  }
   const [status, setStatus] = useState<string>("");
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
@@ -82,7 +105,7 @@ function VisitsPageInner() {
   const createVisit = useMutation(api.visits.create) as unknown as (args: {
     customerId: string;
     vehicleId?: string;
-    notes: { issue?: string; inspection?: string; diagnosis?: string; plan?: string };
+    notes: { issue?: string; plan?: string };
   }) => Promise<{ ok: boolean; id?: string; reason?: string }>;
   const finalizeVisit = useMutation(api.visits.finalize) as unknown as (args: {
     id: string;
@@ -100,7 +123,8 @@ function VisitsPageInner() {
     const s = params.get("status") ?? ""; // "draft" | "finalized"
     if (c) setCustomerId(c);
     if (v) setVehicleId(v);
-    if (s === "draft" || s === "finalized") setStatus(s);
+    if (s === "draft" || s === "finalized" || s === "in_progress" || s === "ready")
+      setStatus(s);
   }, [params]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [vehicleSearch, setVehicleSearch] = useState("");
@@ -128,11 +152,11 @@ function VisitsPageInner() {
 
   async function onCreateNewVisit() {
     if (!customerId) {
-      toast.error("Изберете клиент (customerId)");
+      toast.error("Изберете клиент");
       return;
     }
     if (!vehicleId) {
-      toast.error("Изберете автомобил (vehicleId)");
+      toast.error("Изберете автомобил");
       return;
     }
     const res = await createVisit({
@@ -154,7 +178,9 @@ function VisitsPageInner() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 p-6">
+    <main
+      className={`mx-auto space-y-6 p-6 ${view === "board" ? "max-w-7xl" : "max-w-5xl"}`}
+    >
       <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
         <div className="flex w-full items-center gap-2 md:w-auto">
           <CalendarCheck className="text-primary size-5" />
@@ -171,6 +197,41 @@ function VisitsPageInner() {
         </Button>
       </div>
 
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-muted-foreground text-sm">Изглед:</span>
+        <div className="bg-muted inline-flex rounded-lg border p-1">
+          <Button
+            type="button"
+            variant={view === "list" ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-1"
+            onClick={() => setViewPersisted("list")}
+          >
+            <List className="size-4" aria-hidden />
+            Списък
+          </Button>
+          <Button
+            type="button"
+            variant={view === "board" ? "secondary" : "ghost"}
+            size="sm"
+            className="gap-1"
+            onClick={() => setViewPersisted("board")}
+          >
+            <LayoutGrid className="size-4" aria-hidden />
+            Табло
+          </Button>
+        </div>
+        {view === "board" ? (
+          <p className="text-muted-foreground text-xs md:ml-2">
+            Таблото показва активни посещения и приключени от последните 7 дни.
+          </p>
+        ) : null}
+      </div>
+
+      {view === "board" ? (
+        <VisitsKanbanBoard />
+      ) : (
+        <>
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
         <div className="grid grid-cols-1 gap-3 sm:col-span-2 md:grid-cols-2">
           <div>
@@ -278,7 +339,7 @@ function VisitsPageInner() {
                   variant="outline"
                   className="h-10 min-h-[44px] w-full justify-between"
                 >
-                  {status || "Всички"}
+                  {status ? visitStatusLabelBg(status) : "Всички"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
@@ -298,7 +359,23 @@ function VisitsPageInner() {
                         setPage(0);
                       }}
                     >
-                      Чернова
+                      Ново
+                    </CommandItem>
+                    <CommandItem
+                      onSelect={() => {
+                        setStatus("in_progress");
+                        setPage(0);
+                      }}
+                    >
+                      В работа
+                    </CommandItem>
+                    <CommandItem
+                      onSelect={() => {
+                        setStatus("ready");
+                        setPage(0);
+                      }}
+                    >
+                      Готов
                     </CommandItem>
                     <CommandItem
                       onSelect={() => {
@@ -395,7 +472,7 @@ function VisitsPageInner() {
                 className="hover:bg-accent inline-flex items-center gap-1 rounded-full border px-2 py-1"
               >
                 <span>
-                  Статус: {status === "draft" ? "Чернова" : "Приключени"}
+                  Статус: {visitStatusLabelBg(status)}
                 </span>
                 <span aria-hidden>✕</span>
               </button>
@@ -471,7 +548,7 @@ function VisitsPageInner() {
                 <VisitStatusBadge status={v.status} />
               </div>
               <div className="flex flex-wrap gap-2 sm:flex-shrink-0 sm:flex-nowrap">
-                {v.status === "draft" ? (
+                {v.status !== "finalized" ? (
                   <Button
                     variant="outline"
                     className="min-h-[44px] flex-1 sm:flex-none"
@@ -542,6 +619,8 @@ function VisitsPageInner() {
           <ChevronRight className="ml-1 size-4" aria-hidden />
         </Button>
       </div>
+        </>
+      )}
     </main>
   );
 }

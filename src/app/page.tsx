@@ -115,14 +115,20 @@ export default function HomePage() {
     customerId: string;
     vehicleId?: string;
     datetime?: number;
-    notes: { issue?: string; inspection?: string; diagnosis?: string; plan?: string };
+    notes: { issue?: string; plan?: string };
   }) => Promise<{ ok: boolean; id?: string; reason?: string }>;
   const updateScheduleSlot = useMutation(api.schedule.update);
 
   // Query for draft visits to check if vehicles have existing visits
   const allDraftVisitsQuery = useQuery(
     api.visits.list,
-    useMemo(() => ({ status: "draft", limit: 1000 }), []),
+    useMemo(
+      () => ({
+        statuses: ["draft", "in_progress", "ready"],
+        limit: 1000,
+      }),
+      [],
+    ),
   );
   const allDraftVisitsResult = allDraftVisitsQuery as
     | {

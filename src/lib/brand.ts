@@ -1,5 +1,5 @@
 export const brand = {
-  name: "Alisa",
-  nameBg: "Алиса",
-  shortName: "Alisa",
+  name: "Car Service CRM",
+  nameBg: "Car Service CRM",
+  shortName: "Car Service CRM",
 };

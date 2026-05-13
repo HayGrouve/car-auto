@@ -15,23 +15,17 @@ import { Badge } from "@/components/ui/badge";
 
 type Step = "notes" | "services" | "parts";
 
-export default function VisitWizard({
-  id,
-  onClose,
-}: {
-  id: Id<"visits">;
-  onClose: () => void;
-}) {
-  const visitUnknown = useQuery(api.visits.getById, { id });
-  const visit = visitUnknown as VisitDoc | null | undefined;
+export default function VisitWizard({ id }: { id: Id<"visits"> }) {
+  const visit = useQuery(api.visits.getById, { id }) as
+    | VisitDoc
+    | null
+    | undefined;
   const updateVisit = useMutation(api.visits.update);
 
   const [currentStep, setCurrentStep] = useState<Step>("notes");
 
   // Local state for the form fields
   const [issue, setIssue] = useState("");
-  const [inspection, setInspection] = useState("");
-  const [diagnosis, setDiagnosis] = useState("");
   const [plan, setPlan] = useState("");
 
   const [services, setServices] = useState<string[]>([]);
@@ -45,8 +39,6 @@ export default function VisitWizard({
   useEffect(() => {
     if (!hydrated && visit) {
       setIssue(visit.notes?.issue ?? "");
-      setInspection(visit.notes?.inspection ?? "");
-      setDiagnosis(visit.notes?.diagnosis ?? "");
       setPlan(visit.notes?.plan ?? "");
       setServices(visit.services ?? []);
       setParts(visit.parts ?? []);
@@ -62,8 +54,6 @@ export default function VisitWizard({
         id,
         notes: {
           issue,
-          inspection,
-          diagnosis,
           plan,
         },
         services,
@@ -73,7 +63,7 @@ export default function VisitWizard({
       if (nextStep) {
         setCurrentStep(nextStep);
       } else {
-        onClose();
+        setCurrentStep("notes");
       }
     } catch (error) {
       console.error(error);
@@ -89,21 +79,20 @@ export default function VisitWizard({
     <div className="bg-card rounded-lg border shadow-sm">
       {/* Wizard Header / Progress */}
       <div className="border-b p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-medium">
+        <div className="flex items-center gap-2 text-sm font-medium">
             <button
               onClick={() => setCurrentStep("notes")}
-              className={`flex items-center gap-1 ${currentStep === "notes" ? "text-primary" : "text-muted-foreground"}`}
+              className={`flex items-center cursor-pointer gap-1 ${currentStep === "notes" ? "text-primary" : "text-muted-foreground"}`}
             >
               <span className="bg-muted flex h-6 w-6 items-center justify-center rounded-full text-xs">
                 1
               </span>
-              Бележки
+              Анализ
             </button>
             <ChevronRight className="text-muted-foreground h-4 w-4" />
             <button
               onClick={() => setCurrentStep("services")}
-              className={`flex items-center gap-1 ${currentStep === "services" ? "text-primary" : "text-muted-foreground"}`}
+              className={`flex items-center cursor-pointer gap-1 ${currentStep === "services" ? "text-primary" : "text-muted-foreground"}`}
             >
               <span className="bg-muted flex h-6 w-6 items-center justify-center rounded-full text-xs">
                 2
@@ -113,17 +102,13 @@ export default function VisitWizard({
             <ChevronRight className="text-muted-foreground h-4 w-4" />
             <button
               onClick={() => setCurrentStep("parts")}
-              className={`flex items-center gap-1 ${currentStep === "parts" ? "text-primary" : "text-muted-foreground"}`}
+              className={`flex items-center cursor-pointer gap-1 ${currentStep === "parts" ? "text-primary" : "text-muted-foreground"}`}
             >
               <span className="bg-muted flex h-6 w-6 items-center justify-center rounded-full text-xs">
                 3
               </span>
               Части
             </button>
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
@@ -131,32 +116,14 @@ export default function VisitWizard({
       <div className="p-6">
         {currentStep === "notes" && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Бележки</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <h3 className="text-lg font-semibold">Анализ</h3>
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <Label>Оплакване</Label>
                 <Textarea
                   value={issue}
                   onChange={(e) => setIssue(e.target.value)}
                   placeholder="Какво е оплакването на клиента?"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Оглед</Label>
-                <Textarea
-                  value={inspection}
-                  onChange={(e) => setInspection(e.target.value)}
-                  placeholder="Какво установихте при огледа?"
-                  rows={3}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Диагноза</Label>
-                <Textarea
-                  value={diagnosis}
-                  onChange={(e) => setDiagnosis(e.target.value)}
-                  placeholder="Каква е диагнозата?"
                   rows={3}
                 />
               </div>

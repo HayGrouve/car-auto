@@ -89,7 +89,7 @@ export function VehicleSummaryCard({
     const allVisits = visits ?? [];
     return {
       total: allVisits.length,
-      drafts: allVisits.filter((v) => v.status === "draft").length,
+      active: allVisits.filter((v) => v.status !== "finalized").length,
       finalized: allVisits.filter((v) => v.status === "finalized").length,
     };
   }, [visits]);
@@ -259,8 +259,8 @@ export function VehicleSummaryCard({
                 <span>{visitMetrics.total}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Чернови:</span>
-                <span>{visitMetrics.drafts}</span>
+                <span className="text-muted-foreground">Активни:</span>
+                <span>{visitMetrics.active}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Финализирани:</span>

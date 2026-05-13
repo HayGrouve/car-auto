@@ -4,6 +4,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -353,8 +354,10 @@ export default function CustomersPage() {
                     htmlFor="notes"
                     error={methods.formState.errors.notes?.message}
                   >
-                    <Input
+                    <Textarea
                       id="notes"
+                      rows={4}
+                      className="min-h-[100px]"
                       placeholder="Допълнителна информация"
                       {...getFormFieldProps(methods, "notes")}
                     />

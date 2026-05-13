@@ -20,7 +20,7 @@ const chartConfig = {
     color: "hsl(0, 84%, 60%)", // Red color
   },
   draftVisits: {
-    label: "Чернови посещения",
+    label: "Активни посещения",
     color: "hsl(38, 92%, 50%)", // Orange color
   },
 } satisfies ChartConfig;
@@ -36,7 +36,7 @@ export function StatusBarChart({
       fill: "var(--color-unpaidInvoices)",
     },
     {
-      name: "Чернови посещения",
+      name: "Активни посещения",
       value: draftVisits,
       fill: "var(--color-draftVisits)",
     },
@@ -49,7 +49,7 @@ export function StatusBarChart({
       <div className="space-y-2">
         <h3 className="text-lg font-medium">Статус</h3>
         <div className="text-muted-foreground flex h-[300px] items-center justify-center rounded-lg border">
-          Няма неплатени фактури или чернови посещения
+          Няма неплатени фактури или активни посещения
         </div>
       </div>
     );
