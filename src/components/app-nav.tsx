@@ -21,6 +21,12 @@ const GlobalSearch = dynamic(() => import("@/components/GlobalSearch"), {
   ssr: false,
 });
 
+/** Nav section match: exact path or nested under `href` (not prefix-only on short strings). */
+function isNavSectionActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function AppNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -53,26 +59,31 @@ export function AppNav() {
 
   const NavLinks = ({ onClick }: { onClick?: () => void }) => (
     <>
-      {links.map((l) => (
-        <Link
-          key={l.href}
-          href={l.href}
-          onClick={onClick}
-          className={`inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-md px-3 py-2 ${pathname === l.href ? "bg-accent" : "hover:bg-accent"}`}
-        >
-          {l.icon ? <l.icon className="size-4" /> : null}
-          {l.label}
-        </Link>
-      ))}
+      {links.map((l) => {
+        const active = isNavSectionActive(pathname, l.href);
+        return (
+          <Link
+            key={l.href}
+            href={l.href}
+            onClick={onClick}
+            aria-current={active ? "page" : undefined}
+            className={`inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-md px-3 py-2 ${active ? "bg-accent" : "hover:bg-accent"}`}
+          >
+            {l.icon ? <l.icon className="size-4" /> : null}
+            {l.label}
+          </Link>
+        );
+      })}
     </>
   );
 
   return (
     <div className="bg-background/70 fixed top-0 right-0 left-0 z-50 border-b backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between p-2">
+      <div className="mx-auto flex max-w-6xl items-center justify-between p-2">
         <div className="flex items-center gap-2">
           <Link
             href="/"
+            aria-current={pathname === "/" ? "page" : undefined}
             className="inline-flex cursor-pointer items-center gap-2 font-semibold hover:underline"
           >
             <Image
@@ -124,7 +135,7 @@ export function AppNav() {
       </div>
       {open && (
         <div className="bg-background border-t md:hidden">
-          <div className="mx-auto flex max-w-5xl flex-col gap-2 p-3">
+          <div className="mx-auto flex max-w-6xl flex-col gap-2 p-3">
             <NavLinks onClick={() => setOpen(false)} />
           </div>
         </div>
