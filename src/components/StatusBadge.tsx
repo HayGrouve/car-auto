@@ -27,7 +27,7 @@ const VISIT_STATUS_META: Record<
 export function VisitStatusBadge({ status }: { status?: string }) {
   const key = status ?? "";
   const meta = VISIT_STATUS_META[key];
-  const label = meta?.label ?? (status ? status : "—");
+  const label = meta?.label ?? status ?? "—";
   const cls =
     meta?.className ?? "bg-muted text-foreground border";
   return (

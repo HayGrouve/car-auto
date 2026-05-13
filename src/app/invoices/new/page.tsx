@@ -564,8 +564,7 @@ function NewInvoicePageInner() {
             >
               Добави ред за част
             </Button>
-            {visit &&
-            (visit.parts?.length) ? (
+            {visit?.parts?.length ? (
               <Button
                 type="button"
                 variant="outline"
@@ -706,8 +705,7 @@ function NewInvoicePageInner() {
             >
               Добави ред за труд
             </Button>
-            {visit &&
-            (visit.services?.length) ? (
+            {visit?.services?.length ? (
               <Button
                 type="button"
                 variant="outline"

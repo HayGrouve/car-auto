@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useMemo, useState, useEffect, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
@@ -125,6 +126,16 @@ function InvoiceDetailPageContent() {
                 ? `Платена${inv.paidAt ? ` · ${fmtDateTimeBG(inv.paidAt)}` : ""}`
                 : "Неплатена"}
             </div>
+            {inv.visitId ? (
+              <div className="pt-1">
+                <Link
+                  href={`/visits/${inv.visitId}`}
+                  className="text-primary font-medium underline underline-offset-2 hover:no-underline"
+                >
+                  Към посещението
+                </Link>
+              </div>
+            ) : null}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             {inv.paid ? null : (

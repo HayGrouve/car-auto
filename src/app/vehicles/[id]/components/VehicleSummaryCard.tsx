@@ -7,7 +7,7 @@ import { Copy } from "lucide-react";
 
 import { SectionCard } from "@/components/ui/section-card";
 import { Button } from "@/components/ui/button";
-import { fmtDateBG, fmtDateTimeBG } from "@/lib/format";
+import { fmtDateTimeBG } from "@/lib/format";
 
 type CustomerSummary = {
   _id: string;

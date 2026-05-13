@@ -133,15 +133,16 @@ export default function CustomerDetailPage() {
     });
     if (res?.ok) {
       toast.success("Записът е обновен");
-      router.push("/customers");
+      return;
     }
+    toast.error("Неуспешен запис");
   }
 
   if (!customer)
-    return <main className="mx-auto max-w-5xl p-6">Зареждане...</main>;
+    return <main className="mx-auto max-w-6xl p-6">Зареждане...</main>;
 
   return (
-    <main className="mx-auto max-w-5xl space-y-4 p-6">
+    <main className="mx-auto max-w-6xl space-y-4 p-6">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">
           Клиент: {customer.name}
@@ -361,7 +362,10 @@ export default function CustomerDetailPage() {
             <span className="text-sm">Правен запор (Legal Hold)</span>
           </label>
         </div>
-        <div className="flex justify-end">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button type="button" variant="outline" asChild>
+            <Link href="/customers">Към списъка</Link>
+          </Button>
           <Button type="submit">Запази</Button>
         </div>
       </form>

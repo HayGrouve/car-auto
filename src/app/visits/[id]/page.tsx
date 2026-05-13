@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
@@ -265,10 +265,10 @@ export default function VisitDetailPage() {
     }
   }
 
-  function onDelete() {
+  const onDelete = useCallback(() => {
     setShowDeleteConfirm(true);
     setDeleteConfirmationText("");
-  }
+  }, []);
 
   async function onWorkflowStatusChange(next: VisitWorkflowStatus) {
     if (!visit || visit.status === "finalized" || next === visit.status) return;

@@ -46,8 +46,13 @@ export default function VisitWizard({ id }: { id: Id<"visits"> }) {
     }
   }, [visit, hydrated]);
 
-  const handleSave = async (nextStep?: Step) => {
-    if (!visit) return;
+  const handleSave = async (
+    nextStep?: Step,
+    overrides?: Partial<{ services: string[]; parts: string[] }>,
+  ): Promise<boolean> => {
+    if (!visit) return false;
+    const servicesToPersist = overrides?.services ?? services;
+    const partsToPersist = overrides?.parts ?? parts;
     setIsSaving(true);
     try {
       await updateVisit({
@@ -56,18 +61,22 @@ export default function VisitWizard({ id }: { id: Id<"visits"> }) {
           issue,
           plan,
         },
-        services,
-        parts,
+        services: servicesToPersist,
+        parts: partsToPersist,
       });
       toast.success("Запазено");
+      if (overrides?.services !== undefined) setServices(servicesToPersist);
+      if (overrides?.parts !== undefined) setParts(partsToPersist);
       if (nextStep) {
         setCurrentStep(nextStep);
       } else {
         setCurrentStep("notes");
       }
+      return true;
     } catch (error) {
       console.error(error);
       toast.error("Грешка при запазване");
+      return false;
     } finally {
       setIsSaving(false);
     }
@@ -210,7 +219,18 @@ export default function VisitWizard({ id }: { id: Id<"visits"> }) {
               >
                 Назад
               </Button>
-              <Button onClick={() => handleSave("parts")} disabled={isSaving}>
+              <Button
+                onClick={() => {
+                  void (async () => {
+                    const merged = newService.trim()
+                      ? [...services, newService.trim()]
+                      : services;
+                    const ok = await handleSave("parts", { services: merged });
+                    if (ok) setNewService("");
+                  })();
+                }}
+                disabled={isSaving}
+              >
                 Напред <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -279,7 +299,18 @@ export default function VisitWizard({ id }: { id: Id<"visits"> }) {
               >
                 Назад
               </Button>
-              <Button onClick={() => handleSave()} disabled={isSaving}>
+              <Button
+                onClick={() => {
+                  void (async () => {
+                    const merged = newPart.trim()
+                      ? [...parts, newPart.trim()]
+                      : parts;
+                    const ok = await handleSave(undefined, { parts: merged });
+                    if (ok) setNewPart("");
+                  })();
+                }}
+                disabled={isSaving}
+              >
                 <Check className="mr-2 h-4 w-4" /> Готово
               </Button>
             </div>
