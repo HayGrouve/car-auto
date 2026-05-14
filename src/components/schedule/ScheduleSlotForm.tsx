@@ -34,7 +34,9 @@ import {
   getAvailableHours,
   getNextAvailableSlot,
   isPastDate,
+  type TimeRangeMs,
 } from "@/lib/schedule";
+import { formatTimeRange } from "@/lib/format";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { Id } from "@/../convex/_generated/dataModel";
 import type { CalendarKind } from "@/lib/calendar-kind";
@@ -60,6 +62,8 @@ type ScheduleSlotFormProps = {
     status?: "scheduled" | "completed" | "cancelled";
   }) => Promise<void>;
   onCancel?: () => void;
+  /** Opens delete confirmation (parent owns AlertDialog). */
+  onRequestDelete?: () => void;
   initialData?: ScheduleSlot | null;
   customers?: Array<{ _id: string; name: string; phone?: string }>;
   vehicles?: Array<{
@@ -72,6 +76,8 @@ type ScheduleSlotFormProps = {
   hideDatePicker?: boolean; // Hide date picker when using calendar selection
   existingSlots?: Array<{ startTime: number; endTime: number }>; // Existing slots for the selected date
   vehicleDraftVisitMap?: Map<string, string>; // Map of vehicleId -> draft visit ID
+  /** When set with hideDatePicker, time comes from the free-slot list (parent-controlled). */
+  externalTimeRange?: TimeRangeMs | null;
 };
 
 export function ScheduleSlotForm({
@@ -79,6 +85,7 @@ export function ScheduleSlotForm({
   selectedDate,
   onSubmit,
   onCancel,
+  onRequestDelete,
   initialData,
   customers = [],
   vehicles = [],
@@ -86,6 +93,7 @@ export function ScheduleSlotForm({
   hideDatePicker = false,
   existingSlots = [],
   vehicleDraftVisitMap,
+  externalTimeRange = null,
 }: ScheduleSlotFormProps) {
   const [date, setDate] = useState<Date>(
     initialData ? new Date(initialData.date) : selectedDate,
@@ -261,14 +269,13 @@ export function ScheduleSlotForm({
       }
 
       const dayStart = startOfDay(date);
-      const startTimestamp = setMinutes(
-        setHours(dayStart, startHour),
-        startMinute,
-      ).getTime();
-      const endTimestamp = setMinutes(
-        setHours(dayStart, endHour),
-        endMinute,
-      ).getTime();
+      const useExternal = hideDatePicker && externalTimeRange != null;
+      const startTimestamp = useExternal
+        ? externalTimeRange.startTime
+        : setMinutes(setHours(dayStart, startHour), startMinute).getTime();
+      const endTimestamp = useExternal
+        ? externalTimeRange.endTime
+        : setMinutes(setHours(dayStart, endHour), endMinute).getTime();
 
       const validation = validateSlotTime(date, startTimestamp, endTimestamp);
       if (!validation.valid) {
@@ -303,10 +310,12 @@ export function ScheduleSlotForm({
         setCustomerId("");
         setVehicleId("");
         setStatus("scheduled");
-        setStartHour(9);
-        setStartMinute(0);
-        setEndHour(10);
-        setEndMinute(0);
+        if (!hideDatePicker) {
+          setStartHour(9);
+          setStartMinute(0);
+          setEndHour(10);
+          setEndMinute(0);
+        }
       }
     } catch (error) {
       setValidationError(
@@ -321,6 +330,9 @@ export function ScheduleSlotForm({
   useEffect(() => {
     if (!initialData) {
       setDate(selectedDate);
+      if (hideDatePicker) {
+        return;
+      }
       // Prefill with next available slot
       const nextSlot = getNextAvailableSlot(selectedDate, existingSlots, 30);
       if (nextSlot) {
@@ -349,11 +361,14 @@ export function ScheduleSlotForm({
         }
       }
     }
-  }, [selectedDate, initialData, existingSlots]);
+  }, [selectedDate, initialData, existingSlots, hideDatePicker]);
 
   // Adjust hours when date changes to ensure they're within working hours
   const hourOptions = useMemo(() => getAvailableHours(date), [date]);
   useEffect(() => {
+    if (hideDatePicker) {
+      return;
+    }
     if (hourOptions.length > 0) {
       // If start hour is not in available hours, set to first available hour
       if (!hourOptions.includes(startHour)) {
@@ -372,10 +387,13 @@ export function ScheduleSlotForm({
         }
       }
     }
-  }, [date, hourOptions, startHour, endHour]);
+  }, [date, hourOptions, startHour, endHour, hideDatePicker]);
 
   // Auto-fill end time to be 30 minutes after start time
   useEffect(() => {
+    if (hideDatePicker) {
+      return;
+    }
     // Skip auto-fill on initial mount to preserve existing end time when editing
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -400,7 +418,7 @@ export function ScheduleSlotForm({
         setEndMinute(newEndMinute);
       }
     }
-  }, [startHour, startMinute, hourOptions]);
+  }, [startHour, startMinute, hourOptions, hideDatePicker]);
 
   const minuteOptions = [0, 15, 30, 45];
 
@@ -544,78 +562,96 @@ export function ScheduleSlotForm({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <Label>Начален час</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <Select
-              value={startHour.toString()}
-              onValueChange={(v) => setStartHour(Number(v))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {hourOptions.map((h) => (
-                  <SelectItem key={h} value={h.toString()}>
-                    {h.toString().padStart(2, "0")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={startMinute.toString()}
-              onValueChange={(v) => setStartMinute(Number(v))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {minuteOptions.map((m) => (
-                  <SelectItem key={m} value={m.toString()}>
-                    {m.toString().padStart(2, "0")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {hideDatePicker ? (
+        <div className="space-y-1">
+          <Label>Час</Label>
+          {externalTimeRange ? (
+            <p className="text-foreground rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              {formatTimeRange(
+                externalTimeRange.startTime,
+                externalTimeRange.endTime,
+              )}
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              Използвайте дневния график, за да изберете час.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label>Начален час</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Select
+                value={startHour.toString()}
+                onValueChange={(v) => setStartHour(Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {hourOptions.map((h) => (
+                    <SelectItem key={h} value={h.toString()}>
+                      {h.toString().padStart(2, "0")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={startMinute.toString()}
+                onValueChange={(v) => setStartMinute(Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {minuteOptions.map((m) => (
+                    <SelectItem key={m} value={m.toString()}>
+                      {m.toString().padStart(2, "0")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label>Краен час</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Select
+                value={endHour.toString()}
+                onValueChange={(v) => setEndHour(Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {hourOptions.map((h) => (
+                    <SelectItem key={h} value={h.toString()}>
+                      {h.toString().padStart(2, "0")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={endMinute.toString()}
+                onValueChange={(v) => setEndMinute(Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {minuteOptions.map((m) => (
+                    <SelectItem key={m} value={m.toString()}>
+                      {m.toString().padStart(2, "0")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
-        <div>
-          <Label>Краен час</Label>
-          <div className="grid grid-cols-2 gap-2">
-            <Select
-              value={endHour.toString()}
-              onValueChange={(v) => setEndHour(Number(v))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {hourOptions.map((h) => (
-                  <SelectItem key={h} value={h.toString()}>
-                    {h.toString().padStart(2, "0")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={endMinute.toString()}
-              onValueChange={(v) => setEndMinute(Number(v))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {minuteOptions.map((m) => (
-                  <SelectItem key={m} value={m.toString()}>
-                    {m.toString().padStart(2, "0")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
+      )}
 
       <FormField
         label="Заглавие"
@@ -720,14 +756,25 @@ export function ScheduleSlotForm({
         </div>
       )}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isSubmitting} className="flex-1">
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" disabled={isSubmitting || (hideDatePicker && externalTimeRange == null)} className="min-w-0 flex-1">
           {isSubmitting
             ? "Запазване..."
             : initialData
               ? "Запази промените"
               : "Добави слот"}
         </Button>
+        {initialData && onRequestDelete && !isEditingPastSlot && (
+          <Button
+            type="button"
+            variant="outline"
+            className="text-destructive border-destructive/40 hover:bg-destructive/10"
+            onClick={onRequestDelete}
+            disabled={isSubmitting}
+          >
+            Изтрий
+          </Button>
+        )}
         {onCancel && (
           <Button
             type="button"
