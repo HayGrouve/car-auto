@@ -57,15 +57,15 @@ export function TodayScheduleColumn({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <Clock className="text-primary size-4 shrink-0" />
+                    <span className="font-semibold shrink-0">
+                      {formatTimeRange(slot.startTime, slot.endTime)}
+                    </span>
                     <Link
                       href={`/schedule?date=${dateStr}&calendar=${slot.calendarKind}`}
-                      className="flex min-h-[44px] cursor-pointer items-center font-medium hover:underline"
+                      className="flex min-h-[44px] cursor-pointer items-center text-muted-foreground hover:underline"
                     >
                       <span className="truncate">{slot.title}</span>
                     </Link>
-                    <span className="text-muted-foreground shrink-0 text-xs">
-                      {formatTimeRange(slot.startTime, slot.endTime)}
-                    </span>
                   </div>
                   <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                     {slot.description ? (

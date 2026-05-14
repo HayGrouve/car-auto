@@ -197,8 +197,11 @@ export function ScheduleSlotForm({
       if (selectedVehicle?.customerId) {
         setCustomerId(selectedVehicle.customerId);
       }
-      // Auto-fill draft visit if one exists for this vehicle
-      if (vehicleDraftVisitMap?.has(vehicleIdValue)) {
+      // Auto-fill draft visit only when editing (visit linking optional there)
+      if (
+        initialData &&
+        vehicleDraftVisitMap?.has(vehicleIdValue)
+      ) {
         const draftVisitId = vehicleDraftVisitMap.get(vehicleIdValue);
         if (draftVisitId) {
           setVisitId(draftVisitId);
@@ -281,7 +284,10 @@ export function ScheduleSlotForm({
         title,
         calendarKind: initialData?.calendarKind ?? calendarKind,
         description: description || undefined,
-        visitId: visitId ? (visitId as Id<"visits">) : undefined,
+        visitId:
+          initialData && visitId
+            ? (visitId as Id<"visits">)
+            : undefined,
         customerId: customerId ? (customerId as Id<"customers">) : undefined,
         vehicleId: vehicleId ? (vehicleId as Id<"vehicles">) : undefined,
         status: status,
@@ -409,6 +415,93 @@ export function ScheduleSlotForm({
         <FormError message={validationError} className="mb-2" />
       )}
 
+      <div>
+        <Label>Клиент</Label>
+        <Popover open={customerPopoverOpen} onOpenChange={setCustomerPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              {customerId
+                ? filteredCustomers.find((o) => o._id === customerId)?.name
+                : "Без клиент"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <Command shouldFilter={false}>
+              <CommandInput
+                placeholder="Търси клиент..."
+                value={customerSearch}
+                onValueChange={setCustomerSearch}
+              />
+              <CommandList>
+                <CommandEmpty>Няма резултати</CommandEmpty>
+                <CommandItem
+                  value=""
+                  onSelect={() => {
+                    setCustomerId("");
+                    setCustomerPopoverOpen(false);
+                  }}
+                >
+                  Без клиент
+                </CommandItem>
+                {filteredCustomers.map((o) => (
+                  <CommandItem
+                    key={o._id}
+                    value={o.name}
+                    onSelect={() => handleCustomerSelect(o._id)}
+                  >
+                    {o.name}
+                    {o.phone ? ` · ${o.phone}` : ""}
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      <div>
+        <Label>Автомобил</Label>
+        <Popover open={vehiclePopoverOpen} onOpenChange={setVehiclePopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              {vehicleId
+                ? filteredVehicles.find((a) => a._id === vehicleId)?.licensePlate
+                : "Без автомобил"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <Command shouldFilter={false}>
+              <CommandInput
+                placeholder="Търси автомобил..."
+                value={vehicleSearch}
+                onValueChange={setVehicleSearch}
+              />
+              <CommandList>
+                <CommandEmpty>Няма резултати</CommandEmpty>
+                <CommandItem
+                  value=""
+                  onSelect={() => {
+                    setVehicleId("");
+                    setVehiclePopoverOpen(false);
+                  }}
+                >
+                  Без автомобил
+                </CommandItem>
+                {filteredVehicles.map((a) => (
+                  <CommandItem
+                    key={a._id}
+                    value={a.licensePlate}
+                    onSelect={() => handleVehicleSelect(a._id)}
+                  >
+                    {a.licensePlate} ({a.make})
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+
       {!hideDatePicker && (
         <div>
           <Label>Дата</Label>
@@ -533,7 +626,6 @@ export function ScheduleSlotForm({
             ? "Заглавието не може да надвишава 100 символа"
             : undefined
         }
-        hint="Въведете кратко описание"
       >
         <Input
           id="title"
@@ -559,138 +651,53 @@ export function ScheduleSlotForm({
         />
       </FormField>
 
-      <div>
-        <Label>Посещение</Label>
-        <Popover open={visitPopoverOpen} onOpenChange={setVisitPopoverOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              {visitId
-                ? (visits.find((v) => v._id === visitId)?.code ?? "Избрано")
-                : "Без посещение"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command shouldFilter={false}>
-              <CommandInput
-                placeholder="Търси посещение..."
-                value={visitSearch}
-                onValueChange={setVisitSearch}
-              />
-              <CommandList>
-                <CommandEmpty>Няма резултати</CommandEmpty>
-                <CommandItem
-                  value=""
-                  onSelect={() => {
-                    setVisitId("");
-                    setVisitPopoverOpen(false);
-                  }}
-                >
-                  Без посещение
-                </CommandItem>
-                {filteredVisits.map((v) => (
+      {initialData ? (
+        <div>
+          <Label>Посещение</Label>
+          <Popover open={visitPopoverOpen} onOpenChange={setVisitPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                {visitId
+                  ? (visits.find((v) => v._id === visitId)?.code ?? "Избрано")
+                  : "Без посещение"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+              <Command shouldFilter={false}>
+                <CommandInput
+                  placeholder="Търси посещение..."
+                  value={visitSearch}
+                  onValueChange={setVisitSearch}
+                />
+                <CommandList>
+                  <CommandEmpty>Няма резултати</CommandEmpty>
                   <CommandItem
-                    key={v._id}
-                    value={v.code ?? v._id}
+                    value=""
                     onSelect={() => {
-                      setVisitId(v._id);
+                      setVisitId("");
                       setVisitPopoverOpen(false);
                     }}
                   >
-                    {v.code ?? v._id}
+                    Без посещение
                   </CommandItem>
-                ))}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      <div>
-        <Label>Клиент</Label>
-        <Popover open={customerPopoverOpen} onOpenChange={setCustomerPopoverOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              {customerId
-                ? filteredCustomers.find((o) => o._id === customerId)?.name
-                : "Без клиент"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command shouldFilter={false}>
-              <CommandInput
-                placeholder="Търси клиент..."
-                value={customerSearch}
-                onValueChange={setCustomerSearch}
-              />
-              <CommandList>
-                <CommandEmpty>Няма резултати</CommandEmpty>
-                <CommandItem
-                  value=""
-                  onSelect={() => {
-                    setCustomerId("");
-                    setCustomerPopoverOpen(false);
-                  }}
-                >
-                  Без клиент
-                </CommandItem>
-                {filteredCustomers.map((o) => (
-                  <CommandItem
-                    key={o._id}
-                    value={o.name}
-                    onSelect={() => handleCustomerSelect(o._id)}
-                  >
-                    {o.name}
-                    {o.phone ? ` · ${o.phone}` : ""}
-                  </CommandItem>
-                ))}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-
-      <div>
-        <Label>Автомобил</Label>
-        <Popover open={vehiclePopoverOpen} onOpenChange={setVehiclePopoverOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              {vehicleId
-                ? filteredVehicles.find((a) => a._id === vehicleId)?.licensePlate
-                : "Без автомобил"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command shouldFilter={false}>
-              <CommandInput
-                placeholder="Търси автомобил..."
-                value={vehicleSearch}
-                onValueChange={setVehicleSearch}
-              />
-              <CommandList>
-                <CommandEmpty>Няма резултати</CommandEmpty>
-                <CommandItem
-                  value=""
-                  onSelect={() => {
-                    setVehicleId("");
-                    setVehiclePopoverOpen(false);
-                  }}
-                >
-                  Без автомобил
-                </CommandItem>
-                {filteredVehicles.map((a) => (
-                  <CommandItem
-                    key={a._id}
-                    value={a.licensePlate}
-                    onSelect={() => handleVehicleSelect(a._id)}
-                  >
-                    {a.licensePlate} ({a.make})
-                  </CommandItem>
-                ))}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
+                  {filteredVisits.map((v) => (
+                    <CommandItem
+                      key={v._id}
+                      value={v.code ?? v._id}
+                      onSelect={() => {
+                        setVisitId(v._id);
+                        setVisitPopoverOpen(false);
+                      }}
+                    >
+                      {v.code ?? v._id}
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+      ) : null}
 
       {initialData && (
         <div>
