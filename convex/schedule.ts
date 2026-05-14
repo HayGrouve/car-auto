@@ -1,12 +1,21 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+
+const calendarKindValidator = v.union(
+  v.literal("workshop"),
+  v.literal("inspection"),
+);
+
+function normalizeCalendarKind(raw: unknown): "workshop" | "inspection" {
+  return raw === "inspection" ? "inspection" : "workshop";
+}
 
 export const list = query({
   args: {
     from: v.optional(v.number()),
     to: v.optional(v.number()),
     date: v.optional(v.number()),
+    calendarKind: v.optional(calendarKindValidator),
   },
   handler: async (ctx, args) => {
     let items = await ctx.db.query("schedule").collect();
@@ -27,6 +36,13 @@ export const list = query({
       );
     }
 
+    if (args.calendarKind !== undefined) {
+      items = items.filter(
+        (item: any) =>
+          normalizeCalendarKind(item.calendarKind) === args.calendarKind,
+      );
+    }
+
     return items.sort((a: any, b: any) => a.startTime - b.startTime);
   },
 });
@@ -34,16 +50,23 @@ export const list = query({
 export const getByDate = query({
   args: {
     date: v.number(),
+    calendarKind: v.optional(calendarKindValidator),
   },
   handler: async (ctx, args) => {
     // args.date is already start of day timestamp
     const dayStart = args.date;
     const dayEnd = dayStart + 24 * 60 * 60 * 1000 - 1; // end of day
-    const items = await ctx.db
+    let items = await ctx.db
       .query("schedule")
       .filter((q: any) => q.gte(q.field("date"), dayStart))
       .filter((q: any) => q.lte(q.field("date"), dayEnd))
       .collect();
+    if (args.calendarKind !== undefined) {
+      items = items.filter(
+        (item: any) =>
+          normalizeCalendarKind(item.calendarKind) === args.calendarKind,
+      );
+    }
     return items.sort((a: any, b: any) => a.startTime - b.startTime);
   },
 });
@@ -54,6 +77,7 @@ export const create = mutation({
     startTime: v.number(),
     endTime: v.number(),
     title: v.string(),
+    calendarKind: calendarKindValidator,
     description: v.optional(v.string()),
     visitId: v.optional(v.id("visits")),
     customerId: v.optional(v.id("customers")),
@@ -67,6 +91,7 @@ export const create = mutation({
       startTime: args.startTime,
       endTime: args.endTime,
       title: args.title,
+      calendarKind: args.calendarKind,
       description: args.description ?? null,
       visitId: args.visitId ?? null,
       customerId: args.customerId ?? null,
@@ -91,6 +116,7 @@ export const update = mutation({
     customerId: v.optional(v.id("customers")),
     vehicleId: v.optional(v.id("vehicles")),
     status: v.optional(v.union(v.literal("scheduled"), v.literal("completed"), v.literal("cancelled"))),
+    calendarKind: v.optional(calendarKindValidator),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;

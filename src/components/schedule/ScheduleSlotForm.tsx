@@ -37,17 +37,22 @@ import {
 } from "@/lib/schedule";
 import type { ScheduleSlot } from "@/types/schedule";
 import type { Id } from "@/../convex/_generated/dataModel";
+import type { CalendarKind } from "@/lib/calendar-kind";
 import { FormField } from "@/components/ui/form-field";
 import { FormError } from "@/components/ui/form-error";
 import { cn } from "@/lib/utils";
+import { calendarKindLabelBg } from "@/lib/calendar-kind";
 
 type ScheduleSlotFormProps = {
+  /** Active calendar (workshop vs ГТП); new slots are created under this kind. */
+  calendarKind: CalendarKind;
   selectedDate: Date;
   onSubmit: (data: {
     date: number;
     startTime: number;
     endTime: number;
     title: string;
+    calendarKind: CalendarKind;
     description?: string;
     visitId?: Id<"visits">;
     customerId?: Id<"customers">;
@@ -70,6 +75,7 @@ type ScheduleSlotFormProps = {
 };
 
 export function ScheduleSlotForm({
+  calendarKind,
   selectedDate,
   onSubmit,
   onCancel,
@@ -273,6 +279,7 @@ export function ScheduleSlotForm({
         startTime: startTimestamp,
         endTime: endTimestamp,
         title,
+        calendarKind: initialData?.calendarKind ?? calendarKind,
         description: description || undefined,
         visitId: visitId ? (visitId as Id<"visits">) : undefined,
         customerId: customerId ? (customerId as Id<"customers">) : undefined,
@@ -437,6 +444,12 @@ export function ScheduleSlotForm({
           )}
         </div>
       )}
+
+      {initialData ? (
+        <div className="text-muted-foreground rounded-md border bg-muted/40 px-3 py-2 text-sm">
+          Календар: <span className="text-foreground font-medium">{calendarKindLabelBg(initialData.calendarKind)}</span>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-2">
         <div>

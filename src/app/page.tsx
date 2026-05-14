@@ -1,16 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo, Suspense, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
-import { Clock, BarChart3, PieChart as PieChartIcon } from "lucide-react";
+import { BarChart3, PieChart as PieChartIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 
 import { api } from "@/../convex/_generated/api";
 import { brand } from "@/lib/brand";
-import { formatTimeRange } from "@/lib/format";
 import { SkeletonList } from "@/components/SkeletonList";
+import {
+  TodayScheduleColumn,
+  type TodayScheduleSlotItem,
+} from "@/components/dashboard/TodayScheduleColumn";
 import {
   VisitList,
   type VisitListItem,
@@ -71,24 +73,11 @@ type DashboardVisit = {
   vehicleId: string | null;
 };
 
-type DashboardScheduleSlot = {
-  _id: string;
-  title: string;
-  description: string | null;
-  startTime: number;
-  endTime: number;
-  visitId: string | null;
-  customerId: string | null;
-  customerName: string | null;
-  vehicleId: string | null;
-  vehicleName: string | null;
-};
-
 type DashboardOverview = {
   counts: DashboardCounts;
   totals: DashboardTotals;
   todayVisits: DashboardVisit[];
-  todayScheduleSlots: DashboardScheduleSlot[];
+  todayScheduleSlots: TodayScheduleSlotItem[];
   visitInvoiceMap: Record<string, string>; // visitId -> invoiceId
 };
 
@@ -159,7 +148,21 @@ export default function HomePage() {
     { label: "Начало", href: "/" } satisfies BreadcrumbItem,
   ]);
 
-  const handleStartVisit = async (slot: DashboardScheduleSlot) => {
+  const workshopScheduleSlots = useMemo(() => {
+    if (!overview) return [] as TodayScheduleSlotItem[];
+    return overview.todayScheduleSlots.filter(
+      (s) => s.calendarKind === "workshop",
+    );
+  }, [overview]);
+
+  const inspectionScheduleSlots = useMemo(() => {
+    if (!overview) return [] as TodayScheduleSlotItem[];
+    return overview.todayScheduleSlots.filter(
+      (s) => s.calendarKind === "inspection",
+    );
+  }, [overview]);
+
+  const handleStartVisit = async (slot: TodayScheduleSlotItem) => {
     if (slot.visitId) {
       // If slot already has a visit, navigate to it
       router.push(`/visits/${slot.visitId}`);
@@ -257,6 +260,23 @@ export default function HomePage() {
       </div>
 
       <section className="grid gap-4 md:grid-cols-2">
+        <TodayScheduleColumn
+          title="График днес — Автосервиз"
+          slots={workshopScheduleSlots}
+          emptyLabel="Няма записани часове за днес"
+          vehicleDraftVisitMap={vehicleDraftVisitMap}
+          onStartVisit={handleStartVisit}
+        />
+        <TodayScheduleColumn
+          title="График днес — ГТП"
+          slots={inspectionScheduleSlots}
+          emptyLabel="Няма записани часове за днес"
+          vehicleDraftVisitMap={vehicleDraftVisitMap}
+          onStartVisit={handleStartVisit}
+        />
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
         <div className="relative flex flex-col rounded-lg border p-4">
           <div className="absolute top-4 right-4 z-10">
             <Button
@@ -312,118 +332,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium">График днес</h2>
-          </div>
-          <div className="divide-y rounded-md border">
-            {overview.todayScheduleSlots.length === 0 ? (
-              <div className="text-muted-foreground flex min-h-[72px] items-center p-3 text-sm">
-                Няма планирани посещения за днес
-              </div>
-            ) : (
-              overview.todayScheduleSlots.map((slot) => (
-                <div
-                  key={slot._id}
-                  className="flex min-h-[72px] flex-col gap-3 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Clock className="text-primary size-4 flex-shrink-0" />
-                      <Link
-                        href={`/schedule?date=${new Date(slot.startTime).toISOString().split("T")[0]}`}
-                        className="flex min-h-[44px] cursor-pointer items-center font-medium hover:underline"
-                      >
-                        <span className="truncate">{slot.title}</span>
-                      </Link>
-                      <span className="text-muted-foreground flex-shrink-0 text-xs">
-                        {formatTimeRange(slot.startTime, slot.endTime)}
-                      </span>
-                    </div>
-                    <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                      {slot.description && (
-                        <span className="truncate">
-                          {slot.description.length > 20
-                            ? `${slot.description.slice(0, 20)}...`
-                            : slot.description}
-                        </span>
-                      )}
-                      {slot.customerName && (
-                        <span className="truncate">· {slot.customerName}</span>
-                      )}
-                      {slot.vehicleName && (
-                        <span className="truncate">· {slot.vehicleName}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-shrink-0">
-                    {slot.visitId ? (
-                      <Link href={`/visits/${slot.visitId}`}>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="min-h-[44px] w-full sm:min-h-0 sm:w-auto"
-                        >
-                          Отвори посещение
-                        </Button>
-                      </Link>
-                    ) : slot.vehicleId &&
-                      vehicleDraftVisitMap.has(slot.vehicleId) ? (
-                      <div className="flex flex-col gap-1">
-                        <Button
-                          size="sm"
-                          className="min-h-[44px] w-full sm:min-h-0 sm:w-auto"
-                          onClick={() => {
-                            const draftVisitId = vehicleDraftVisitMap.get(
-                              slot.vehicleId!,
-                            );
-                            if (draftVisitId) {
-                              router.push(`/visits/${draftVisitId}`);
-                            }
-                          }}
-                          disabled={!slot.customerId || !slot.vehicleId}
-                        >
-                          Продължи посещение
-                        </Button>
-                        {(!slot.customerId || !slot.vehicleId) && (
-                          <p className="text-muted-foreground text-center text-xs sm:text-left">
-                            {!slot.customerId && !slot.vehicleId
-                              ? "Добавете клиент и автомобил в графика"
-                              : !slot.customerId
-                                ? "Добавете клиент в графика"
-                                : "Добавете автомобил в графика"}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        <Button
-                          size="sm"
-                          className="min-h-[44px] w-full sm:min-h-0 sm:w-auto"
-                          onClick={() => handleStartVisit(slot)}
-                          disabled={!slot.customerId || !slot.vehicleId}
-                        >
-                          Започни посещение
-                        </Button>
-                        {(!slot.customerId || !slot.vehicleId) && (
-                          <p className="text-muted-foreground text-center text-xs sm:text-left">
-                            {!slot.customerId && !slot.vehicleId
-                              ? "Добавете клиент и автомобил в графика"
-                              : !slot.customerId
-                                ? "Добавете клиент в графика"
-                                : "Добавете автомобил в графика"}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-
+      <section>
         <VisitList
           title={`Посещения днес: ${overview.todayVisits.length}`}
           visits={todayVisits}

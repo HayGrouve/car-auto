@@ -2,7 +2,7 @@
 
 import { useState, useMemo, Suspense } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { api } from "@/../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -17,7 +17,13 @@ import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
 } from "@/components/breadcrumbs";
-import type { ScheduleSlot } from "@/types/schedule";
+import { type ScheduleSlot, parseScheduleSlot } from "@/types/schedule";
+import {
+  parseCalendarKindParam,
+  calendarKindLabelBg,
+  CALENDAR_KINDS,
+  type CalendarKind,
+} from "@/lib/calendar-kind";
 import type { Id } from "@/../convex/_generated/dataModel";
 import {
   Dialog,
@@ -47,7 +53,17 @@ export default function SchedulePage() {
 }
 
 function SchedulePageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const calendarKind: CalendarKind =
+    parseCalendarKindParam(searchParams.get("calendar")) ?? "workshop";
+
+  const updateCalendarKind = (kind: CalendarKind) => {
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("calendar", kind);
+    router.replace(`${pathname}?${p.toString()}`);
+  };
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => {
     // Check if there's a date parameter in the URL
     const dateParam = searchParams.get("date");
@@ -70,10 +86,17 @@ function SchedulePageContent() {
     return startOfDay(selectedDate).getTime();
   }, [selectedDate]);
 
-  const slots = useQuery(
+  const rawSlots = useQuery(
     api.schedule.getByDate,
-    dateTimestamp !== undefined ? { date: dateTimestamp } : "skip",
-  ) as ScheduleSlot[] | undefined;
+    dateTimestamp !== undefined
+      ? { date: dateTimestamp, calendarKind }
+      : "skip",
+  );
+
+  const slots = useMemo(() => {
+    if (!rawSlots) return undefined;
+    return rawSlots.map((s) => parseScheduleSlot(s));
+  }, [rawSlots]);
 
   const createSlot = useMutation(api.schedule.create);
   const updateSlot = useMutation(api.schedule.update);
@@ -192,6 +215,7 @@ function SchedulePageContent() {
     startTime: number;
     endTime: number;
     title: string;
+    calendarKind: CalendarKind;
     description?: string;
     visitId?: Id<"visits">;
     customerId?: Id<"customers">;
@@ -294,7 +318,7 @@ function SchedulePageContent() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 p-6">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold sm:text-2xl md:text-3xl">График</h1>
           {selectedDate && (
@@ -303,16 +327,31 @@ function SchedulePageContent() {
             </p>
           )}
         </div>
-        {selectedDate && !isPastDate(selectedDate) && (
-          <Button
-            className="md:hidden"
-            variant="outline"
-            onClick={() => setShowCreatePanel(true)}
-          >
-            <Plus className="mr-2 size-4" />
-            Нов слот
-          </Button>
-        )}
+        <div className="flex flex-col gap-2 sm:items-end">
+          <div className="bg-muted flex w-full max-w-md rounded-lg border p-1 sm:w-auto">
+            {CALENDAR_KINDS.map((kind) => (
+              <Button
+                key={kind}
+                type="button"
+                variant={calendarKind === kind ? "default" : "ghost"}
+                className="flex-1"
+                onClick={() => updateCalendarKind(kind)}
+              >
+                {calendarKindLabelBg(kind)}
+              </Button>
+            ))}
+          </div>
+          {selectedDate && !isPastDate(selectedDate) && (
+            <Button
+              className="md:hidden w-full sm:w-auto"
+              variant="outline"
+              onClick={() => setShowCreatePanel(true)}
+            >
+              <Plus className="mr-2 size-4" />
+              Нов слот
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_380px]">
@@ -380,6 +419,7 @@ function SchedulePageContent() {
                 </div>
                 {selectedDate ? (
                   <ScheduleSlotForm
+                    calendarKind={calendarKind}
                     selectedDate={selectedDate}
                     onSubmit={handleCreate}
                     customers={customers}
@@ -408,6 +448,7 @@ function SchedulePageContent() {
           </DialogHeader>
           {editingSlot && selectedDate ? (
             <ScheduleSlotForm
+              calendarKind={editingSlot.calendarKind}
               selectedDate={new Date(editingSlot.date)}
               onSubmit={async (data) => {
                 await handleUpdate({

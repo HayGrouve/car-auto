@@ -61,6 +61,7 @@ type ScheduleSlotDoc = {
   customerId?: string | null;
   vehicleId?: string | null;
   status: string;
+  calendarKind?: "workshop" | "inspection" | null;
 };
 
 export const overview = query({
@@ -203,6 +204,8 @@ export const overview = query({
         vehicleName: slot.vehicleId
           ? (vehicleMap.get(String(slot.vehicleId))?.licensePlate ?? null)
           : null,
+        calendarKind:
+          slot.calendarKind === "inspection" ? "inspection" : "workshop",
       }));
 
     return {
