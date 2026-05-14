@@ -9,7 +9,7 @@ import {
   ChartLegendContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { fmtNumberBG } from "@/lib/format";
+import { fmtNumberBG, APP_CURRENCY } from "@/lib/format";
 
 type TodayInvoicesChartProps = {
   paid: number;
@@ -63,7 +63,7 @@ export function TodayInvoicesChart({ paid, unpaid }: TodayInvoicesChartProps) {
                       : String(name ?? "");
                   const formatted = fmtNumberBG(numValue, {
                     style: "currency",
-                    currency: "EUR",
+                    currency: APP_CURRENCY,
                   });
                   return [formatted, label];
                 }}
@@ -92,7 +92,7 @@ export function TodayInvoicesChart({ paid, unpaid }: TodayInvoicesChartProps) {
         </PieChart>
       </ChartContainer>
       <div className="text-muted-foreground mt-2 text-center text-xs sm:text-sm">
-        Общо: {fmtNumberBG(total, { style: "currency", currency: "EUR" })}
+        Общо: {fmtNumberBG(total, { style: "currency", currency: APP_CURRENCY })}
       </div>
     </div>
   );

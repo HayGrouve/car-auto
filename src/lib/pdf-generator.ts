@@ -5,6 +5,7 @@ import imageCompression from "browser-image-compression";
 import type { InvoiceDoc } from "@/types/visit";
 import { brand } from "@/lib/brand";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { invoiceGrandTotal } from "@/lib/invoice-totals";
 
 const FONT_REGULAR_PATH = "/fonts/NotoSans-Regular.ttf";
 const FONT_BOLD_PATH = "/fonts/NotoSans-Bold.ttf";
@@ -52,7 +53,8 @@ async function ensureFonts(doc: jsPDF): Promise<void> {
 type InvoicePdfMeta = {
   customerName?: string;
   issuedAt?: Date | number | string;
-  status?: "paid" | "pending" | "cancelled" | "draft";
+  /** Fine-grained non-payment state; unpaid default is «Неплатена». */
+  status?: "pending" | "cancelled";
 };
 
 type VisitSummaryData = {
@@ -143,16 +145,19 @@ export async function generateInvoicePdf(
   const issuedAt = meta.issuedAt ?? invoice.createdAt;
   doc.text(`Дата: ${formatDate(issuedAt)}`, 20, yPos);
   yPos += 10;
-  const statusKey = meta.status ?? (invoice.paid ? "paid" : "draft");
-  const statusLabel =
-    statusKey === "paid"
-      ? "Платена"
-      : statusKey === "pending"
-        ? "Чакаща"
-        : statusKey === "cancelled"
-          ? "Отменена"
-          : "Чернова";
-  doc.text(`Статус: ${statusLabel}`, 20, yPos);
+
+  /** Payment status for the customer — avoids «чернова», which implied an unfinished document. */
+  let paymentStatusLabel: string;
+  if (invoice.paid) {
+    paymentStatusLabel = "Платена";
+  } else if (meta.status === "cancelled") {
+    paymentStatusLabel = "Отменена";
+  } else if (meta.status === "pending") {
+    paymentStatusLabel = "Чакаща плащане";
+  } else {
+    paymentStatusLabel = "Неплатена";
+  }
+  doc.text(`Статус на плащане: ${paymentStatusLabel}`, 20, yPos);
 
   yPos += 20;
   doc.setFont("NotoSans", "bold");
@@ -214,7 +219,12 @@ export async function generateInvoicePdf(
   yPos += 10;
   doc.setFont("NotoSans", "bold");
   doc.text("Общо:", priceX, yPos, { align: "right" });
-  doc.text(formatCurrency(invoice.totalAmount), amountX, yPos, { align: "right" });
+  doc.text(
+    formatCurrency(invoiceGrandTotal(invoice)),
+    amountX,
+    yPos,
+    { align: "right" },
+  );
 
   const pageHeight = doc.internal.pageSize.getHeight();
   doc.setFontSize(10);

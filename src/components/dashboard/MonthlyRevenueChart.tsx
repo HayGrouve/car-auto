@@ -7,7 +7,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { fmtNumberBG } from "@/lib/format";
+import { fmtNumberBG, APP_CURRENCY } from "@/lib/format";
 
 type MonthlyRevenueChartProps = {
   data: {
@@ -62,7 +62,7 @@ export function MonthlyRevenueChart({ data }: MonthlyRevenueChartProps) {
             tickFormatter={(value) =>
               fmtNumberBG(Number(value) || 0, {
                 style: "currency",
-                currency: "EUR",
+                currency: APP_CURRENCY,
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
               })
@@ -82,7 +82,7 @@ export function MonthlyRevenueChart({ data }: MonthlyRevenueChartProps) {
                   return [
                     fmtNumberBG(numValue, {
                       style: "currency",
-                      currency: "EUR",
+                      currency: APP_CURRENCY,
                     }),
                     label,
                   ];

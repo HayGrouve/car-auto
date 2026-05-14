@@ -11,9 +11,57 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Check, ChevronRight, X } from "lucide-react";
 import { type VisitDoc } from "@/types/visit";
-import { Badge } from "@/components/ui/badge";
 
 type Step = "notes" | "services" | "parts";
+
+function WizardStringList({
+  items,
+  onRemove,
+  emptyHint,
+  rowLabelRemove,
+}: {
+  items: string[];
+  onRemove: (index: number) => void;
+  emptyHint: string;
+  rowLabelRemove: string;
+}) {
+  if (items.length === 0) {
+    return (
+      <div className="bg-muted/30 text-muted-foreground rounded-lg border border-dashed px-4 py-8 text-center text-sm leading-relaxed">
+        {emptyHint}
+      </div>
+    );
+  }
+
+  return (
+    <ul
+      className="divide-border divide-y overflow-hidden rounded-lg border"
+      role="list"
+    >
+      {items.map((text, idx) => (
+        <li
+          key={`${idx}-${text}`}
+          className="bg-background flex gap-2 px-3 py-2.5 sm:items-center sm:gap-3 sm:py-2"
+        >
+          <span className="text-muted-foreground w-8 shrink-0 text-right text-xs font-medium tabular-nums sm:text-sm">
+            {idx + 1}.
+          </span>
+          <span className="min-w-0 flex-1 text-sm leading-relaxed">{text}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive h-9 w-9 shrink-0"
+            onClick={() => onRemove(idx)}
+            aria-label={`${rowLabelRemove}: ${text}`}
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </Button>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default function VisitWizard({ id }: { id: Id<"visits"> }) {
   const visit = useQuery(api.visits.getById, { id }) as
@@ -159,56 +207,64 @@ export default function VisitWizard({ id }: { id: Id<"visits"> }) {
 
         {currentStep === "services" && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Услуги</h3>
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={newService}
-                  onChange={(e) => setNewService(e.target.value)}
-                  placeholder="Добави услуга..."
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newService.trim()) {
-                      e.preventDefault();
-                      setServices([...services, newService.trim()]);
-                      setNewService("");
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (newService.trim()) {
-                      setServices([...services, newService.trim()]);
-                      setNewService("");
-                    }
-                  }}
-                >
-                  Добави
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {services.map((service, idx) => (
-                  <Badge
-                    key={idx}
-                    variant="secondary"
-                    className="flex items-center gap-1 px-3 py-1"
-                  >
-                    {service}
-                    <button
-                      onClick={() =>
-                        setServices(services.filter((_, i) => i !== idx))
+            <div>
+              <h3 className="text-lg font-semibold">Услуги</h3>
+              <p className="text-muted-foreground mt-1 mb-3 text-sm">
+                Добавете извършените или планирани услуги. Всеки ред е отделна
+                позиция.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="wizard-new-service">Нова услуга</Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="wizard-new-service"
+                    value={newService}
+                    onChange={(e) => setNewService(e.target.value)}
+                    placeholder="Напр. Смяна на масло и филтри"
+                    className="sm:flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newService.trim()) {
+                        e.preventDefault();
+                        setServices([...services, newService.trim()]);
+                        setNewService("");
                       }
-                      className="text-muted-foreground hover:text-foreground ml-1"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-                {services.length === 0 && (
-                  <span className="text-muted-foreground text-sm">
-                    Няма добавени услуги
-                  </span>
-                )}
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="sm:w-auto"
+                    onClick={() => {
+                      if (newService.trim()) {
+                        setServices([...services, newService.trim()]);
+                        setNewService("");
+                      }
+                    }}
+                  >
+                    Добави към списъка
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <div className="text-muted-foreground flex items-center justify-between text-xs font-medium tracking-wide uppercase">
+                  <span>Списък</span>
+                  {services.length > 0 ? (
+                    <span>
+                      {services.length}{" "}
+                      {services.length === 1 ? "услуга" : "услуги"}
+                    </span>
+                  ) : null}
+                </div>
+                <WizardStringList
+                  items={services}
+                  onRemove={(idx) =>
+                    setServices(services.filter((_, i) => i !== idx))
+                  }
+                  emptyHint="Все още няма услуги. Добавете поне една по-горе или продължете без — винаги можете да се върнете към тази стъпка."
+                  rowLabelRemove="Премахни услуга"
+                />
               </div>
             </div>
             <div className="flex justify-between pt-4">
@@ -239,56 +295,64 @@ export default function VisitWizard({ id }: { id: Id<"visits"> }) {
 
         {currentStep === "parts" && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Части</h3>
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={newPart}
-                  onChange={(e) => setNewPart(e.target.value)}
-                  placeholder="Добави част..."
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newPart.trim()) {
-                      e.preventDefault();
-                      setParts([...parts, newPart.trim()]);
-                      setNewPart("");
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (newPart.trim()) {
-                      setParts([...parts, newPart.trim()]);
-                      setNewPart("");
-                    }
-                  }}
-                >
-                  Добави
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {parts.map((part, idx) => (
-                  <Badge
-                    key={idx}
-                    variant="secondary"
-                    className="flex items-center gap-1 px-3 py-1"
-                  >
-                    {part}
-                    <button
-                      onClick={() =>
-                        setParts(parts.filter((_, i) => i !== idx))
+            <div>
+              <h3 className="text-lg font-semibold">Части</h3>
+              <p className="text-muted-foreground mt-1 mb-3 text-sm">
+                Материали и резервни части за посещението — по един ред за
+                позиция.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="wizard-new-part">Нова част</Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="wizard-new-part"
+                    value={newPart}
+                    onChange={(e) => setNewPart(e.target.value)}
+                    placeholder="Напр. Моторно масло 5W-30"
+                    className="sm:flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newPart.trim()) {
+                        e.preventDefault();
+                        setParts([...parts, newPart.trim()]);
+                        setNewPart("");
                       }
-                      className="text-muted-foreground hover:text-foreground ml-1"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-                {parts.length === 0 && (
-                  <span className="text-muted-foreground text-sm">
-                    Няма добавени части
-                  </span>
-                )}
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="sm:w-auto"
+                    onClick={() => {
+                      if (newPart.trim()) {
+                        setParts([...parts, newPart.trim()]);
+                        setNewPart("");
+                      }
+                    }}
+                  >
+                    Добави към списъка
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <div className="text-muted-foreground flex items-center justify-between text-xs font-medium tracking-wide uppercase">
+                  <span>Списък</span>
+                  {parts.length > 0 ? (
+                    <span>
+                      {parts.length}{" "}
+                      {parts.length === 1 ? "част" : "части"}
+                    </span>
+                  ) : null}
+                </div>
+                <WizardStringList
+                  items={parts}
+                  onRemove={(idx) =>
+                    setParts(parts.filter((_, i) => i !== idx))
+                  }
+                  emptyHint="Все още няма части. Добавете позициите по-горе или преминете напред — списъкът може да се допълни по-късно."
+                  rowLabelRemove="Премахни част"
+                />
               </div>
             </div>
             <div className="flex justify-between pt-4">

@@ -207,7 +207,7 @@ export const create = mutation({
           args.visitId as any,
           {
             invoiceCode: code,
-            outstandingAmount: `${totalAmount.toFixed(2)} BGN`,
+            outstandingAmount: `${totalAmount.toFixed(2)} EUR`,
             updatedAt: now,
           } as any,
         );

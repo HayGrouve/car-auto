@@ -6,13 +6,14 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../convex/_generated/api";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
+import { fmtDateTimeBG, fmtNumberBG, APP_CURRENCY } from "@/lib/format";
 import dynamic from "next/dynamic";
 import { Printer, CheckCircle } from "lucide-react";
 // import dynamic from "next/dynamic";
 // const InvoicePdf = dynamic(() => import("@/components/pdf/InvoicePdf"), { ssr: false });
 import type { InvoiceDoc } from "@/types/visit";
 import { printInvoice } from "@/lib/printInvoice";
+import { invoiceGrandTotal } from "@/lib/invoice-totals";
 import {
   useBreadcrumbRegistration,
   type BreadcrumbItem,
@@ -187,7 +188,7 @@ function InvoiceDetailPageContent() {
                     Цена:{" "}
                     {fmtNumberBG(it.price, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: APP_CURRENCY,
                     })}
                   </span>
                 </div>
@@ -196,7 +197,7 @@ function InvoiceDetailPageContent() {
                   <span>
                     {fmtNumberBG(it.price * it.quantity, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: APP_CURRENCY,
                     })}
                   </span>
                 </div>
@@ -217,7 +218,7 @@ function InvoiceDetailPageContent() {
                     Цена:{" "}
                     {fmtNumberBG(it.price, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: APP_CURRENCY,
                     })}
                   </span>
                 </div>
@@ -226,18 +227,18 @@ function InvoiceDetailPageContent() {
                   <span>
                     {fmtNumberBG(it.price * it.quantity, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: APP_CURRENCY,
                     })}
                   </span>
                 </div>
               </div>
             ))}
-            <div className="flex items-center justify-between border-t pt-3 font-medium">
+            <div className="flex items-center justify-end gap-2 border-t pt-3 font-medium">
               <span>Общо:</span>
               <span>
-                {fmtNumberBG(inv.totalAmount, {
+                {fmtNumberBG(invoiceGrandTotal(inv), {
                   style: "currency",
-                  currency: "BGN",
+                  currency: APP_CURRENCY,
                 })}
               </span>
             </div>
@@ -266,13 +267,13 @@ function InvoiceDetailPageContent() {
                   <td className="py-2 text-right">
                     {fmtNumberBG(it.price, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: APP_CURRENCY,
                     })}
                   </td>
                   <td className="py-2 text-right">
                     {fmtNumberBG(it.price * it.quantity, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: APP_CURRENCY,
                     })}
                   </td>
                 </tr>
@@ -289,13 +290,13 @@ function InvoiceDetailPageContent() {
                   <td className="py-2 text-right">
                     {fmtNumberBG(it.price, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: APP_CURRENCY,
                     })}
                   </td>
                   <td className="py-2 text-right">
                     {fmtNumberBG(it.price * it.quantity, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: APP_CURRENCY,
                     })}
                   </td>
                 </tr>
@@ -303,14 +304,16 @@ function InvoiceDetailPageContent() {
             </tbody>
             <tfoot>
               <tr>
-                <td colSpan={3} className="py-2 text-right font-medium">
-                  Общо:
-                </td>
-                <td className="py-2 text-right font-medium">
-                  {fmtNumberBG(inv.totalAmount, {
-                    style: "currency",
-                    currency: "BGN",
-                  })}
+                <td colSpan={4} className="py-2 text-right font-medium">
+                  <span className="inline-flex flex-wrap items-baseline justify-end gap-x-2">
+                    <span>Общо:</span>
+                    <span>
+                      {fmtNumberBG(invoiceGrandTotal(inv), {
+                        style: "currency",
+                        currency: APP_CURRENCY,
+                      })}
+                    </span>
+                  </span>
                 </td>
               </tr>
             </tfoot>

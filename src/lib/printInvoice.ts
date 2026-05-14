@@ -1,5 +1,6 @@
 import type { InvoiceDoc } from "@/types/visit";
-import { fmtNumberBG } from "@/lib/format";
+import { fmtNumberBG, APP_CURRENCY } from "@/lib/format";
+import { invoiceGrandTotal } from "@/lib/invoice-totals";
 
 export function printInvoice(inv: InvoiceDoc): void {
   if (!inv) return;
@@ -10,8 +11,8 @@ export function printInvoice(inv: InvoiceDoc): void {
         <tr>
           <td>${it.name}</td>
           <td style="text-align:right;">${it.quantity}</td>
-          <td style="text-align:right;">${fmtNumberBG(it.price, { style: "currency", currency: "BGN" })}</td>
-          <td style="text-align:right;">${fmtNumberBG(it.price * it.quantity, { style: "currency", currency: "BGN" })}</td>
+          <td style="text-align:right;">${fmtNumberBG(it.price, { style: "currency", currency: APP_CURRENCY })}</td>
+          <td style="text-align:right;">${fmtNumberBG(it.price * it.quantity, { style: "currency", currency: APP_CURRENCY })}</td>
         </tr>
       `,
     )
@@ -23,8 +24,8 @@ export function printInvoice(inv: InvoiceDoc): void {
         <tr>
           <td>${it.name}</td>
           <td style="text-align:right;">${it.quantity}</td>
-          <td style="text-align:right;">${fmtNumberBG(it.price, { style: "currency", currency: "BGN" })}</td>
-          <td style="text-align:right;">${fmtNumberBG(it.price * it.quantity, { style: "currency", currency: "BGN" })}</td>
+          <td style="text-align:right;">${fmtNumberBG(it.price, { style: "currency", currency: APP_CURRENCY })}</td>
+          <td style="text-align:right;">${fmtNumberBG(it.price * it.quantity, { style: "currency", currency: APP_CURRENCY })}</td>
         </tr>
       `,
     )
@@ -47,8 +48,8 @@ export function printInvoice(inv: InvoiceDoc): void {
         ${laborRows ? `<tr><td colspan="4" style="font-weight:bold;background:#f9f9f9;">Труд/Услуги</td></tr>${laborRows}` : ""}
       </tbody>
       <tfoot><tr><td colspan="3" style="text-align:right;">Общо</td><td style="text-align:right;">${fmtNumberBG(
-        inv.totalAmount,
-        { style: "currency", currency: "BGN" },
+        invoiceGrandTotal(inv),
+        { style: "currency", currency: APP_CURRENCY },
       )}</td></tr></tfoot>
       </table>
     </body></html>`;

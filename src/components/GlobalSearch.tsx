@@ -20,6 +20,7 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Search,
   Users,
@@ -29,11 +30,9 @@ import {
   Loader2,
   Eraser,
 } from "lucide-react";
-import { fmtDateTimeBG } from "@/lib/format";
+import { fmtDateTimeBG, fmtNumberBG, APP_CURRENCY } from "@/lib/format";
 import { highlightMatch } from "@/lib/search-utils";
 import { visitStatusLabelBg } from "@/lib/visit-status";
-import { Badge } from "@/components/ui/badge";
-import { fmtNumberBG } from "@/lib/format";
 
 const HISTORY_STORAGE_KEY = "car-service-crm.searchHistory.v1";
 const HISTORY_LIMIT = 8;
@@ -72,6 +71,8 @@ interface Invoice {
   customerId?: string;
   visitId?: string;
 }
+
+type HighlightSegment = { text: string; highlight: boolean };
 
 // Parse query for prefix filters (c:, v:, p:, i:)
 function parseQuery(rawQuery: string): {
@@ -118,7 +119,7 @@ function parseQuery(rawQuery: string): {
 
 // Format currency
 function formatCurrency(amount: number): string {
-  return fmtNumberBG(amount, { style: "currency", currency: "BGN" });
+  return fmtNumberBG(amount, { style: "currency", currency: APP_CURRENCY });
 }
 
 // Get status badge variant
@@ -515,7 +516,7 @@ export function GlobalSearch({
                   >
                     <Users className="mr-2 size-4" aria-hidden />
                     <span className="font-medium">
-                      {nameParts.map((part, i) =>
+                      {nameParts.map((part: HighlightSegment, i: number) =>
                         part.highlight ? (
                           <mark
                             key={i}
@@ -563,7 +564,7 @@ export function GlobalSearch({
                   >
                     <Car className="mr-2 size-4" aria-hidden />
                     <span className="font-medium">
-                      {nameParts.map((part, i) =>
+                      {nameParts.map((part: HighlightSegment, i: number) =>
                         part.highlight ? (
                           <mark
                             key={i}
@@ -612,7 +613,7 @@ export function GlobalSearch({
                   >
                     <CalendarCheck className="mr-2 size-4" aria-hidden />
                     <span className="font-medium">
-                      {codeParts.map((part, i) =>
+                      {codeParts.map((part: HighlightSegment, i: number) =>
                         part.highlight ? (
                           <mark
                             key={i}
@@ -662,7 +663,7 @@ export function GlobalSearch({
                   >
                     <FileText className="mr-2 size-4" aria-hidden />
                     <span className="font-medium">
-                      {codeParts.map((part, i) =>
+                      {codeParts.map((part: HighlightSegment, i: number) =>
                         part.highlight ? (
                           <mark
                             key={i}

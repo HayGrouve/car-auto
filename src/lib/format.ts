@@ -11,6 +11,9 @@ export function fmtDateBG(value: number | Date): string {
   return new Intl.DateTimeFormat("bg-BG", { dateStyle: "medium" }).format(date);
 }
 
+/** All amounts in the app are shown and stored as this ISO currency. */
+export const APP_CURRENCY = "EUR" as const;
+
 export function fmtNumberBG(
   value: number,
   options?: Intl.NumberFormatOptions,
@@ -21,7 +24,7 @@ export function fmtNumberBG(
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("bg-BG", {
     style: "currency",
-    currency: "EUR",
+    currency: APP_CURRENCY,
   }).format(value);
 }
 

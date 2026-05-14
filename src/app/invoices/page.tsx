@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
+import { fmtDateTimeBG, fmtNumberBG, APP_CURRENCY } from "@/lib/format";
 import { toast } from "sonner";
 import type { InvoiceDoc } from "@/types/visit";
 import type { Id } from "@/../convex/_generated/dataModel";
@@ -165,7 +165,7 @@ export default function InvoicesPage() {
               <span className="text-foreground font-medium">
                 {fmtNumberBG(totals?.unpaidTotal ?? 0, {
                   style: "currency",
-                  currency: "BGN",
+                  currency: APP_CURRENCY,
                 })}
               </span>
             </div>
@@ -174,7 +174,7 @@ export default function InvoicesPage() {
               <span className="text-foreground font-medium">
                 {fmtNumberBG(totals?.paidTotal ?? 0, {
                   style: "currency",
-                  currency: "BGN",
+                  currency: APP_CURRENCY,
                 })}
               </span>
             </div>
@@ -185,7 +185,7 @@ export default function InvoicesPage() {
                   (totals?.paidTotal ?? 0) + (totals?.unpaidTotal ?? 0),
                   {
                     style: "currency",
-                    currency: "BGN",
+                    currency: APP_CURRENCY,
                   },
                 )}
               </span>
@@ -379,7 +379,7 @@ export default function InvoicesPage() {
                     Общо:{" "}
                     {fmtNumberBG(inv.totalAmount, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: APP_CURRENCY,
                     })}
                   </div>
                 </div>
@@ -405,7 +405,7 @@ export default function InvoicesPage() {
                       {it.name} × {it.quantity} —{" "}
                       {fmtNumberBG(it.price * it.quantity, {
                         style: "currency",
-                        currency: "BGN",
+                        currency: APP_CURRENCY,
                       })}
                     </li>
                   ))}
@@ -416,7 +416,7 @@ export default function InvoicesPage() {
                   Общо:{" "}
                   {fmtNumberBG(inv.totalAmount, {
                     style: "currency",
-                    currency: "BGN",
+                    currency: APP_CURRENCY,
                   })}
                 </div>
                 <div className="mt-2 flex flex-col gap-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-end">

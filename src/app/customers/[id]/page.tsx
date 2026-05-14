@@ -19,7 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import Link from "next/link";
-import { fmtDateTimeBG, fmtNumberBG } from "@/lib/format";
+import { fmtDateTimeBG, fmtNumberBG, APP_CURRENCY } from "@/lib/format";
 import { InvoiceStatusBadge } from "@/components/StatusBadge";
 import {
   FileText,
@@ -255,7 +255,7 @@ export default function CustomerDetailPage() {
               (s: number, i) => s + (i.totalAmount ?? 0),
               0,
             ),
-            { style: "currency", currency: "BGN" },
+            { style: "currency", currency: APP_CURRENCY },
           )}
         </div>
         <div>
@@ -520,11 +520,11 @@ function CustomerInvoices({ customerId }: { customerId: Id<"customers"> }) {
         <div className="text-muted-foreground flex items-center gap-3 text-sm">
           <span>
             Неплатени:{" "}
-            {fmtNumberBG(totals.unpaid, { style: "currency", currency: "BGN" })}
+            {fmtNumberBG(totals.unpaid, { style: "currency", currency: APP_CURRENCY })}
           </span>
           <span>
             Платени:{" "}
-            {fmtNumberBG(totals.paid, { style: "currency", currency: "BGN" })}
+            {fmtNumberBG(totals.paid, { style: "currency", currency: APP_CURRENCY })}
           </span>
           <label className="inline-flex items-center gap-2">
             <Checkbox
@@ -561,7 +561,7 @@ function CustomerInvoices({ customerId }: { customerId: Id<"customers"> }) {
                     Общо:{" "}
                     {fmtNumberBG(inv.totalAmount, {
                       style: "currency",
-                      currency: "BGN",
+                      currency: APP_CURRENCY,
                     })}
                   </div>
                 </div>
@@ -587,7 +587,7 @@ function CustomerInvoices({ customerId }: { customerId: Id<"customers"> }) {
                       {it.name} × {it.quantity} —{" "}
                       {fmtNumberBG(it.price * it.quantity, {
                         style: "currency",
-                        currency: "BGN",
+                        currency: APP_CURRENCY,
                       })}
                     </li>
                   ))}
@@ -596,7 +596,7 @@ function CustomerInvoices({ customerId }: { customerId: Id<"customers"> }) {
                       {it.name} × {it.quantity} —{" "}
                       {fmtNumberBG(it.price * it.quantity, {
                         style: "currency",
-                        currency: "BGN",
+                        currency: APP_CURRENCY,
                       })}
                     </li>
                   ))}
@@ -607,7 +607,7 @@ function CustomerInvoices({ customerId }: { customerId: Id<"customers"> }) {
                   Общо:{" "}
                   {fmtNumberBG(inv.totalAmount, {
                     style: "currency",
-                    currency: "BGN",
+                    currency: APP_CURRENCY,
                   })}
                 </div>
                 <div className="mt-2 flex flex-col gap-2 sm:mt-auto sm:flex-row sm:items-center sm:justify-end">

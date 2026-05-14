@@ -19,7 +19,7 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { useRouter, useSearchParams } from "next/navigation";
-import { fmtNumberBG, fmtDateTimeBG } from "@/lib/format";
+import { fmtNumberBG, fmtDateTimeBG, APP_CURRENCY } from "@/lib/format";
 import type { Id } from "@/../convex/_generated/dataModel";
 import { toast } from "sonner";
 import { CalendarCheck } from "lucide-react";
@@ -529,7 +529,7 @@ function NewInvoicePageInner() {
                         ? "Цената трябва да е неотрицателно число (макс. 999999.99)"
                         : undefined
                     }
-                    hint="Въведете цена в BGN"
+                    hint="Въведете цена в евро"
                   >
                     <Input
                       id={`part-price-${idx}`}
@@ -545,7 +545,7 @@ function NewInvoicePageInner() {
                 <div className="text-right">
                   {fmtNumberBG(it.total, {
                     style: "currency",
-                    currency: "BGN",
+                    currency: APP_CURRENCY,
                   })}
                 </div>
               </div>
@@ -670,7 +670,7 @@ function NewInvoicePageInner() {
                         ? "Цената трябва да е неотрицателно число (макс. 999999.99)"
                         : undefined
                     }
-                    hint="Въведете цена в BGN"
+                    hint="Въведете цена в евро"
                   >
                     <Input
                       id={`labor-price-${idx}`}
@@ -686,7 +686,7 @@ function NewInvoicePageInner() {
                 <div className="text-right">
                   {fmtNumberBG(it.total, {
                     style: "currency",
-                    currency: "BGN",
+                    currency: APP_CURRENCY,
                   })}
                 </div>
               </div>
@@ -739,7 +739,7 @@ function NewInvoicePageInner() {
                 (s, it) => s + (Number.isFinite(it.total) ? it.total : 0),
                 0,
               ),
-              { style: "currency", currency: "BGN" },
+              { style: "currency", currency: APP_CURRENCY },
             )}
           </div>
           <div className="flex items-center gap-3">
